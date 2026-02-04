@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, 
@@ -35,8 +35,14 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter(); // Use router from next/navigation
   const { user, logout } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
 
   // Filter items based on role
   const filteredNavItems = NAV_ITEMS.filter(item => 
@@ -116,7 +122,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   "w-full flex items-center gap-3 justify-start text-slate-500 hover:text-slate-900 hover:bg-slate-50",
                   !isSidebarOpen && "justify-center px-0"
                 )}
-                onClick={() => logout()}
+                onClick={handleLogout}
               >
                 <LogOut size={20} />
                 {isSidebarOpen && "Cerrar Sesión"}
