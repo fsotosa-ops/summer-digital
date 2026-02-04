@@ -71,6 +71,9 @@ export interface Journey {
   id: string;
   title: string;
   description: string;
+  status: 'active' | 'completed';
+  category?: string;
+  progress: number; // 0-100
   nodes: JourneyNode[];
 }
 

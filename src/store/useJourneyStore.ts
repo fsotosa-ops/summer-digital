@@ -4,41 +4,51 @@ import { journeyService } from '@/services/journey.service';
 import { useAuthStore } from './useAuthStore';
 
 interface JourneyState {
-  journey: Journey | null;
+  journeys: Journey[];
+  selectedJourneyId: string | null;
   isLoading: boolean;
-  fetchJourney: () => Promise<void>;
+  fetchJourneys: () => Promise<void>;
+  selectJourney: (id: string | null) => void;
   completeActivity: (nodeId: string) => Promise<void>;
 }
 
 export const useJourneyStore = create<JourneyState>((set, get) => ({
-  journey: null,
+  journeys: [],
+  selectedJourneyId: null,
   isLoading: false,
-  fetchJourney: async () => {
+
+  fetchJourneys: async () => {
     set({ isLoading: true });
     try {
-        const journey = await journeyService.getJourney();
-        set({ journey, isLoading: false });
-    } catch (error) {
-        set({ isLoading: false });
-        console.error('Failed to fetch journey', error);
+      const journeys = await journeyService.fetchJourneys();
+      set({ journeys });
+    } finally {
+      set({ isLoading: false });
     }
   },
+
+  selectJourney: (id) => {
+      set({ selectedJourneyId: id });
+  },
+
   completeActivity: async (nodeId: string) => {
-    // Optimistic update could go here, for now just call service
+    const { journeys, selectedJourneyId } = get();
+    if (!selectedJourneyId) return;
+
     await journeyService.completeNode(nodeId);
     
-    // Add points for completion (Example: 5 points per activity)
+    // Add points
     useAuthStore.getState().addPoints(5);
 
-    // Refresh journey to get updated status (in a real app, backend would update)
-    // For mock, we might need to manually update local state if we want interactivity without refresh
-    const currentJourney = get().journey;
-    if (currentJourney) {
-        let nextNodeId: string | undefined;
+    const updatedJourneys = journeys.map(journey => {
+        if (journey.id !== selectedJourneyId) return journey;
 
-        const updatedNodes = currentJourney.nodes.map(node => {
+        // Current Journey Logic
+        let nextNodeId: string | undefined;
+        let completedNodesCount = 0;
+
+        const updatedNodes = journey.nodes.map(node => {
             if (node.id === nodeId) {
-                // Determine next node logic (simple version: use connections[0])
                 if (node.connections.length > 0) {
                     nextNodeId = node.connections[0];
                 }
@@ -46,16 +56,32 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
             }
             return node;
         });
-        
-        // Unlock next node if found
+
         const finalNodes = updatedNodes.map(node => {
+            if (node.status === 'completed') completedNodesCount++;
             if (nextNodeId && node.id === nextNodeId && node.status === 'locked') {
                 return { ...node, status: 'available' as const };
             }
             return node;
         });
+        
+        // Recalculate progress
+        const progress = Math.round((completedNodesCount / finalNodes.length) * 100);
+        
+        // Check for journey completion (simple check: if progress 100 or last node completed)
+        // Ideally we check if the completed node was a leaf node or if all nodes are completed.
+        // For now, let's use progress === 100 as the trigger if we assume linear.
+        // Or better: if nextNodeId is undefined and node was completed, it might be the end.
+        
+        let status = journey.status;
+        if (progress === 100 && status !== 'completed') {
+            status = 'completed';
+            // Here we could trigger a celebration flag in a local UI state or return something
+        }
 
-        set({ journey: { ...currentJourney, nodes: finalNodes } });
-    }
+        return { ...journey, nodes: finalNodes, progress, status };
+    });
+
+    set({ journeys: updatedJourneys });
   },
 }));

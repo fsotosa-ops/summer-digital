@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { JourneyNode } from '@/types';
 import { useJourneyStore } from '@/store/useJourneyStore';
@@ -13,24 +13,40 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Check, Lock, Play, Star } from 'lucide-react';
+import { Check, Lock, Play, Star, Users as UsersIcon, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function JourneyMap() {
-  const { journey, fetchJourney, completeActivity } = useJourneyStore();
+  const { journeys, selectedJourneyId, selectJourney, completeActivity } = useJourneyStore();
+  const journey = journeys.find(j => j.id === selectedJourneyId);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedNode, setSelectedNode] = useState<JourneyNode | null>(null);
 
-  useEffect(() => {
-    fetchJourney();
-  }, [fetchJourney]);
+  // No longer fetching a single journey, but relying on selectedJourneyId
+  // useEffect(() => {
+  //   fetchJourney();
+  // }, [fetchJourney]);
 
-  if (!journey) return <div className="p-10 text-center text-slate-400">Cargando mapa...</div>;
+  if (!journey) return <div className="p-10 text-center text-slate-500">Selecciona un viaje para comenzar.</div>;
 
   // Helper to find node by ID for connection drawing
   const getNodeById = (id: string) => journey.nodes.find(n => n.id === id);
 
   return (
-    <div className="relative w-full h-[600px] bg-slate-50/50 rounded-xl overflow-hidden border border-slate-100 shadow-inner">
+    <div className="relative w-full h-[600px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner" ref={containerRef}>
+      
+      {/* Back Button */}
+      <div className="absolute top-4 left-4 z-20">
+        <Button variant="ghost" className="gap-2 text-slate-600 hover:text-slate-900" onClick={() => selectJourney(null)}>
+            <ChevronLeft size={16} /> Volver a mis viajes
+        </Button>
+      </div>
+
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0 opacity-5" 
+           style={{ backgroundImage: 'radial-gradient(#0f172a 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
+      </div>
+
       {/* SVG Layer for Connections */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
         {journey.nodes.map(node => (
@@ -39,21 +55,16 @@ export function JourneyMap() {
               const target = getNodeById(targetId);
               if (!target) return null;
               
-              const isPathActive = node.status === 'completed' || node.status === 'in-progress';
+              // const isPathActive = node.status === 'completed' || node.status === 'in-progress'; // Removed for simpler lines
 
               return (
-                <motion.line
+                <line 
                   key={`${node.id}-${targetId}`}
-                  x1={`${node.x}%`}
-                  y1={`${node.y}%`}
-                  x2={`${target.x}%`}
-                  y2={`${target.y}%`}
-                  stroke={isPathActive ? "#0d9488" : "#e2e8f0"} // Teal-600 vs Slate-200
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 1.5, ease: "easeInOut" }}
+                  x1={`${node.x}%`} y1={`${node.y}%`}
+                  x2={`${target.x}%`} y2={`${target.y}%`}
+                  stroke="#cbd5e1" 
+                  strokeWidth="2"
+                  strokeDasharray="4 4"
                 />
               );
             })}
@@ -187,25 +198,4 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
   );
 }
 
-// Simple Icon component for the placeholder
-function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-    )
-}
+
