@@ -31,7 +31,7 @@ export interface CRMUser {
 }
 
 interface UserProfileSheetProps {
-  user: CRMUser;
+  user: CRMUser | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
