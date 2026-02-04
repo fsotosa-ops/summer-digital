@@ -1,22 +1,51 @@
 import { User } from '@/types';
 
-class MockAuthService {
-  private static readonly LATENCY = 800;
-
-  private static readonly MOCK_USER: User = {
+const MOCK_USERS: Record<string, User> = {
+  Participant: {
     id: 'u1',
     name: 'Valentina Muñoz',
     email: 'valentina@fundacionsummer.cl',
     role: 'Participant',
     oasisScore: 78,
-    avatarUrl: 'https://github.com/shadcn.png',
+    avatarUrl: 'https://i.pravatar.cc/150?u=1',
     lastConnection: new Date().toISOString(),
-  };
+  },
+  Subscriber: {
+    id: 'u2',
+    name: 'Carlos Nuevo',
+    email: 'carlos@example.com',
+    role: 'Subscriber',
+    oasisScore: 0,
+    avatarUrl: 'https://i.pravatar.cc/150?u=2',
+    lastConnection: new Date().toISOString(),
+  },
+  Admin: {
+    id: 'u3',
+    name: 'Admin User',
+    email: 'admin@fundacionsummer.cl',
+    role: 'Admin',
+    oasisScore: 100,
+    avatarUrl: 'https://i.pravatar.cc/150?u=3',
+    lastConnection: new Date().toISOString(),
+  },
+  SuperAdmin: {
+    id: 'u4',
+    name: 'Super Admin',
+    email: 'super@fundacionsummer.cl',
+    role: 'SuperAdmin',
+    oasisScore: 100,
+    avatarUrl: 'https://i.pravatar.cc/150?u=4',
+    lastConnection: new Date().toISOString(),
+  }
+};
 
-  async login(): Promise<User> {
+class MockAuthService {
+  private static readonly LATENCY = 500;
+
+  async login(role: string = 'Participant'): Promise<User> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(MockAuthService.MOCK_USER);
+        resolve(MOCK_USERS[role] || MOCK_USERS['Participant']);
       }, MockAuthService.LATENCY);
     });
   }
@@ -24,7 +53,7 @@ class MockAuthService {
   async getUserProfile(): Promise<User> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(MockAuthService.MOCK_USER);
+        resolve(MOCK_USERS['Participant']);
       }, MockAuthService.LATENCY / 2);
     });
   }
@@ -39,3 +68,4 @@ class MockAuthService {
 }
 
 export const authService = new MockAuthService();
+

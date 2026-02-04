@@ -5,17 +5,17 @@ import { authService } from '@/services/auth.service';
 interface AuthState {
   user: User | null;
   isLoading: boolean;
-  login: () => Promise<void>;
+  login: (role?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
-  login: async () => {
+  login: async (role?: string) => {
     set({ isLoading: true });
     try {
-      const user = await authService.login();
+      const user = await authService.login(role);
       set({ user, isLoading: false });
     } catch (error) {
       set({ isLoading: false });

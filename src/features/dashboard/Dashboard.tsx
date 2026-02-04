@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { OasisScore } from './components/OasisScore';
 import { NewsWidget } from './components/NewsWidget';
@@ -9,16 +9,20 @@ import { ArrowRight, Map } from 'lucide-react';
 import Link from 'next/link';
 
 export function Dashboard() {
-  const { user, login } = useAuthStore();
+  const { user } = useAuthStore();
+  
+  // Auto-login removed. Auth handled by MainLayout or Middleware in real app.
+  // For dev, if no user, show loading or redirect.
+  // We'll let the user manually login via the new Login page if they hit this directly or are redirected.
 
-  useEffect(() => {
-    // Auto-login for mock
-    if (!user) {
-        login();
-    }
-  }, [user, login]);
-
-  if (!user) return <div className="p-10">Cargando perfil...</div>;
+  if (!user) return (
+     <div className="flex flex-col items-center justify-center p-10 h-full">
+        <p className="text-slate-500 mb-4">No hay sesión activa.</p>
+        <Link href="/login">
+            <Button>Ir al Login</Button>
+        </Link>
+     </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -29,7 +33,7 @@ export function Dashboard() {
           <p className="text-slate-500">Bienvenida de nuevo a tu espacio de transformación.</p>
         </div>
         <Link href="/journey">
-          <Button className="bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-200/50">
+          <Button className="bg-slate-900 hover:bg-slate-800 text-white shadow-lg">
             Continuar mi Viaje <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>

@@ -58,7 +58,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="font-bold text-xl text-teal-600 tracking-tight"
+                className="font-bold text-xl text-slate-900 tracking-tight"
               >
                 Oasis Digital
               </motion.span>
@@ -68,7 +68,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             variant="ghost" 
             size="icon" 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="text-slate-500 hover:text-teal-600"
+            className="text-slate-500 hover:text-slate-900"
           >
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </Button>
@@ -82,24 +82,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <div className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 group relative",
                   isActive 
-                    ? "bg-teal-50 text-teal-700" 
+                    ? "bg-slate-100 text-slate-900 font-medium" 
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}>
                   <item.icon size={22} className={cn(
                     "transition-colors",
-                    isActive ? "text-teal-600" : "text-slate-400 group-hover:text-slate-600"
+                    isActive ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
                   )} />
                   {isSidebarOpen && (
                     <motion.span 
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="font-medium text-sm"
+                      className="text-sm"
                     >
                       {item.label}
                     </motion.span>
                   )}
                   {!isSidebarOpen && (
-                    <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                    <div className="absolute left-full ml-4 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                       {item.label}
                     </div>
                   )}
@@ -113,7 +113,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
              <Button 
                 variant="ghost" 
                 className={cn(
-                  "w-full flex items-center gap-3 justify-start text-red-500 hover:text-red-700 hover:bg-red-50",
+                  "w-full flex items-center gap-3 justify-start text-slate-500 hover:text-slate-900 hover:bg-slate-50",
                   !isSidebarOpen && "justify-center px-0"
                 )}
                 onClick={() => logout()}
@@ -140,7 +140,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                <Link key={item.href} href={item.href} className="flex-1">
                  <div className={cn(
                    "flex flex-col items-center justify-center py-2 h-full gap-1 transition-colors",
-                   isActive ? "text-teal-600" : "text-slate-400 hover:text-slate-600"
+                   isActive ? "text-slate-900" : "text-slate-400 hover:text-slate-600"
                  )}>
                    <item.icon size={24} className={isActive ? "fill-current/10" : ""} />
                    <span className="text-[10px] font-medium leading-none">{item.label}</span>

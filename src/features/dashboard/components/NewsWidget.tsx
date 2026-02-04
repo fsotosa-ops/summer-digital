@@ -21,7 +21,7 @@ export function NewsWidget() {
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
           Novedades
-          <Badge variant="secondary" className="bg-teal-50 text-teal-600 hover:bg-teal-100 border-none font-normal text-xs">
+          <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-none font-normal text-xs">
             Fundación Summer
           </Badge>
         </CardTitle>
@@ -30,7 +30,7 @@ export function NewsWidget() {
         {MOCK_NEWS.map((item) => (
           <div key={item.id} className="group cursor-pointer">
             <div className="flex justify-between items-start mb-1">
-              <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
                 {item.category}
               </span>
               <div className="flex items-center text-slate-400 text-xs">
@@ -38,7 +38,7 @@ export function NewsWidget() {
                 {item.date}
               </div>
             </div>
-            <h4 className="text-sm font-medium text-slate-700 group-hover:text-teal-700 transition-colors">
+            <h4 className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">
               {item.title}
             </h4>
             <div className="h-px bg-slate-50 mt-3 group-last:hidden" />

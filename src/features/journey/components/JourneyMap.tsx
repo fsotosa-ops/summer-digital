@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { JourneyNode, NodeStatus } from '@/types';
+import { motion } from 'framer-motion';
+import { JourneyNode } from '@/types';
 import { useJourneyStore } from '@/store/useJourneyStore';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -120,7 +120,7 @@ export function JourneyMap() {
                    if (selectedNode) await completeActivity(selectedNode.id);
                    setSelectedNode(null);
                 }}
-                className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white"
+                className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white"
               >
                 Completar Actividad
               </Button>
@@ -129,7 +129,7 @@ export function JourneyMap() {
                   <Check className="mr-2 h-4 w-4" /> Completado
                </Button>
             ) : (
-                <Button disabled variant="secondary" className="w-full sm:w-auto">
+                <Button disabled variant="secondary" className="w-full sm:w-auto bg-slate-100 text-slate-400">
                     <Lock className="mr-2 h-4 w-4" /> Bloqueado
                 </Button>
             )}
@@ -166,7 +166,7 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
 }
 
 // Simple Icon component for the placeholder
-function UsersIcon(props: any) {
+function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
         <svg
             {...props}
