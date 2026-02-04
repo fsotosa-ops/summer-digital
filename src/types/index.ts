@@ -83,3 +83,21 @@ export interface NavItem {
   href: string;
   icon?: React.ElementType;
 }
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  date: string; // ISO Date
+  type: 'info' | 'alert' | 'event';
+  authorId: string;
+}
+
+export interface UserActivityLog {
+  id: string;
+  userId: string;
+  activityType: 'journey_step' | 'resource_view' | 'login' | 'medal_earned';
+  description: string;
+  date: string; // ISO Date
+  scoreEarned?: number;
+}

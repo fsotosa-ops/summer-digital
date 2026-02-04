@@ -1,49 +1,45 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from 'lucide-react';
-
-interface NewsItem {
-  id: string;
-  title: string;
-  date: string;
-  category: string;
-}
-
-const MOCK_NEWS: NewsItem[] = [
-  { id: '1', title: 'Nueva Alianza con Escuelas del Sur', date: '02 Feb 2026', category: 'General' },
-  { id: '2', title: 'Resultados del Workshop de Enero', date: '28 Ene 2026', category: 'Actividades' },
-  { id: '3', title: 'Tips para mejorar tu Oasis Score', date: '20 Ene 2026', category: 'Tips' },
-];
+import { useContentStore } from '@/store/useContentStore';
 
 export function NewsWidget() {
+  const { announcements } = useContentStore();
+
   return (
-    <Card className="border-slate-100 shadow-sm h-full">
-      <CardHeader className="pb-3">
+    <Card className="border-slate-100 shadow-sm h-full max-h-[500px] overflow-y-auto">
+      <CardHeader className="pb-3 sticky top-0 bg-white z-10 border-b border-slate-50">
         <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-          Novedades
+          Anuncios y Novedades
           <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-none font-normal text-xs">
-            Fundación Summer
+            {announcements.length} Recientes
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {MOCK_NEWS.map((item) => (
-          <div key={item.id} className="group cursor-pointer">
+      <CardContent className="space-y-4 pt-4">
+        {announcements.length > 0 ? announcements.map((item) => (
+          <div key={item.id} className="group pb-4 border-b border-slate-50 last:border-0 last:pb-0">
             <div className="flex justify-between items-start mb-1">
-              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                {item.category}
-              </span>
-              <div className="flex items-center text-slate-400 text-xs">
+              <Badge variant={item.type === 'alert' ? 'destructive' : 'outline'} className="text-[10px] px-2 py-0 h-5">
+                {item.type === 'alert' ? 'ALERTA' : item.type === 'event' ? 'EVENTO' : 'INFO'}
+              </Badge>
+              <div className="flex items-center text-slate-400 text-xs text-right">
                 <Calendar size={12} className="mr-1" />
-                {item.date}
+                {new Date(item.date).toLocaleDateString()}
               </div>
             </div>
-            <h4 className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">
+            <h4 className="text-sm font-semibold text-slate-800 mb-1">
               {item.title}
             </h4>
-            <div className="h-px bg-slate-50 mt-3 group-last:hidden" />
+            <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                {item.content}
+            </p>
           </div>
-        ))}
+        )) : (
+            <div className="text-center py-8 text-slate-400 text-sm">
+                No hay anuncios recientes.
+            </div>
+        )}
       </CardContent>
     </Card>
   );

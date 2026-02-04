@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { UserProfileSheet } from "./components/UserProfileSheet";
 
 type UserRank = "Semilla" | "Brote" | "Árbol" | "Bosque" | "Oasis";
 
@@ -40,6 +41,7 @@ export function CRMTable() {
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [rankFilter, setRankFilter] = useState<string>("all");
   const [riskFilter, setRiskFilter] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<CRMUser | null>(null);
 
   // Extract unique organizations
   const organizations = Array.from(new Set(users.map(u => u.org)));
@@ -109,7 +111,11 @@ export function CRMTable() {
             </TableHeader>
             <TableBody>
             {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow 
+                    key={user.id} 
+                    className="cursor-pointer hover:bg-slate-50 transition-colors"
+                    onClick={() => setSelectedUser(user)}
+                >
                 <TableCell className="font-medium flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                     <AvatarImage src={`https://i.pravatar.cc/150?u=${user.id}`} />
@@ -153,6 +159,13 @@ export function CRMTable() {
             </TableBody>
         </Table>
         </div>
+
+        {/* User Profile Sheet */}
+        <UserProfileSheet 
+            user={selectedUser} 
+            open={!!selectedUser} 
+            onOpenChange={(open) => !open && setSelectedUser(null)} 
+        />
     </div>
   );
 }
