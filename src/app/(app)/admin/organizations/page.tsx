@@ -52,6 +52,7 @@ export default function AdminOrganizationsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<ApiOrgCreate>({
@@ -76,8 +77,10 @@ export default function AdminOrganizationsPage() {
     try {
       const orgs = await organizationService.listMyOrganizations();
       setOrganizations(orgs);
+      setError(null);
     } catch (err) {
       console.error('Error loading organizations:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar organizaciones');
     } finally {
       setLoading(false);
     }
@@ -107,8 +110,10 @@ export default function AdminOrganizationsPage() {
       setOrganizations(prev => [...prev, newOrg]);
       setCreateDialogOpen(false);
       setFormData({ name: '', slug: '', description: '', type: 'community' });
+      setError(null);
     } catch (err) {
       console.error('Error creating organization:', err);
+      setError(err instanceof Error ? err.message : 'Error al crear organizacion');
     } finally {
       setCreating(false);
     }
@@ -123,8 +128,10 @@ export default function AdminOrganizationsPage() {
     try {
       await organizationService.deleteOrganization(orgId);
       setOrganizations(prev => prev.filter(o => o.id !== orgId));
+      setError(null);
     } catch (err) {
       console.error('Error deleting organization:', err);
+      setError(err instanceof Error ? err.message : 'Error al eliminar organizacion');
     } finally {
       setDeletingId(null);
     }
@@ -229,6 +236,14 @@ export default function AdminOrganizationsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-4">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-12">

@@ -3,6 +3,7 @@ import {
   ApiJourneyAdminRead,
   ApiJourneyCreate,
   ApiJourneyUpdate,
+  ApiJourneyOrganizationsResponse,
   ApiMemberResponse,
   ApiMemberUpdate,
   ApiStepAdminRead,
@@ -54,6 +55,20 @@ class AdminService {
 
   async removeMember(orgId: string, memberId: string): Promise<void> {
     await apiClient.delete(`/auth/organizations/${orgId}/members/${memberId}`);
+  }
+
+  // --- Journey-Organization Management ---
+
+  async getJourneyOrganizations(journeyId: string): Promise<ApiJourneyOrganizationsResponse> {
+    return apiClient.get<ApiJourneyOrganizationsResponse>(`/journeys/admin/journeys/${journeyId}/organizations`);
+  }
+
+  async assignJourneyOrganizations(journeyId: string, organizationIds: string[]): Promise<void> {
+    await apiClient.post(`/journeys/admin/journeys/${journeyId}/organizations`, { organization_ids: organizationIds });
+  }
+
+  async unassignJourneyOrganizations(journeyId: string, organizationIds: string[]): Promise<void> {
+    await apiClient.delete(`/journeys/admin/journeys/${journeyId}/organizations`, { organization_ids: organizationIds });
   }
 
   // --- Step Management ---

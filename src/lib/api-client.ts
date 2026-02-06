@@ -130,6 +130,18 @@ export class ApiError extends Error {
       }
   
       // Auto-inyección de Authorization
+      // Si no hay access token en memoria pero sí hay refresh token, refrescar proactivamente
+      // (esto ocurre después de un page refresh, ya que el access token solo vive en memoria)
+      if (!this.accessToken && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+        const hasRefreshToken = typeof window !== 'undefined' && !!localStorage.getItem('refresh_token');
+        if (hasRefreshToken) {
+          try {
+            await this.refreshAccessToken();
+          } catch {
+            // Si falla, continuamos sin token (el 401 handler lo reintentará)
+          }
+        }
+      }
       if (this.accessToken) {
         headers.set('Authorization', `Bearer ${this.accessToken}`);
       }
@@ -164,13 +176,14 @@ export class ApiError extends Error {
       // 4. Manejo de Errores Generales
       if (!response.ok) {
         let errorData;
-        // Intentar parsear JSON, si falla usar texto o vacío
+        // Leer body como texto una sola vez, luego intentar parsear como JSON
+        const text = await response.text();
         try {
-          errorData = await response.json();
+          errorData = JSON.parse(text);
         } catch {
-          errorData = { message: await response.text() };
+          errorData = { message: text };
         }
-        
+
         throw new ApiError(response.status, response.statusText, errorData);
       }
   
@@ -207,8 +220,12 @@ export class ApiError extends Error {
       });
     }
   
-    public delete<T>(endpoint: string, headers?: HeadersInit): Promise<T> {
-      return this.request<T>(endpoint, { method: 'DELETE', headers });
+    public delete<T>(endpoint: string, body?: any, headers?: HeadersInit): Promise<T> {
+      return this.request<T>(endpoint, {
+        method: 'DELETE',
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        headers,
+      });
     }
   }
   

@@ -256,6 +256,30 @@ export interface ApiStepReorderRequest {
   steps: ApiStepReorderItem[];
 }
 
+// --- Journey-Organization DTOs ---
+
+export interface ApiJourneyOrganizationRead {
+  id: string;
+  journey_id: string;
+  organization_id: string;
+  assigned_at: string;
+  assigned_by?: string | null;
+}
+
+export interface ApiJourneyOrganizationsResponse {
+  journey_id: string;
+  organizations: ApiJourneyOrganizationRead[];
+  total: number;
+}
+
+export interface ApiJourneyOrganizationAssign {
+  organization_ids: string[];
+}
+
+export interface ApiJourneyOrganizationUnassign {
+  organization_ids: string[];
+}
+
 // --- Enrollment DTOs ---
 
 export interface ApiEnrollmentCreate {

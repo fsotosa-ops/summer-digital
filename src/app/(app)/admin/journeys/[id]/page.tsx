@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
-import { ApiJourneyAdminRead, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType } from '@/types/api.types';
+import { organizationService } from '@/services/organization.service';
+import { ApiJourneyAdminRead, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiJourneyOrganizationRead } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,8 +22,6 @@ import {
 } from '@/components/ui/dialog';
 import {
   ChevronLeft,
-  ChevronUp,
-  ChevronDown,
   Plus,
   Loader2,
   Trash2,
@@ -38,6 +37,24 @@ import {
   Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MultiSelect } from '@/components/ui/multi-select';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.ElementType }[] = [
   { value: 'survey', label: 'Encuesta / Typeform', icon: FileText },
@@ -58,18 +75,104 @@ function getStepTypeLabel(type: ApiStepType) {
   return option?.label || type;
 }
 
+function SortableStepItem({
+  step,
+  onEdit,
+  onDelete,
+}: {
+  step: ApiStepAdminRead;
+  onEdit: (step: ApiStepAdminRead) => void;
+  onDelete: (stepId: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: step.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const Icon = getStepIcon(step.type);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors',
+        isDragging && 'opacity-50 shadow-lg border-teal-300 z-50'
+      )}
+    >
+      <button
+        type="button"
+        className="text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+
+      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+        <Icon className="h-4 w-4" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-slate-900 truncate">{step.title}</p>
+        <p className="text-xs text-slate-500">{getStepTypeLabel(step.type)}</p>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Badge variant="secondary" className="text-xs">
+          {step.gamification_rules?.base_points || 0} pts
+        </Badge>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEdit(step)}
+          className="h-8 w-8"
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDelete(step.id)}
+          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function JourneyEditorPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuthStore();
   const journeyId = params.id as string;
-  const orgId = user?.organizationId;
 
   const [journey, setJourney] = useState<ApiJourneyAdminRead | null>(null);
   const [steps, setSteps] = useState<ApiStepAdminRead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Organization management
+  const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
+  const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+
+  // Derive orgId: for SuperAdmins without membership, use journey's org
+  const orgId = user?.organizationId || journey?.organization_id;
 
   // Step dialog state
   const [stepDialogOpen, setStepDialogOpen] = useState(false);
@@ -81,13 +184,14 @@ export default function JourneyEditorPage() {
     gamification_rules: { base_points: 10 },
   });
 
-  const fetchData = async () => {
-    if (!orgId) return;
+  const fetchData = async (effectiveOrgId?: string) => {
+    const oid = effectiveOrgId || orgId;
+    if (!oid) return;
     setIsLoading(true);
     try {
       const [journeyData, stepsData] = await Promise.all([
-        adminService.getJourney(orgId, journeyId),
-        adminService.listSteps(orgId, journeyId),
+        adminService.getJourney(oid, journeyId),
+        adminService.listSteps(oid, journeyId),
       ]);
       setJourney(journeyData);
       setSteps(stepsData.sort((a, b) => a.order_index - b.order_index));
@@ -99,10 +203,65 @@ export default function JourneyEditorPage() {
     }
   };
 
+  const fetchOrganizations = async () => {
+    setIsLoadingOrgs(true);
+    try {
+      const [orgs, journeyOrgsResponse] = await Promise.all([
+        organizationService.listMyOrganizations(),
+        adminService.getJourneyOrganizations(journeyId).catch(() => ({ journey_id: journeyId, organizations: [], total: 0 })),
+      ]);
+      setAllOrgs(orgs);
+      setAssignedOrgIds(journeyOrgsResponse.organizations.map((o: ApiJourneyOrganizationRead) => o.organization_id));
+    } catch (err) {
+      console.error('Error loading organizations:', err);
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  };
+
+  // Initial load: for SuperAdmin without orgId, first load journey to get org_id
   useEffect(() => {
-    fetchData();
+    const init = async () => {
+      if (user?.organizationId) {
+        // Normal user with org membership
+        await fetchData(user.organizationId);
+      } else {
+        // SuperAdmin without org membership - need to discover org from journey
+        // Try loading with a temporary approach: list all orgs first
+        try {
+          const orgs = await organizationService.listMyOrganizations();
+          if (orgs.length > 0) {
+            // Try each org until we find the journey
+            for (const org of orgs) {
+              try {
+                const journeyData = await adminService.getJourney(org.id, journeyId);
+                setJourney(journeyData);
+                const stepsData = await adminService.listSteps(org.id, journeyId);
+                setSteps(stepsData.sort((a, b) => a.order_index - b.order_index));
+                setIsLoading(false);
+                break;
+              } catch {
+                continue;
+              }
+            }
+          }
+        } catch {
+          setError('No se pudo cargar el journey');
+          setIsLoading(false);
+        }
+      }
+    };
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, journeyId]);
+  }, [journeyId, user?.organizationId]);
+
+  // Load orgs after journey is available (for SuperAdmin)
+  useEffect(() => {
+    if (user?.role === 'SuperAdmin' && journey) {
+      fetchOrganizations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journey?.id, user?.role]);
 
   const openCreateDialog = () => {
     setEditingStep(null);
@@ -162,31 +321,57 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleMoveStep = async (stepId: string, direction: 'up' | 'down') => {
-    if (!orgId) return;
+  // DnD sensors with activation constraint to avoid accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-    const currentIndex = steps.findIndex(s => s.id === stepId);
-    if (currentIndex === -1) return;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !orgId) return;
 
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (newIndex < 0 || newIndex >= steps.length) return;
+    const oldIndex = steps.findIndex((s) => s.id === active.id);
+    const newIndex = steps.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    // Swap the steps locally first for immediate feedback
-    const newSteps = [...steps];
-    [newSteps[currentIndex], newSteps[newIndex]] = [newSteps[newIndex], newSteps[currentIndex]];
+    // Optimistic update
+    const newSteps = arrayMove([...steps], oldIndex, newIndex);
     setSteps(newSteps);
 
     // Build reorder request
     const reorderRequest = {
-      steps: newSteps.map((s, idx) => ({ step_id: s.id, new_index: idx })),
+      steps: newSteps.map((s: ApiStepAdminRead, idx: number) => ({ step_id: s.id, new_index: idx })),
     };
 
     try {
       await adminService.reorderSteps(orgId, journeyId, reorderRequest);
-      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al reordenar steps');
       await fetchData(); // Revert on error
+    }
+  };
+
+  const handleOrgAccessChange = async (newOrgIds: string[]) => {
+    const prev = assignedOrgIds;
+    // Compute diff
+    const toAssign = newOrgIds.filter((id) => !prev.includes(id));
+    const toUnassign = prev.filter((id) => !newOrgIds.includes(id));
+
+    // Optimistic update
+    setAssignedOrgIds(newOrgIds);
+
+    try {
+      if (toAssign.length > 0) {
+        await adminService.assignJourneyOrganizations(journeyId, toAssign);
+      }
+      if (toUnassign.length > 0) {
+        await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar organizaciones');
+      // Revert on error
+      setAssignedOrgIds(prev);
     }
   };
 
@@ -270,12 +455,39 @@ export default function JourneyEditorPage() {
         </Card>
       )}
 
+      {/* Organization Access Management (SuperAdmin only) */}
+      {user?.role === 'SuperAdmin' && allOrgs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Organizaciones con acceso</CardTitle>
+            <CardDescription>
+              Gestiona que organizaciones pueden acceder a este journey.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MultiSelect
+              options={allOrgs
+                .filter((o) => o.id !== journey?.organization_id)
+                .map((o) => ({ value: o.id, label: o.name }))}
+              selected={assignedOrgIds.filter((id) => id !== journey?.organization_id)}
+              onChange={(selected) => handleOrgAccessChange([...selected, ...(journey?.organization_id ? [journey.organization_id] : [])])}
+              placeholder="Seleccionar organizaciones adicionales..."
+            />
+            {journey?.organization_id && (
+              <p className="text-xs text-slate-500 mt-2">
+                La organizacion owner siempre tiene acceso.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Roadmap Visual */}
       <Card>
         <CardHeader>
           <CardTitle>Roadmap del Journey</CardTitle>
           <CardDescription>
-            Visualiza y edita los steps. Usa las flechas para reordenar.
+            Visualiza y edita los steps. Arrastra para reordenar.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -368,74 +580,27 @@ export default function JourneyEditorPage() {
                 })}
               </div>
 
-              {/* Step List with Reorder Controls */}
+              {/* Step List with Drag & Drop */}
               <div className="mt-6 space-y-2">
-                {steps.map((step, index) => {
-                  const Icon = getStepIcon(step.type);
-                  return (
-                    <div
-                      key={step.id}
-                      className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
-                    >
-                      <div className="text-slate-400">
-                        <GripVertical className="h-5 w-5" />
-                      </div>
-
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-                        <Icon className="h-4 w-4" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">{step.title}</p>
-                        <p className="text-xs text-slate-500">{getStepTypeLabel(step.type)}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {step.gamification_rules?.base_points || 0} pts
-                        </Badge>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleMoveStep(step.id, 'up')}
-                          disabled={index === 0}
-                          className="h-8 w-8"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleMoveStep(step.id, 'down')}
-                          disabled={index === steps.length - 1}
-                          className="h-8 w-8"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(step)}
-                          className="h-8 w-8"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteStep(step.id)}
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={steps.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {steps.map((step) => (
+                      <SortableStepItem
+                        key={step.id}
+                        step={step}
+                        onEdit={openEditDialog}
+                        onDelete={handleDeleteStep}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </div>
             </div>
           )}

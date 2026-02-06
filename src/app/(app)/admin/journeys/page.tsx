@@ -36,6 +36,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2 } from 'lucide-react';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 export default function AdminJourneysPage() {
   const router = useRouter();
@@ -57,6 +58,7 @@ export default function AdminJourneysPage() {
     category: '',
     is_active: false,
   });
+  const [accessOrgIds, setAccessOrgIds] = useState<string[]>([]);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const orgId = selectedOrgId || user?.organizationId;
@@ -128,9 +130,14 @@ export default function AdminJourneysPage() {
 
     setIsCreating(true);
     try {
-      await adminService.createJourney(orgId, formData);
+      const newJourney = await adminService.createJourney(orgId, formData);
+      // Assign additional organizations if selected
+      if (accessOrgIds.length > 0) {
+        await adminService.assignJourneyOrganizations(newJourney.id, accessOrgIds);
+      }
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
+      setAccessOrgIds([]);
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear journey');
@@ -259,6 +266,24 @@ export default function AdminJourneysPage() {
                   placeholder="Ej: Talleres, Onboarding, Habilidades"
                 />
               </div>
+
+              {/* Organization access selector (only for SuperAdmin with multiple orgs) */}
+              {isSuperAdmin && organizations.length > 1 && (
+                <div className="space-y-2">
+                  <Label>Organizaciones con acceso</Label>
+                  <p className="text-xs text-slate-500">
+                    La organizacion owner ya tiene acceso. Selecciona organizaciones adicionales.
+                  </p>
+                  <MultiSelect
+                    options={organizations
+                      .filter((o) => o.id !== selectedOrgId)
+                      .map((o) => ({ value: o.id, label: o.name }))}
+                    selected={accessOrgIds}
+                    onChange={setAccessOrgIds}
+                    placeholder="Seleccionar organizaciones..."
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button
