@@ -96,6 +96,19 @@ export interface ApiUser {
   organizations: ApiOrgMembership[];
 }
 
+// --- Admin User Management DTOs ---
+
+export interface ApiPaginatedUsersResponse {
+  users: ApiUser[];
+  count: number;
+}
+
+export interface ApiAdminUserUpdate {
+  full_name?: string;
+  status?: ApiAccountStatus;
+  is_platform_admin?: boolean;
+}
+
 // --- Journey & Steps DTOs ---
 
 export type ApiStepType =
