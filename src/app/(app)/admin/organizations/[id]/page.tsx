@@ -34,13 +34,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowLeft, Users, UserPlus, Loader2, Trash2, Mail } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Loader2, Trash2, Mail, Shield, ShieldOff } from 'lucide-react';
 
 const ROLES: { value: ApiMemberRole; label: string }[] = [
   { value: 'owner', label: 'Owner' },
   { value: 'admin', label: 'Admin' },
   { value: 'facilitador', label: 'Facilitador' },
   { value: 'participante', label: 'Participante' },
+];
+
+const STATUSES: { value: ApiMembershipStatus; label: string }[] = [
+  { value: 'active', label: 'Activo' },
+  { value: 'invited', label: 'Invitado' },
+  { value: 'suspended', label: 'Suspendido' },
+  { value: 'inactive', label: 'Inactivo' },
 ];
 
 const STATUS_COLORS: Record<ApiMembershipStatus, string> = {
@@ -58,9 +65,11 @@ export default function OrganizationMembersPage() {
   const [organization, setOrganization] = useState<ApiOrganization | null>(null);
   const [members, setMembers] = useState<ApiMemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
 
   // Invite form
   const [inviteEmail, setInviteEmail] = useState('');
@@ -86,8 +95,10 @@ export default function OrganizationMembersPage() {
       ]);
       setOrganization(org);
       setMembers(membersList);
+      setError(null);
     } catch (err) {
       console.error('Error loading organization data:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar datos');
     } finally {
       setLoading(false);
     }
@@ -106,8 +117,10 @@ export default function OrganizationMembersPage() {
       setInviteDialogOpen(false);
       setInviteEmail('');
       setInviteRole('participante');
+      setError(null);
     } catch (err) {
       console.error('Error inviting member:', err);
+      setError(err instanceof Error ? err.message : 'Error al invitar miembro');
     } finally {
       setInviting(false);
     }
@@ -120,6 +133,7 @@ export default function OrganizationMembersPage() {
       setMembers(prev => prev.map(m => m.id === memberId ? updated : m));
     } catch (err) {
       console.error('Error updating member:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar rol');
     }
   };
 
@@ -130,6 +144,20 @@ export default function OrganizationMembersPage() {
       setMembers(prev => prev.map(m => m.id === memberId ? updated : m));
     } catch (err) {
       console.error('Error updating member:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar estado');
+    }
+  };
+
+  const handleTogglePlatformAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    setTogglingAdminId(userId);
+    try {
+      await organizationService.setPlatformAdmin(userId, !currentIsAdmin);
+      await loadData();
+    } catch (err) {
+      console.error('Error toggling platform admin:', err);
+      setError(err instanceof Error ? err.message : 'Error al cambiar permisos de admin');
+    } finally {
+      setTogglingAdminId(null);
     }
   };
 
@@ -143,6 +171,7 @@ export default function OrganizationMembersPage() {
       setMembers(prev => prev.filter(m => m.id !== memberId));
     } catch (err) {
       console.error('Error removing member:', err);
+      setError(err instanceof Error ? err.message : 'Error al remover miembro');
     } finally {
       setRemovingId(null);
     }
@@ -185,6 +214,14 @@ export default function OrganizationMembersPage() {
           <p className="text-slate-500">{organization.slug} - Gestion de miembros</p>
         </div>
       </div>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-4">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -278,7 +315,7 @@ export default function OrganizationMembersPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{member.user?.full_name || 'Sin nombre'}</div>
-                        <div className="text-sm text-slate-500">{member.user?.email}</div>
+                        <div className="text-sm text-slate-500">{member.user?.email || member.user_id}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -301,16 +338,19 @@ export default function OrganizationMembersPage() {
                         value={member.status}
                         onValueChange={(v: ApiMembershipStatus) => handleUpdateStatus(member.id, v)}
                       >
-                        <SelectTrigger className="w-[130px]">
-                          <Badge className={STATUS_COLORS[member.status]}>
-                            {member.status}
-                          </Badge>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue>
+                            <Badge className={STATUS_COLORS[member.status]}>
+                              {STATUSES.find(s => s.value === member.status)?.label || member.status}
+                            </Badge>
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="invited">Invited</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
+                          {STATUSES.map(s => (
+                            <SelectItem key={s.value} value={s.value}>
+                              <Badge className={STATUS_COLORS[s.value]}>{s.label}</Badge>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -320,19 +360,43 @@ export default function OrganizationMembersPage() {
                         : 'Pendiente'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleRemove(member.id)}
-                        disabled={removingId === member.id}
-                      >
-                        {removingId === member.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title={
+                            member.user_id === user?.id
+                              ? 'No puedes cambiarte a ti mismo'
+                              : member.user?.is_platform_admin
+                                ? 'Quitar Platform Admin'
+                                : 'Hacer Platform Admin'
+                          }
+                          onClick={() => handleTogglePlatformAdmin(member.user_id, !!member.user?.is_platform_admin)}
+                          disabled={togglingAdminId === member.user_id || member.user_id === user?.id}
+                        >
+                          {togglingAdminId === member.user_id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : member.user?.is_platform_admin ? (
+                            <Shield className="h-4 w-4 text-teal-600" />
+                          ) : (
+                            <ShieldOff className="h-4 w-4 text-slate-400" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleRemove(member.id)}
+                          disabled={removingId === member.id}
+                        >
+                          {removingId === member.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

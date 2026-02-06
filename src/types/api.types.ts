@@ -203,6 +203,7 @@ export interface ApiMemberResponse {
     id: string;
     email: string;
     full_name?: string | null;
+    is_platform_admin?: boolean;
   };
 }
 

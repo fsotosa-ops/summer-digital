@@ -48,6 +48,12 @@ class OrganizationService {
   async removeMember(orgId: string, memberId: string): Promise<void> {
     await apiClient.delete(`/auth/organizations/${orgId}/members/${memberId}`);
   }
+
+  // --- User Admin ---
+
+  async setPlatformAdmin(userId: string, isAdmin: boolean): Promise<void> {
+    await apiClient.patch(`/auth/users/${userId}/admin`, { is_platform_admin: isAdmin });
+  }
 }
 
 export const organizationService = new OrganizationService();
