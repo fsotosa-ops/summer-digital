@@ -56,6 +56,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           router.push('/login');
         }
       });
+    } else {
+      router.push('/login');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
-import { ApiJourneyAdminRead, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiJourneyOrganizationRead } from '@/types/api.types';
+import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,9 +35,10 @@ import {
   BookOpen,
   Globe,
   Archive,
+  Check,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MultiSelect } from '@/components/ui/multi-select';
 import {
   DndContext,
   closestCenter,
@@ -64,6 +65,34 @@ const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.Elemen
   { value: 'social_interaction', label: 'Interacción / Feedback', icon: MessageSquare },
   { value: 'resource_consumption', label: 'Artículo / Recurso', icon: BookOpen },
 ];
+
+function generateSlug(title: string) {
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getVideoEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // YouTube
+  let match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  // Vimeo
+  match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (match) return `https://player.vimeo.com/video/${match[1]}`;
+  return null;
+}
+
+function getTypeformEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // https://form.typeform.com/to/XXXXX or https://XXXXX.typeform.com/to/XXXXX
+  const match = url.match(/typeform\.com\/to\/([a-zA-Z0-9]+)/);
+  if (match) return url;
+  return null;
+}
 
 function getStepIcon(type: ApiStepType) {
   const option = STEP_TYPE_OPTIONS.find(o => o.value === type);
@@ -176,10 +205,9 @@ export default function JourneyEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Organization management
-  const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
-  const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
-  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+  // Inline title editing
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
 
   // Derive orgId: for SuperAdmins without membership, use journey's org
   const orgId = user?.organizationId || journey?.organization_id;
@@ -210,28 +238,6 @@ export default function JourneyEditorPage() {
       setError(err instanceof Error ? err.message : 'Error al cargar datos');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchOrganizations = async () => {
-    setIsLoadingOrgs(true);
-    try {
-      const [orgs, journeyOrgsResponse] = await Promise.all([
-        organizationService.listMyOrganizations(),
-        adminService.getJourneyOrganizations(journeyId).catch(() => ({ journey_id: journeyId, organizations: [], total: 0 })),
-      ]);
-      // Prioritize fundacion-summer as parent org
-      const sorted = [...orgs].sort((a, b) => {
-        if (a.slug === 'fundacion-summer') return -1;
-        if (b.slug === 'fundacion-summer') return 1;
-        return 0;
-      });
-      setAllOrgs(sorted);
-      setAssignedOrgIds(journeyOrgsResponse.organizations.map((o: ApiJourneyOrganizationRead) => o.organization_id));
-    } catch (err) {
-      console.error('Error loading organizations:', err);
-    } finally {
-      setIsLoadingOrgs(false);
     }
   };
 
@@ -270,14 +276,6 @@ export default function JourneyEditorPage() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId, user?.organizationId]);
-
-  // Load orgs after journey is available (for SuperAdmin)
-  useEffect(() => {
-    if (user?.role === 'SuperAdmin' && journey) {
-      fetchOrganizations();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journey?.id, user?.role]);
 
   const openCreateDialog = () => {
     setEditingStep(null);
@@ -368,26 +366,22 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleOrgAccessChange = async (newOrgIds: string[]) => {
-    const prev = assignedOrgIds;
-    // Compute diff
-    const toAssign = newOrgIds.filter((id) => !prev.includes(id));
-    const toUnassign = prev.filter((id) => !newOrgIds.includes(id));
-
-    // Optimistic update
-    setAssignedOrgIds(newOrgIds);
-
+  const handleSaveTitle = async () => {
+    if (!orgId || !journey || !editTitle.trim() || editTitle === journey.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    setIsSaving(true);
     try {
-      if (toAssign.length > 0) {
-        await adminService.assignJourneyOrganizations(journeyId, toAssign);
-      }
-      if (toUnassign.length > 0) {
-        await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
-      }
+      const newTitle = editTitle.trim();
+      const newSlug = generateSlug(newTitle);
+      await adminService.updateJourney(orgId, journeyId, { title: newTitle, slug: newSlug } as ApiJourneyUpdate);
+      setJourney({ ...journey, title: newTitle, slug: newSlug });
+      setIsEditingTitle(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al actualizar organizaciones');
-      // Revert on error
-      setAssignedOrgIds(prev);
+      setError(err instanceof Error ? err.message : 'Error al actualizar título');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -433,7 +427,37 @@ export default function JourneyEditorPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">{journey?.title}</h1>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveTitle();
+                    if (e.key === 'Escape') setIsEditingTitle(false);
+                  }}
+                  className="text-2xl font-bold h-10 w-80"
+                  autoFocus
+                />
+                <Button variant="ghost" size="icon" onClick={handleSaveTitle} disabled={isSaving} className="h-8 w-8">
+                  <Check className="h-4 w-4 text-green-600" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsEditingTitle(false)} className="h-8 w-8">
+                  <X className="h-4 w-4 text-slate-400" />
+                </Button>
+              </div>
+            ) : (
+              <h1
+                className={cn(
+                  'text-2xl font-bold text-slate-900',
+                  isSuperAdmin && 'cursor-pointer hover:text-slate-600 transition-colors'
+                )}
+                onClick={isSuperAdmin ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
+                title={isSuperAdmin ? 'Click para editar' : undefined}
+              >
+                {journey?.title}
+              </h1>
+            )}
             <Badge variant={journey?.is_active ? 'default' : 'outline'}>
               {journey?.is_active ? 'Activo' : 'Borrador'}
             </Badge>
@@ -469,33 +493,6 @@ export default function JourneyEditorPage() {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-4">
             <p className="text-red-600">{error}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Organization Access Management (SuperAdmin only) */}
-      {user?.role === 'SuperAdmin' && allOrgs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Organizaciones con acceso</CardTitle>
-            <CardDescription>
-              Gestiona que organizaciones pueden acceder a este journey.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MultiSelect
-              options={allOrgs
-                .filter((o) => o.id !== journey?.organization_id)
-                .map((o) => ({ value: o.id, label: o.name }))}
-              selected={assignedOrgIds.filter((id) => id !== journey?.organization_id)}
-              onChange={(selected) => handleOrgAccessChange([...selected, ...(journey?.organization_id ? [journey.organization_id] : [])])}
-              placeholder="Seleccionar organizaciones adicionales..."
-            />
-            {journey?.organization_id && (
-              <p className="text-xs text-slate-500 mt-2">
-                La organizacion owner siempre tiene acceso.
-              </p>
-            )}
           </CardContent>
         </Card>
       )}
@@ -711,12 +708,22 @@ export default function JourneyEditorPage() {
                   }
                   placeholder="https://form.typeform.com/to/..."
                 />
+                {getTypeformEmbedUrl((stepForm.config?.form_url as string) || '') && (
+                  <div className="rounded-lg overflow-hidden border border-slate-200">
+                    <iframe
+                      src={getTypeformEmbedUrl((stepForm.config?.form_url as string) || '') || ''}
+                      className="w-full h-[300px]"
+                      frameBorder="0"
+                      allow="camera; microphone; autoplay; encrypted-media;"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
             {stepForm.type === 'content_view' && (
               <div className="space-y-2">
-                <Label htmlFor="step-video">URL del video</Label>
+                <Label htmlFor="step-video">URL del video (YouTube, Vimeo)</Label>
                 <Input
                   id="step-video"
                   value={(stepForm.config?.video_url as string) || ''}
@@ -726,8 +733,19 @@ export default function JourneyEditorPage() {
                       config: { ...stepForm.config, video_url: e.target.value },
                     })
                   }
-                  placeholder="https://youtube.com/..."
+                  placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
                 />
+                {getVideoEmbedUrl((stepForm.config?.video_url as string) || '') && (
+                  <div className="rounded-lg overflow-hidden border border-slate-200">
+                    <iframe
+                      src={getVideoEmbedUrl((stepForm.config?.video_url as string) || '') || ''}
+                      className="w-full aspect-video"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
               </div>
             )}
 
