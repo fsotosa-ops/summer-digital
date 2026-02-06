@@ -79,10 +79,12 @@ function SortableStepItem({
   step,
   onEdit,
   onDelete,
+  readOnly = false,
 }: {
   step: ApiStepAdminRead;
   onEdit: (step: ApiStepAdminRead) => void;
   onDelete: (stepId: string) => void;
+  readOnly?: boolean;
 }) {
   const {
     attributes,
@@ -91,7 +93,7 @@ function SortableStepItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: step.id });
+  } = useSortable({ id: step.id, disabled: readOnly });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -109,14 +111,16 @@ function SortableStepItem({
         isDragging && 'opacity-50 shadow-lg border-teal-300 z-50'
       )}
     >
-      <button
-        type="button"
-        className="text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing touch-none"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing touch-none"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+      )}
 
       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
         <Icon className="h-4 w-4" />
@@ -132,23 +136,27 @@ function SortableStepItem({
           {step.gamification_rules?.base_points || 0} pts
         </Badge>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(step)}
-          className="h-8 w-8"
-        >
-          <Edit2 className="h-4 w-4" />
-        </Button>
+        {!readOnly && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(step)}
+              className="h-8 w-8"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(step.id)}
-          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(step.id)}
+              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -159,6 +167,8 @@ export default function JourneyEditorPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const journeyId = params.id as string;
+
+  const isSuperAdmin = user?.role === 'SuperAdmin';
 
   const [journey, setJourney] = useState<ApiJourneyAdminRead | null>(null);
   const [steps, setSteps] = useState<ApiStepAdminRead[]>([]);
@@ -210,7 +220,13 @@ export default function JourneyEditorPage() {
         organizationService.listMyOrganizations(),
         adminService.getJourneyOrganizations(journeyId).catch(() => ({ journey_id: journeyId, organizations: [], total: 0 })),
       ]);
-      setAllOrgs(orgs);
+      // Prioritize fundacion-summer as parent org
+      const sorted = [...orgs].sort((a, b) => {
+        if (a.slug === 'fundacion-summer') return -1;
+        if (b.slug === 'fundacion-summer') return 1;
+        return 0;
+      });
+      setAllOrgs(sorted);
       setAssignedOrgIds(journeyOrgsResponse.organizations.map((o: ApiJourneyOrganizationRead) => o.organization_id));
     } catch (err) {
       console.error('Error loading organizations:', err);
@@ -424,6 +440,7 @@ export default function JourneyEditorPage() {
           </div>
           <p className="text-slate-500">{journey?.description || 'Sin descripción'}</p>
         </div>
+        {isSuperAdmin && (
         <div className="flex items-center gap-2">
           <Button
             variant={journey?.is_active ? 'outline' : 'default'}
@@ -445,6 +462,7 @@ export default function JourneyEditorPage() {
             Agregar Step
           </Button>
         </div>
+        )}
       </div>
 
       {error && (
@@ -487,17 +505,19 @@ export default function JourneyEditorPage() {
         <CardHeader>
           <CardTitle>Roadmap del Journey</CardTitle>
           <CardDescription>
-            Visualiza y edita los steps. Arrastra para reordenar.
+            {isSuperAdmin ? 'Visualiza y edita los steps. Arrastra para reordenar.' : 'Visualiza los steps del journey.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {steps.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <p>No hay steps en este journey.</p>
-              <Button onClick={openCreateDialog} variant="outline" className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Crear primer step
-              </Button>
+              {isSuperAdmin && (
+                <Button onClick={openCreateDialog} variant="outline" className="mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear primer step
+                </Button>
+              )}
             </div>
           ) : (
             <div className="relative">
@@ -542,16 +562,19 @@ export default function JourneyEditorPage() {
                   return (
                     <div
                       key={step.id}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10 cursor-pointer group"
+                      className={cn(
+                        'absolute transform -translate-x-1/2 -translate-y-1/2 z-10 group',
+                        isSuperAdmin && 'cursor-pointer'
+                      )}
                       style={{ left: `${x}%`, top: '50%' }}
-                      onClick={() => openEditDialog(step)}
+                      onClick={isSuperAdmin ? () => openEditDialog(step) : undefined}
                     >
                       {/* Node Circle */}
                       <div
                         className={cn(
                           'w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all',
                           'bg-white border-2 border-slate-300 text-slate-600',
-                          'group-hover:border-teal-500 group-hover:shadow-teal-100 group-hover:scale-110'
+                          isSuperAdmin && 'group-hover:border-teal-500 group-hover:shadow-teal-100 group-hover:scale-110'
                         )}
                       >
                         <Icon className="h-6 w-6" />
@@ -570,11 +593,13 @@ export default function JourneyEditorPage() {
                       </div>
 
                       {/* Hover Edit Icon */}
+                      {isSuperAdmin && (
                       <div className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center">
                           <Edit2 className="h-3 w-3" />
                         </div>
                       </div>
+                      )}
                     </div>
                   );
                 })}
@@ -597,6 +622,7 @@ export default function JourneyEditorPage() {
                         step={step}
                         onEdit={openEditDialog}
                         onDelete={handleDeleteStep}
+                        readOnly={!isSuperAdmin}
                       />
                     ))}
                   </SortableContext>

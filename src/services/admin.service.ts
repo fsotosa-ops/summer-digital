@@ -15,8 +15,11 @@ import {
 class AdminService {
   // --- Journey Management ---
 
-  async listJourneys(orgId: string): Promise<ApiJourneyAdminRead[]> {
-    return apiClient.get<ApiJourneyAdminRead[]>(`/journeys/${orgId}/admin/journeys`);
+  async listJourneys(orgId: string, isActive?: boolean | null): Promise<ApiJourneyAdminRead[]> {
+    const params = new URLSearchParams();
+    if (isActive !== undefined && isActive !== null) params.set('is_active', String(isActive));
+    const qs = params.toString();
+    return apiClient.get<ApiJourneyAdminRead[]>(`/journeys/${orgId}/admin/journeys${qs ? `?${qs}` : ''}`);
   }
 
   async getJourney(orgId: string, journeyId: string): Promise<ApiJourneyAdminRead> {

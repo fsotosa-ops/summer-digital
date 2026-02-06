@@ -32,7 +32,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', href: '/dashboard', icon: Home, allowedRoles: ['Subscriber', 'Participant', 'Admin', 'SuperAdmin'] },
-  { label: 'Mi Viaje', href: '/journey', icon: MapIcon, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },
+  { label: 'Mi Viaje', href: '/journey', icon: MapIcon, allowedRoles: ['Participant'] },
   { label: 'Actividades Abiertas', href: '/open-activities', icon: Layout, allowedRoles: ['Subscriber'] },
   { label: 'Recursos', href: '/resources', icon: BookOpen, allowedRoles: ['Subscriber', 'Participant', 'Admin', 'SuperAdmin'] },
   { label: 'Mi Perfil', href: '/profile', icon: User, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },

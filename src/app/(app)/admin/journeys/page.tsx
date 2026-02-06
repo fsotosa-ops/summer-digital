@@ -36,6 +36,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
 
 export default function AdminJourneysPage() {
@@ -49,6 +50,7 @@ export default function AdminJourneysPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
 
   // Form state
   const [formData, setFormData] = useState<ApiJourneyCreate>({
@@ -61,7 +63,7 @@ export default function AdminJourneysPage() {
   const [accessOrgIds, setAccessOrgIds] = useState<string[]>([]);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
-  const orgId = selectedOrgId || user?.organizationId;
+  const orgId = isSuperAdmin ? selectedOrgId : user?.organizationId;
 
   // Load organizations for SuperAdmin
   useEffect(() => {
@@ -72,10 +74,16 @@ export default function AdminJourneysPage() {
       }
       try {
         const orgs = await organizationService.listMyOrganizations();
-        setOrganizations(orgs);
-        // Auto-select first org if none selected
-        if (orgs.length > 0 && !selectedOrgId) {
-          setSelectedOrgId(orgs[0].id);
+        // Prioritize fundacion-summer as parent org
+        const sorted = [...orgs].sort((a, b) => {
+          if (a.slug === 'fundacion-summer') return -1;
+          if (b.slug === 'fundacion-summer') return 1;
+          return 0;
+        });
+        setOrganizations(sorted);
+        // Auto-select fundacion-summer (or first) if none selected
+        if (sorted.length > 0 && !selectedOrgId) {
+          setSelectedOrgId(sorted[0].id);
         }
       } catch (err) {
         console.error('Error loading organizations:', err);
@@ -90,7 +98,8 @@ export default function AdminJourneysPage() {
     if (!orgId) return;
     setIsLoading(true);
     try {
-      const data = await adminService.listJourneys(orgId);
+      const isActive = statusFilter === 'all' ? null : statusFilter === 'active';
+      const data = await adminService.listJourneys(orgId, isActive);
       setJourneys(data);
       setError(null);
     } catch (err) {
@@ -105,7 +114,7 @@ export default function AdminJourneysPage() {
       fetchJourneys();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, isLoadingOrgs]);
+  }, [orgId, isLoadingOrgs, statusFilter]);
 
   const generateSlug = (title: string) => {
     return title
@@ -126,14 +135,16 @@ export default function AdminJourneysPage() {
 
   const handleCreateJourney = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgId) return;
+    if (accessOrgIds.length === 0) return;
+
+    const [ownerOrgId, ...extraOrgIds] = accessOrgIds;
 
     setIsCreating(true);
     try {
-      const newJourney = await adminService.createJourney(orgId, formData);
-      // Assign additional organizations if selected
-      if (accessOrgIds.length > 0) {
-        await adminService.assignJourneyOrganizations(newJourney.id, accessOrgIds);
+      const newJourney = await adminService.createJourney(ownerOrgId, formData);
+      // Assign extra organizations (owner is auto-assigned by backend)
+      if (extraOrgIds.length > 0) {
+        await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
       }
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
@@ -186,7 +197,9 @@ export default function AdminJourneysPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Gestion de Journeys</h1>
-          <p className="text-slate-500">Crea y administra los viajes de aprendizaje</p>
+          <p className="text-slate-500">
+            {isSuperAdmin ? 'Crea y administra los viajes de aprendizaje' : 'Viajes de aprendizaje asignados a tu organizacion'}
+          </p>
         </div>
         <div className="flex items-center gap-4">
           {/* Organization Selector for SuperAdmin */}
@@ -207,6 +220,7 @@ export default function AdminJourneysPage() {
               </Select>
             </div>
           )}
+          {isSuperAdmin && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-slate-900 hover:bg-slate-800">
@@ -267,17 +281,15 @@ export default function AdminJourneysPage() {
                 />
               </div>
 
-              {/* Organization access selector (only for SuperAdmin with multiple orgs) */}
-              {isSuperAdmin && organizations.length > 1 && (
+              {/* Organization access selector */}
+              {isSuperAdmin && organizations.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Organizaciones con acceso</Label>
+                  <Label>Organizaciones con acceso <span className="text-red-500">*</span></Label>
                   <p className="text-xs text-slate-500">
-                    La organizacion owner ya tiene acceso. Selecciona organizaciones adicionales.
+                    Selecciona las organizaciones que tendran acceso a este journey.
                   </p>
                   <MultiSelect
-                    options={organizations
-                      .filter((o) => o.id !== selectedOrgId)
-                      .map((o) => ({ value: o.id, label: o.name }))}
+                    options={organizations.map((o) => ({ value: o.id, label: o.name }))}
                     selected={accessOrgIds}
                     onChange={setAccessOrgIds}
                     placeholder="Seleccionar organizaciones..."
@@ -294,7 +306,7 @@ export default function AdminJourneysPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isCreating}>
+                <Button type="submit" disabled={isCreating || accessOrgIds.length === 0}>
                   {isCreating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -308,7 +320,30 @@ export default function AdminJourneysPage() {
             </form>
           </DialogContent>
         </Dialog>
+          )}
         </div>
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg w-fit">
+        {([
+          { key: 'all' as const, label: 'Todos' },
+          { key: 'active' as const, label: 'Activos' },
+          { key: 'draft' as const, label: 'Borradores' },
+        ]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            className={cn(
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              statusFilter === key
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Show message if no org selected for SuperAdmin */}
@@ -340,7 +375,9 @@ export default function AdminJourneysPage() {
           <CardHeader className="text-center">
             <CardTitle>No hay journeys</CardTitle>
             <CardDescription>
-              Crea tu primer journey para empezar a diseñar experiencias de aprendizaje.
+              {isSuperAdmin
+                ? 'Crea tu primer journey para empezar a diseñar experiencias de aprendizaje.'
+                : 'No hay journeys asignados a tu organizacion.'}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -355,7 +392,7 @@ export default function AdminJourneysPage() {
                 <TableHead className="text-center">Steps</TableHead>
                 <TableHead className="text-center">Inscritos</TableHead>
                 <TableHead className="text-center">Completados</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                {isSuperAdmin && <TableHead className="text-right">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -393,6 +430,7 @@ export default function AdminJourneysPage() {
                       </span>
                     )}
                   </TableCell>
+                  {isSuperAdmin && (
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button
@@ -426,6 +464,7 @@ export default function AdminJourneysPage() {
                       </Button>
                     </div>
                   </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
