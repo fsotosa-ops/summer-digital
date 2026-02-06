@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Plus, Users, Loader2, Trash2, Settings } from 'lucide-react';
+import { Building2, Plus, Users, Loader2, Trash2 } from 'lucide-react';
 
 const ORG_TYPES: { value: ApiOrgType; label: string }[] = [
   { value: 'community', label: 'Comunidad' },
@@ -300,13 +300,6 @@ export default function AdminOrganizationsPage() {
                         >
                           <Users className="h-4 w-4 mr-1" />
                           Miembros
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/admin/organizations/${org.id}/settings`)}
-                        >
-                          <Settings className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
