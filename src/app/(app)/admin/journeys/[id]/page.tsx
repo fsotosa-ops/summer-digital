@@ -37,6 +37,7 @@ import {
   Archive,
   Check,
   X,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -464,8 +465,17 @@ export default function JourneyEditorPage() {
           </div>
           <p className="text-slate-500">{journey?.description || 'Sin descripción'}</p>
         </div>
-        {isSuperAdmin && (
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
+            disabled={steps.length === 0}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Vista Previa
+          </Button>
+        {isSuperAdmin && (
+        <>
           <Button
             variant={journey?.is_active ? 'outline' : 'default'}
             onClick={handleToggleActive}
@@ -485,8 +495,9 @@ export default function JourneyEditorPage() {
             <Plus className="h-4 w-4 mr-2" />
             Agregar Step
           </Button>
-        </div>
+        </>
         )}
+        </div>
       </div>
 
       {error && (

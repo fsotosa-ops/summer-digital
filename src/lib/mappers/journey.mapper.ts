@@ -1,5 +1,5 @@
 import { Journey, JourneyNode, NodeType, NodeStatus } from '@/types';
-import { ApiEnrollment, ApiJourney, ApiStepProgress, ApiStepType } from '@/types/api.types';
+import { ApiEnrollment, ApiJourney, ApiJourneyAdminRead, ApiStepAdminRead, ApiStepProgress, ApiStepType } from '@/types/api.types';
 
 const STEP_TYPE_TO_NODE_TYPE: Record<ApiStepType, NodeType> = {
   survey: 'typeform',
@@ -87,6 +87,50 @@ export function mapApiToJourney(
     status: enrollment.status === 'completed' ? 'completed' : 'active',
     category: journey.category || undefined,
     progress: enrollment.progress_percentage,
+    nodes,
+  };
+}
+
+// For admin preview: transforms admin data to participant-like Journey for preview simulation
+export function mapAdminDataToPreviewJourney(
+  journey: ApiJourneyAdminRead,
+  steps: ApiStepAdminRead[]
+): Journey {
+  const sortedSteps = [...steps].sort((a, b) => a.order_index - b.order_index);
+  const total = sortedSteps.length;
+
+  const nodes: JourneyNode[] = sortedSteps.map((step, index) => {
+    const config = step.config || {};
+    const nodeType = mapStepTypeToNodeType(step.type, config);
+    const { x, y } = generateCoordinates(index, total);
+
+    const connections: string[] = index < total - 1 ? [sortedSteps[index + 1].id] : [];
+
+    const description = (config.description as string) || step.title;
+    const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
+    const videoUrl = (config.video_url as string) || undefined;
+
+    return {
+      id: step.id,
+      title: step.title,
+      description,
+      type: nodeType,
+      status: index === 0 ? 'available' : 'locked' as NodeStatus,
+      x,
+      y,
+      connections,
+      externalUrl,
+      videoUrl,
+    };
+  });
+
+  return {
+    id: journey.id,
+    title: journey.title,
+    description: journey.description || '',
+    status: 'active',
+    category: journey.category || undefined,
+    progress: 0,
     nodes,
   };
 }
