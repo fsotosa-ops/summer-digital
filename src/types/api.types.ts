@@ -212,6 +212,34 @@ export interface ApiMemberUpdate {
   status?: ApiMembershipStatus | null;
 }
 
+export interface ApiMemberAdd {
+  email: string;
+  role?: ApiMemberRole;
+}
+
+export interface ApiBulkMemberItem {
+  email: string;
+  role?: ApiMemberRole;
+}
+
+export interface ApiBulkMemberAdd {
+  members: ApiBulkMemberItem[];
+}
+
+export interface ApiBulkMemberResultItem {
+  email: string;
+  success: boolean;
+  error?: string | null;
+  member?: ApiMemberResponse | null;
+}
+
+export interface ApiBulkMemberAddResponse {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: ApiBulkMemberResultItem[];
+}
+
 // --- Admin Step DTOs ---
 
 export interface ApiStepAdminRead {

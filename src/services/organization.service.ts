@@ -6,6 +6,9 @@ import {
   ApiMemberResponse,
   ApiMemberUpdate,
   ApiMemberInvite,
+  ApiMemberAdd,
+  ApiBulkMemberAdd,
+  ApiBulkMemberAddResponse,
 } from '@/types/api.types';
 
 class OrganizationService {
@@ -47,6 +50,14 @@ class OrganizationService {
 
   async removeMember(orgId: string, memberId: string): Promise<void> {
     await apiClient.delete(`/auth/organizations/${orgId}/members/${memberId}`);
+  }
+
+  async addMember(orgId: string, data: ApiMemberAdd): Promise<ApiMemberResponse> {
+    return apiClient.post<ApiMemberResponse>(`/auth/organizations/${orgId}/members/add`, data);
+  }
+
+  async bulkAddMembers(orgId: string, data: ApiBulkMemberAdd): Promise<ApiBulkMemberAddResponse> {
+    return apiClient.post<ApiBulkMemberAddResponse>(`/auth/organizations/${orgId}/members/bulk`, data);
   }
 
   // --- User Admin ---
