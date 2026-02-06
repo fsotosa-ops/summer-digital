@@ -19,7 +19,7 @@ class UserService {
       params.set('search', search);
     }
     return apiClient.get<ApiPaginatedUsersResponse>(
-      `/auth/users?${params.toString()}`,
+      `/auth/users/?${params.toString()}`, 
     );
   }
 
