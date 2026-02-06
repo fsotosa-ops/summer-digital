@@ -117,14 +117,16 @@ export default function OrganizationMembersPage() {
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
+  const isAdmin = user?.role === 'Admin';
+  const canAccess = isSuperAdmin || (isAdmin && user?.organizationId === orgId);
 
   useEffect(() => {
-    if (!isSuperAdmin) {
+    if (!canAccess) {
       router.push('/dashboard');
       return;
     }
     loadData();
-  }, [orgId, isSuperAdmin, router]);
+  }, [orgId, canAccess, router]);
 
   const loadData = async () => {
     if (!orgId) return;
@@ -302,7 +304,7 @@ export default function OrganizationMembersPage() {
     }
   };
 
-  if (!isSuperAdmin) {
+  if (!canAccess) {
     return null;
   }
 
@@ -328,7 +330,7 @@ export default function OrganizationMembersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/organizations')}>
+        <Button variant="ghost" size="icon" onClick={() => router.push(isSuperAdmin ? '/admin/organizations' : '/admin/journeys')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
@@ -717,6 +719,7 @@ export default function OrganizationMembersPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {isSuperAdmin && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -739,6 +742,7 @@ export default function OrganizationMembersPage() {
                             <ShieldOff className="h-4 w-4 text-slate-400" />
                           )}
                         </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

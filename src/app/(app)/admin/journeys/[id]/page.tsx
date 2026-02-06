@@ -199,6 +199,7 @@ export default function JourneyEditorPage() {
   const journeyId = params.id as string;
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
+  const canEdit = isSuperAdmin || user?.role === 'Admin';
 
   const [journey, setJourney] = useState<ApiJourneyAdminRead | null>(null);
   const [steps, setSteps] = useState<ApiStepAdminRead[]>([]);
@@ -451,10 +452,10 @@ export default function JourneyEditorPage() {
               <h1
                 className={cn(
                   'text-2xl font-bold text-slate-900',
-                  isSuperAdmin && 'cursor-pointer hover:text-slate-600 transition-colors'
+                  canEdit && 'cursor-pointer hover:text-slate-600 transition-colors'
                 )}
-                onClick={isSuperAdmin ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
-                title={isSuperAdmin ? 'Click para editar' : undefined}
+                onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
+                title={canEdit ? 'Click para editar' : undefined}
               >
                 {journey?.title}
               </h1>
@@ -474,7 +475,7 @@ export default function JourneyEditorPage() {
             <Eye className="h-4 w-4 mr-2" />
             Vista Previa
           </Button>
-        {isSuperAdmin && (
+        {canEdit && (
         <>
           <Button
             variant={journey?.is_active ? 'outline' : 'default'}
@@ -513,14 +514,14 @@ export default function JourneyEditorPage() {
         <CardHeader>
           <CardTitle>Roadmap del Journey</CardTitle>
           <CardDescription>
-            {isSuperAdmin ? 'Visualiza y edita los steps. Arrastra para reordenar.' : 'Visualiza los steps del journey.'}
+            {canEdit ? 'Visualiza y edita los steps. Arrastra para reordenar.' : 'Visualiza los steps del journey.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {steps.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <p>No hay steps en este journey.</p>
-              {isSuperAdmin && (
+              {canEdit && (
                 <Button onClick={openCreateDialog} variant="outline" className="mt-4">
                   <Plus className="h-4 w-4 mr-2" />
                   Crear primer step
@@ -572,17 +573,17 @@ export default function JourneyEditorPage() {
                       key={step.id}
                       className={cn(
                         'absolute transform -translate-x-1/2 -translate-y-1/2 z-10 group',
-                        isSuperAdmin && 'cursor-pointer'
+                        canEdit && 'cursor-pointer'
                       )}
                       style={{ left: `${x}%`, top: '50%' }}
-                      onClick={isSuperAdmin ? () => openEditDialog(step) : undefined}
+                      onClick={canEdit ? () => openEditDialog(step) : undefined}
                     >
                       {/* Node Circle */}
                       <div
                         className={cn(
                           'w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all',
                           'bg-white border-2 border-slate-300 text-slate-600',
-                          isSuperAdmin && 'group-hover:border-teal-500 group-hover:shadow-teal-100 group-hover:scale-110'
+                          canEdit && 'group-hover:border-teal-500 group-hover:shadow-teal-100 group-hover:scale-110'
                         )}
                       >
                         <Icon className="h-6 w-6" />
@@ -601,7 +602,7 @@ export default function JourneyEditorPage() {
                       </div>
 
                       {/* Hover Edit Icon */}
-                      {isSuperAdmin && (
+                      {canEdit && (
                       <div className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center">
                           <Edit2 className="h-3 w-3" />
@@ -630,7 +631,7 @@ export default function JourneyEditorPage() {
                         step={step}
                         onEdit={openEditDialog}
                         onDelete={handleDeleteStep}
-                        readOnly={!isSuperAdmin}
+                        readOnly={!canEdit}
                       />
                     ))}
                   </SortableContext>

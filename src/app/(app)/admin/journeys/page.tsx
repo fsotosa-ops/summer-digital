@@ -63,6 +63,7 @@ export default function AdminJourneysPage() {
   const [accessOrgIds, setAccessOrgIds] = useState<string[]>([]);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
+  const canEdit = isSuperAdmin || user?.role === 'Admin';
   const orgId = isSuperAdmin ? selectedOrgId : user?.organizationId;
 
   // Load organizations for SuperAdmin
@@ -135,9 +136,12 @@ export default function AdminJourneysPage() {
 
   const handleCreateJourney = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (accessOrgIds.length === 0) return;
 
-    const [ownerOrgId, ...extraOrgIds] = accessOrgIds;
+    // Admin uses their own org; SuperAdmin uses multi-select
+    const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
+    if (effectiveOrgIds.length === 0) return;
+
+    const [ownerOrgId, ...extraOrgIds] = effectiveOrgIds;
 
     setIsCreating(true);
     try {
@@ -198,7 +202,7 @@ export default function AdminJourneysPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Gestion de Journeys</h1>
           <p className="text-slate-500">
-            {isSuperAdmin ? 'Crea y administra los viajes de aprendizaje' : 'Viajes de aprendizaje asignados a tu organizacion'}
+            {canEdit ? 'Crea y administra los viajes de aprendizaje' : 'Viajes de aprendizaje asignados a tu organizacion'}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -220,7 +224,7 @@ export default function AdminJourneysPage() {
               </Select>
             </div>
           )}
-          {isSuperAdmin && (
+          {canEdit && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-slate-900 hover:bg-slate-800">
@@ -306,7 +310,7 @@ export default function AdminJourneysPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isCreating || accessOrgIds.length === 0}>
+                <Button type="submit" disabled={isCreating || (isSuperAdmin && accessOrgIds.length === 0)}>
                   {isCreating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -375,7 +379,7 @@ export default function AdminJourneysPage() {
           <CardHeader className="text-center">
             <CardTitle>No hay journeys</CardTitle>
             <CardDescription>
-              {isSuperAdmin
+              {canEdit
                 ? 'Crea tu primer journey para empezar a diseñar experiencias de aprendizaje.'
                 : 'No hay journeys asignados a tu organizacion.'}
             </CardDescription>
@@ -392,7 +396,7 @@ export default function AdminJourneysPage() {
                 <TableHead className="text-center">Steps</TableHead>
                 <TableHead className="text-center">Inscritos</TableHead>
                 <TableHead className="text-center">Completados</TableHead>
-                {isSuperAdmin && <TableHead className="text-right">Acciones</TableHead>}
+                {canEdit && <TableHead className="text-right">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -430,7 +434,7 @@ export default function AdminJourneysPage() {
                       </span>
                     )}
                   </TableCell>
-                  {isSuperAdmin && (
+                  {canEdit && (
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button

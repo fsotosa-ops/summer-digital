@@ -37,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Recursos', href: '/resources', icon: BookOpen, allowedRoles: ['Subscriber', 'Participant', 'Admin', 'SuperAdmin'] },
   { label: 'Mi Perfil', href: '/profile', icon: User, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },
   { label: 'Organizaciones', href: '/admin/organizations', icon: Building2, allowedRoles: ['SuperAdmin'] },
+  { label: 'Mi Organización', href: '/admin/my-organization', icon: Building2, allowedRoles: ['Admin'] },
   { label: 'Journeys', href: '/admin/journeys', icon: Route, allowedRoles: ['Admin', 'SuperAdmin'] },
   { label: 'Gestión CRM', href: '/crm', icon: Users, allowedRoles: ['Admin', 'SuperAdmin'] },
   { label: 'Analítica', href: '/analytics', icon: BarChart2, allowedRoles: ['SuperAdmin'] },
