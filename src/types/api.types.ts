@@ -1,0 +1,287 @@
+/**
+ * API DTOs (Data Transfer Objects).
+ *
+ * Estas interfaces reflejan exactamente la estructura de los datos que vienen del Backend.
+ * NO usar estas interfaces directamente en componentes de React; deben ser transformadas
+ * por mappers/adapters a los modelos de dominio de la aplicación antes de su uso.
+ */
+
+// --- Auth DTOs ---
+
+export interface ApiLoginResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: ApiUser;
+}
+
+export interface ApiOAuthUrlResponse {
+  url: string;
+}
+
+export interface ApiRegisterRequest {
+  email: string;
+  password: string;
+  full_name?: string;
+}
+
+export interface ApiPasswordResetRequest {
+  email: string;
+}
+
+// --- Organization DTOs ---
+
+export type ApiOrgType = 'community' | 'provider' | 'sponsor' | 'enterprise';
+
+export interface ApiOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logo_url?: string | null;
+  type: ApiOrgType;
+  settings?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApiOrgCreate {
+  name: string;
+  slug: string;
+  description?: string | null;
+  logo_url?: string | null;
+  type?: ApiOrgType;
+  settings?: Record<string, unknown> | null;
+  owner_user_id?: string | null;
+}
+
+export interface ApiOrgUpdate {
+  name?: string | null;
+  description?: string | null;
+  logo_url?: string | null;
+  settings?: Record<string, unknown> | null;
+}
+
+export interface ApiMemberInvite {
+  email: string;
+  role?: ApiMemberRole;
+}
+
+export type ApiMemberRole = 'owner' | 'admin' | 'facilitador' | 'participante';
+export type ApiMembershipStatus = 'active' | 'invited' | 'suspended' | 'inactive';
+
+export interface ApiOrgMembership {
+  id: string;
+  organization_id: string;
+  role: ApiMemberRole;
+  status: ApiMembershipStatus;
+  joined_at?: string | null;
+  organization_name?: string | null;
+  organization_slug?: string | null;
+}
+
+// --- User DTOs ---
+
+export type ApiAccountStatus = 'active' | 'suspended' | 'pending_verification' | 'deleted';
+
+export interface ApiUser {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  is_platform_admin: boolean;
+  status?: ApiAccountStatus;
+  created_at?: string | null;
+  updated_at?: string | null;
+  organizations: ApiOrgMembership[];
+}
+
+// --- Journey & Steps DTOs ---
+
+export type ApiStepType =
+  | 'survey'
+  | 'event_attendance'
+  | 'content_view'
+  | 'milestone'
+  | 'social_interaction'
+  | 'resource_consumption';
+
+export interface ApiJourneyStep {
+  id: string;
+  journey_id: string;
+  title: string;
+  type: ApiStepType;
+  order_index: number;
+  config: Record<string, unknown>;
+  gamification_rules: Record<string, unknown>;
+}
+
+export interface ApiJourney {
+  id: string;
+  title: string;
+  description?: string | null;
+  organization_id: string;
+  is_active: boolean;
+  category?: string | null;
+  steps?: ApiJourneyStep[];
+}
+
+// --- Enrollment & Progress DTOs ---
+
+export type ApiEnrollmentStatus = 'active' | 'completed' | 'dropped' | string;
+
+export interface ApiEnrollment {
+  id: string;
+  user_id: string;
+  journey_id: string;
+  status: ApiEnrollmentStatus;
+  current_step_index: number;
+  progress_percentage: number;
+  started_at: string;
+  completed_at?: string | null;
+}
+
+export type ApiStepStatus = 'locked' | 'available' | 'completed';
+
+export interface ApiStepProgress {
+  step_id: string;
+  title: string;
+  type: string;
+  order_index: number;
+  status: ApiStepStatus;
+  completed_at?: string | null;
+  points_earned: number;
+}
+
+// --- Admin Journey DTOs ---
+
+export interface ApiJourneyAdminRead {
+  id: string;
+  organization_id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  category?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  total_steps: number;
+  total_enrollments: number;
+  active_enrollments: number;
+  completed_enrollments: number;
+  completion_rate: number;
+}
+
+export interface ApiJourneyCreate {
+  title: string;
+  slug: string;
+  description?: string | null;
+  category?: string | null;
+  is_active?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApiJourneyUpdate {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  category?: string | null;
+  is_active?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+// --- Organization Member DTOs ---
+
+export interface ApiMemberResponse {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: ApiMemberRole;
+  status: ApiMembershipStatus;
+  joined_at?: string | null;
+  user?: {
+    id: string;
+    email: string;
+    full_name?: string | null;
+  };
+}
+
+export interface ApiMemberUpdate {
+  role?: ApiMemberRole | null;
+  status?: ApiMembershipStatus | null;
+}
+
+// --- Admin Step DTOs ---
+
+export interface ApiStepAdminRead {
+  id: string;
+  journey_id: string;
+  title: string;
+  type: ApiStepType;
+  order_index: number;
+  config: Record<string, unknown>;
+  gamification_rules: ApiGamificationRules;
+  created_at: string;
+  updated_at: string;
+  total_completions: number;
+  average_points: number;
+}
+
+export interface ApiGamificationRules {
+  base_points?: number;
+  bonus_rules?: Record<string, unknown>;
+}
+
+export interface ApiStepCreate {
+  title: string;
+  type: ApiStepType;
+  order_index?: number | null;
+  config?: Record<string, unknown>;
+  gamification_rules?: ApiGamificationRules;
+}
+
+export interface ApiStepUpdate {
+  title?: string | null;
+  type?: ApiStepType | null;
+  config?: Record<string, unknown> | null;
+  gamification_rules?: ApiGamificationRules | null;
+}
+
+export interface ApiStepReorderItem {
+  step_id: string;
+  new_index: number;
+}
+
+export interface ApiStepReorderRequest {
+  steps: ApiStepReorderItem[];
+}
+
+// --- Enrollment DTOs ---
+
+export interface ApiEnrollmentCreate {
+  journey_id: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApiEnrollmentResponse {
+  id: string;
+  user_id: string;
+  journey_id: string;
+  status: string;
+  current_step_index: number;
+  progress_percentage: number;
+  started_at: string;
+  completed_at?: string | null;
+}
+
+// --- Journey Read (public) ---
+
+export interface ApiJourneyRead {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  category?: string | null;
+  is_active: boolean;
+  total_steps: number;
+}

@@ -3,15 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useJourneyStore } from '@/store/useJourneyStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { journeyService } from '@/services/journey.service';
+import { organizationService } from '@/services/organization.service';
+import { ApiJourneyRead, ApiOrganization } from '@/types/api.types';
 import { JourneyMap } from '@/features/journey/components/JourneyMap';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Play, CheckCircle, Clock } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Play, CheckCircle, Clock, Compass, Loader2, Plus, Building2, AlertCircle } from 'lucide-react';
 import ReactConfetti from 'react-confetti';
 
-// Simple window size hook if react-use not available
 function useWindowDimensions() {
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
   useEffect(() => {
@@ -25,28 +34,120 @@ function useWindowDimensions() {
 
 export default function JourneyPage() {
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, selectedJourneyId, selectJourney, isLoading } = useJourneyStore();
+  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading, isPreviewMode } = useJourneyStore();
   const { width, height } = useWindowDimensions();
 
-  useEffect(() => {
-    fetchJourneys();
-  }, [fetchJourneys]);
+  const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const [enrollError, setEnrollError] = useState<string | null>(null);
 
-  if (isLoading) return <div className="p-8 text-center text-slate-400">Cargando tus viajes...</div>;
+  // For SuperAdmin: org selector
+  const [organizations, setOrganizations] = useState<ApiOrganization[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+
+  const isSuperAdmin = user?.role === 'SuperAdmin';
+  const orgId = selectedOrgId || user?.organizationId;
+
+  // Load organizations for SuperAdmin
+  useEffect(() => {
+    const loadOrgs = async () => {
+      if (!isSuperAdmin) return;
+      setLoadingOrgs(true);
+      try {
+        const orgs = await organizationService.listMyOrganizations();
+        setOrganizations(orgs);
+        if (orgs.length > 0 && !selectedOrgId) {
+          setSelectedOrgId(orgs[0].id);
+        }
+      } catch (err) {
+        console.error('Error loading organizations:', err);
+      } finally {
+        setLoadingOrgs(false);
+      }
+    };
+    loadOrgs();
+  }, [isSuperAdmin, selectedOrgId]);
+
+  // Fetch journeys based on role
+  useEffect(() => {
+    if (!orgId) return;
+
+    if (isSuperAdmin) {
+      // SuperAdmin: fetch all journeys directly (preview mode)
+      fetchJourneysForAdmin(orgId);
+    } else {
+      // Participants: fetch based on enrollments
+      fetchJourneys(orgId);
+    }
+  }, [fetchJourneys, fetchJourneysForAdmin, orgId, isSuperAdmin]);
+
+  // Load available journeys for enrollment (only for non-SuperAdmin)
+  useEffect(() => {
+    const loadAvailable = async () => {
+      if (!orgId || isSuperAdmin) return;
+      setLoadingAvailable(true);
+      try {
+        const all = await journeyService.listAvailableJourneys(orgId);
+        // Filter out journeys user is already enrolled in
+        const enrolledIds = new Set(journeys.map(j => j.id));
+        const notEnrolled = all.filter(j => !enrolledIds.has(j.id) && j.is_active);
+        setAvailableJourneys(notEnrolled);
+      } catch (err) {
+        console.error('Error loading available journeys:', err);
+      } finally {
+        setLoadingAvailable(false);
+      }
+    };
+    loadAvailable();
+  }, [orgId, journeys, isSuperAdmin]);
+
+  const handleEnroll = async (journeyId: string) => {
+    setEnrollingId(journeyId);
+    setEnrollError(null);
+    try {
+      await journeyService.enrollInJourney(journeyId);
+      await fetchJourneys();
+      setAvailableJourneys(prev => prev.filter(j => j.id !== journeyId));
+    } catch (err) {
+      console.error('Error enrolling:', err);
+      setEnrollError('No se pudo inscribir. Verifica que seas miembro de la organizacion.');
+    } finally {
+      setEnrollingId(null);
+    }
+  };
+
+  // Show message if no organization
+  if (!orgId && !isSuperAdmin) {
+    return (
+      <div className="p-8 text-center">
+        <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+        <h2 className="text-xl font-bold text-slate-800 mb-2">Sin organizacion asignada</h2>
+        <p className="text-slate-500">
+          Necesitas pertenecer a una organizacion para ver los journeys disponibles.
+          Contacta a tu administrador.
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading || loadingOrgs) {
+    return <div className="p-8 text-center text-slate-400">Cargando tus viajes...</div>;
+  }
 
   // If a journey is selected, show the map.
   if (selectedJourneyId) {
     const activeJourney = journeys.find(j => j.id === selectedJourneyId);
-    
+
     return (
       <div className="space-y-4">
-        {/* Confetti conditionally */}
         {activeJourney?.status === 'completed' && activeJourney.progress === 100 && (
              <div className="fixed inset-0 pointer-events-none z-50">
                  <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={500} />
              </div>
         )}
-        
+
         <div className="flex justify-between items-center mb-2">
              <h2 className="text-xl font-bold text-slate-800">{activeJourney?.title}</h2>
              <Badge variant={activeJourney?.status === 'completed' ? "default" : "secondary"}>
@@ -64,41 +165,94 @@ export default function JourneyPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
+      {/* SuperAdmin Org Selector */}
+      {isSuperAdmin && organizations.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-slate-400" />
+            <span className="text-sm text-slate-600">Ver journeys de:</span>
+            <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
+              <SelectTrigger className="w-[250px]">
+                <SelectValue placeholder="Selecciona organizacion" />
+              </SelectTrigger>
+              <SelectContent>
+                {organizations.map(org => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+            Modo Vista Previa
+          </Badge>
+        </div>
+      )}
+
+      {/* Error message */}
+      {enrollError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          {enrollError}
+        </div>
+      )}
+
       {/* Active Journeys Section */}
       <section>
         <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
                 <Play className="text-teal-500" />
-                <h1 className="text-2xl font-bold text-slate-900">Mis Viajes Activos</h1>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  {isSuperAdmin ? 'Journeys de la Organizacion' : 'Mis Viajes Activos'}
+                </h1>
             </div>
-            { (user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
-                <Button className="bg-slate-900 text-white hover:bg-slate-800">
-                    + Nuevo Viaje
-                </Button>
-            )}
         </div>
-        
-        {activeJourneys.length > 0 ? (
+
+        {(isSuperAdmin ? journeys : activeJourneys).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activeJourneys.map(journey => (
-                    <Card key={journey.id} className="border-teal-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => selectJourney(journey.id)}>
+                {(isSuperAdmin ? journeys : activeJourneys).map(journey => (
+                    <Card
+                      key={journey.id}
+                      className={`shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+                        isSuperAdmin ? 'border-purple-100' : 'border-teal-100'
+                      }`}
+                      onClick={() => selectJourney(journey.id)}
+                    >
                         <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
-                                <Badge variant="outline" className="mb-2 bg-teal-50 text-teal-700 border-teal-200">
+                                <Badge variant="outline" className={`mb-2 ${
+                                  isSuperAdmin
+                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                    : 'bg-teal-50 text-teal-700 border-teal-200'
+                                }`}>
                                     {journey.category || "General"}
                                 </Badge>
-                                <span className="text-xs font-semibold text-teal-600">{journey.progress}%</span>
+                                {isSuperAdmin ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    {journey.nodes.length} pasos
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs font-semibold text-teal-600">{journey.progress}%</span>
+                                )}
                             </div>
                             <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
                             <CardDescription className="line-clamp-2">{journey.description}</CardDescription>
                         </CardHeader>
-                        <CardContent className="pb-2">
-                            <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
-                        </CardContent>
+                        {!isSuperAdmin && (
+                          <CardContent className="pb-2">
+                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
+                          </CardContent>
+                        )}
                         <CardFooter>
-                            <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white group">
-                                Continuar <Play size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                            <Button className={`w-full group ${
+                              isSuperAdmin
+                                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                : 'bg-slate-900 hover:bg-slate-800 text-white'
+                            }`}>
+                                {isSuperAdmin ? 'Ver Preview' : 'Continuar'}
+                                <Play size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </CardFooter>
                     </Card>
@@ -106,10 +260,68 @@ export default function JourneyPage() {
             </div>
         ) : (
             <div className="p-10 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-center text-slate-500">
-                No tienes viajes activos en este momento. ¡Explora el catálogo!
+                {isSuperAdmin
+                  ? 'No hay journeys en esta organizacion. Crea uno desde el menu Journeys.'
+                  : 'No tienes viajes activos. Explora los disponibles abajo para comenzar.'}
             </div>
         )}
       </section>
+
+      {/* Available Journeys Section - Only show for non-SuperAdmin or if SuperAdmin is member of org */}
+      {!isSuperAdmin && (
+        <section className="pt-8 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-4">
+              <Compass className="text-amber-500" />
+              <h2 className="text-xl font-bold text-slate-700">Journeys Disponibles</h2>
+          </div>
+
+          {loadingAvailable ? (
+            <div className="p-8 text-center">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+            </div>
+          ) : availableJourneys.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {availableJourneys.map(journey => (
+                      <Card key={journey.id} className="border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-2">
+                              <div className="flex justify-between items-start">
+                                  <Badge variant="outline" className="mb-2 bg-amber-50 text-amber-700 border-amber-200">
+                                      {journey.category || "General"}
+                                  </Badge>
+                                  <span className="text-xs text-slate-500">{journey.total_steps} pasos</span>
+                              </div>
+                              <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
+                              <CardDescription className="line-clamp-2">{journey.description || 'Sin descripcion'}</CardDescription>
+                          </CardHeader>
+                          <CardFooter>
+                              <Button
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                                onClick={() => handleEnroll(journey.id)}
+                                disabled={enrollingId === journey.id}
+                              >
+                                  {enrollingId === journey.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Inscribiendo...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus size={14} className="mr-2" />
+                                      Inscribirme
+                                    </>
+                                  )}
+                              </Button>
+                          </CardFooter>
+                      </Card>
+                  ))}
+              </div>
+          ) : (
+              <div className="p-10 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-center text-slate-500">
+                  No hay mas journeys disponibles en este momento.
+              </div>
+          )}
+        </section>
+      )}
 
       {/* History Section */}
       {completedJourneys.length > 0 && (
@@ -118,7 +330,7 @@ export default function JourneyPage() {
                 <Clock className="text-slate-400" />
                 <h2 className="text-xl font-bold text-slate-700">Historial de Aprendizaje</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-80 hover:opacity-100 transition-opacity">
                  {completedJourneys.map(journey => (
                     <Card key={journey.id} className="bg-slate-50 border-slate-200">

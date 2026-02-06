@@ -1,59 +1,63 @@
 import { Journey } from '@/types';
+import { apiClient } from '@/lib/api-client';
+import { ApiEnrollment, ApiJourney, ApiStepProgress, ApiJourneyRead, ApiEnrollmentResponse } from '@/types/api.types';
+import { mapApiToJourney, mapApiJourneyToPreview } from '@/lib/mappers';
 
-const MOCK_JOURNEYS: Journey[] = [
-    {
-        id: 'journey-1',
-        title: 'Taller Oasis',
-        description: 'Un viaje de autoconocimiento y conexión.',
-        status: 'active',
-        category: 'Talleres',
-        progress: 40,
-        nodes: [
-            { id: 'node-1', title: 'Bienvenida', description: 'Introducción al programa', type: 'video', status: 'completed', x: 10, y: 50, connections: ['node-2'] },
-            { id: 'node-2', title: 'Cuestionario Inicial', description: 'Evaluación de expectativas', type: 'typeform', externalUrl: 'https://form.typeform.com/to/example', status: 'completed', x: 30, y: 50, connections: ['node-3'] },
-            { id: 'node-3', title: 'Primer Taller', description: 'Dinámica grupal', type: 'workshop', status: 'available', x: 50, y: 50, connections: ['node-4'] },
-            { id: 'node-4', title: 'Reflexión', description: 'Video de cierre', type: 'video', status: 'locked', x: 70, y: 50, connections: ['node-5'] },
-            { id: 'node-5', title: 'Desafío Final', description: 'Comparte tu experiencia', type: 'challenge', status: 'locked', x: 90, y: 50, connections: [] },
-        ]
-    },
-    {
-        id: 'journey-2',
-        title: 'Comunicación Empática',
-        description: 'Aprende a comunicarte mejor con tu entorno.',
-        status: 'active',
-        category: 'Habilidades',
-        progress: 10,
-        nodes: [
-            { id: 'j2-node-1', title: 'Intro a la Empatía', description: 'Fundamentos básicos', type: 'video', status: 'completed', x: 20, y: 30, connections: ['j2-node-2'] },
-            { id: 'j2-node-2', title: 'Roleplay Virtual', description: 'Práctica interactiva', type: 'workshop', status: 'available', x: 50, y: 50, connections: ['j2-node-3'] },
-            { id: 'j2-node-3', title: 'Quiz de Escucha', description: 'Evalúa tu aprendizaje', type: 'quiz', status: 'locked', x: 80, y: 70, connections: [] },
-        ]
-    },
-    {
-        id: 'journey-3',
-        title: 'Bienvenida Pro',
-        description: 'Onboarding para nuevos miembros.',
-        status: 'completed',
-        category: 'Onboarding',
-        progress: 100,
-        nodes: [
-            { id: 'j3-node-1', title: 'Misión y Visión', description: 'Nuestros valores', type: 'video', status: 'completed', x: 20, y: 50, connections: ['j3-node-2'] },
-            { id: 'j3-node-2', title: 'Tus Herramientas', description: 'Recursos disponibles', type: 'article', status: 'completed', x: 50, y: 50, connections: ['j3-node-3'] },
-            { id: 'j3-node-3', title: 'Checklist Final', description: 'Confirma tu inicio', type: 'quiz', status: 'completed', x: 80, y: 50, connections: [] },
-        ]
-    }
-];
+interface FetchJourneysResult {
+  journeys: Journey[];
+  enrollmentMap: Map<string, string>;
+}
 
-export const journeyService = {
-  fetchJourneys: async (): Promise<Journey[]> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800)); 
-    return MOCK_JOURNEYS;
-  },
+class JourneyService {
+  // For participants: fetch journeys based on their enrollments
+  async fetchJourneys(orgId: string): Promise<FetchJourneysResult> {
+    const enrollments = await apiClient.get<ApiEnrollment[]>('/journeys/enrollments/me');
 
-  completeNode: async (nodeId: string): Promise<void> => {
-     await new Promise(resolve => setTimeout(resolve, 500));
-     // In a real app, this would call an API
-     console.log(`Node ${nodeId} completed`);
+    const enrollmentMap = new Map<string, string>();
+    const journeyPromises = enrollments.map(async (enrollment) => {
+      enrollmentMap.set(enrollment.journey_id, enrollment.id);
+
+      const [journey, stepsProgress] = await Promise.all([
+        apiClient.get<ApiJourney>(`/journeys/${orgId}/journeys/${enrollment.journey_id}`),
+        apiClient.get<ApiStepProgress[]>(`/journeys/enrollments/${enrollment.id}/progress`),
+      ]);
+
+      return mapApiToJourney(enrollment, journey, stepsProgress);
+    });
+
+    const journeys = await Promise.all(journeyPromises);
+
+    return { journeys, enrollmentMap };
   }
-};
+
+  // For SuperAdmin: fetch all journeys from an org (preview mode, no enrollment)
+  async fetchJourneysForAdmin(orgId: string): Promise<Journey[]> {
+    const journeysList = await apiClient.get<ApiJourneyRead[]>(`/journeys/${orgId}/journeys`);
+
+    // For each journey, fetch full details with steps
+    const journeyPromises = journeysList.map(async (journeyRead) => {
+      const journey = await apiClient.get<ApiJourney>(`/journeys/${orgId}/journeys/${journeyRead.id}`);
+      return mapApiJourneyToPreview(journey);
+    });
+
+    return Promise.all(journeyPromises);
+  }
+
+  async completeNode(enrollmentId: string, stepId: string): Promise<void> {
+    await apiClient.post(`/journeys/enrollments/${enrollmentId}/steps/${stepId}/complete`, {});
+  }
+
+  async listAvailableJourneys(orgId: string): Promise<ApiJourneyRead[]> {
+    return apiClient.get<ApiJourneyRead[]>(`/journeys/${orgId}/journeys`);
+  }
+
+  async enrollInJourney(journeyId: string): Promise<ApiEnrollmentResponse> {
+    return apiClient.post<ApiEnrollmentResponse>('/journeys/enrollments/', { journey_id: journeyId });
+  }
+
+  async getMyEnrollments(): Promise<ApiEnrollment[]> {
+    return apiClient.get<ApiEnrollment[]>('/journeys/enrollments/me');
+  }
+}
+
+export const journeyService = new JourneyService();

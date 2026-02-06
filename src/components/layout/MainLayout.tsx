@@ -1,20 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Home, 
-  Map as MapIcon, 
-  BookOpen, 
-  User, 
-  LogOut, 
-  Menu, 
+import {
+  Home,
+  Map as MapIcon,
+  BookOpen,
+  User,
+  LogOut,
+  Menu,
   X,
   Users,
   Layout,
-  BarChart2
+  BarChart2,
+  Route,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,16 +35,30 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Mi Viaje', href: '/journey', icon: MapIcon, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },
   { label: 'Actividades Abiertas', href: '/open-activities', icon: Layout, allowedRoles: ['Subscriber'] },
   { label: 'Recursos', href: '/resources', icon: BookOpen, allowedRoles: ['Subscriber', 'Participant', 'Admin', 'SuperAdmin'] },
-  { label: 'Mi Perfil', href: '/profile', icon: User, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] }, // Implicitly all usually, but strict per request
+  { label: 'Mi Perfil', href: '/profile', icon: User, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },
+  { label: 'Organizaciones', href: '/admin/organizations', icon: Building2, allowedRoles: ['SuperAdmin'] },
+  { label: 'Journeys', href: '/admin/journeys', icon: Route, allowedRoles: ['Admin', 'SuperAdmin'] },
   { label: 'Gestión CRM', href: '/crm', icon: Users, allowedRoles: ['Admin', 'SuperAdmin'] },
   { label: 'Analítica', href: '/analytics', icon: BarChart2, allowedRoles: ['SuperAdmin'] },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // Use router from next/navigation
-  const { user, logout } = useAuthStore();
+  const router = useRouter();
+  const { user, logout, initializeSession } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      initializeSession().then(() => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser) {
+          router.push('/login');
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await logout();

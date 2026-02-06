@@ -7,79 +7,114 @@ interface JourneyState {
   journeys: Journey[];
   selectedJourneyId: string | null;
   isLoading: boolean;
-  fetchJourneys: () => Promise<void>;
+  enrollmentMap: Map<string, string>;
+  // For SuperAdmin: track which org we're viewing
+  viewingOrgId: string | null;
+  isPreviewMode: boolean;
+  fetchJourneys: (orgIdOverride?: string) => Promise<void>;
+  fetchJourneysForAdmin: (orgId: string) => Promise<void>;
   selectJourney: (id: string | null) => void;
   completeActivity: (nodeId: string) => Promise<void>;
+  setViewingOrgId: (orgId: string | null) => void;
 }
 
 export const useJourneyStore = create<JourneyState>((set, get) => ({
   journeys: [],
   selectedJourneyId: null,
   isLoading: false,
+  enrollmentMap: new Map(),
+  viewingOrgId: null,
+  isPreviewMode: false,
 
-  fetchJourneys: async () => {
-    set({ isLoading: true });
+  // For participants: fetch based on enrollments
+  fetchJourneys: async (orgIdOverride?: string) => {
+    const user = useAuthStore.getState().user;
+    const orgId = orgIdOverride || user?.organizationId;
+    if (!orgId) return;
+
+    set({ isLoading: true, isPreviewMode: false });
     try {
-      const journeys = await journeyService.fetchJourneys();
-      set({ journeys });
+      const { journeys, enrollmentMap } = await journeyService.fetchJourneys(orgId);
+      set({ journeys, enrollmentMap });
+    } catch (error) {
+      console.error('Error fetching journeys:', error);
+      set({ journeys: [], enrollmentMap: new Map() });
     } finally {
       set({ isLoading: false });
     }
   },
 
+  // For SuperAdmin: fetch all journeys from org (preview mode)
+  fetchJourneysForAdmin: async (orgId: string) => {
+    set({ isLoading: true, viewingOrgId: orgId, isPreviewMode: true });
+    try {
+      const journeys = await journeyService.fetchJourneysForAdmin(orgId);
+      set({ journeys, enrollmentMap: new Map() });
+    } catch (error) {
+      console.error('Error fetching journeys for admin:', error);
+      set({ journeys: [] });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  setViewingOrgId: (orgId) => {
+    set({ viewingOrgId: orgId });
+  },
+
   selectJourney: (id) => {
-      set({ selectedJourneyId: id });
+    set({ selectedJourneyId: id });
   },
 
   completeActivity: async (nodeId: string) => {
-    const { journeys, selectedJourneyId } = get();
+    const { journeys, selectedJourneyId, enrollmentMap, isPreviewMode } = get();
     if (!selectedJourneyId) return;
 
-    await journeyService.completeNode(nodeId);
-    
-    // Add points
+    // In preview mode (SuperAdmin), don't actually complete anything
+    if (isPreviewMode) {
+      console.log('Preview mode: activity completion simulated');
+      return;
+    }
+
+    const enrollmentId = enrollmentMap.get(selectedJourneyId);
+    if (!enrollmentId) return;
+
+    await journeyService.completeNode(enrollmentId, nodeId);
+
     useAuthStore.getState().addPoints(5);
 
     const updatedJourneys = journeys.map(journey => {
-        if (journey.id !== selectedJourneyId) return journey;
+      if (journey.id !== selectedJourneyId) return journey;
 
-        // Current Journey Logic
-        let nextNodeId: string | undefined;
-        let completedNodesCount = 0;
+      let nextNodeId: string | undefined;
+      let completedNodesCount = 0;
 
-        const updatedNodes = journey.nodes.map(node => {
-            if (node.id === nodeId) {
-                if (node.connections.length > 0) {
-                    nextNodeId = node.connections[0];
-                }
-                return { ...node, status: 'completed' as const };
-            }
-            return node;
-        });
-
-        const finalNodes = updatedNodes.map(node => {
-            if (node.status === 'completed') completedNodesCount++;
-            if (nextNodeId && node.id === nextNodeId && node.status === 'locked') {
-                return { ...node, status: 'available' as const };
-            }
-            return node;
-        });
-        
-        // Recalculate progress
-        const progress = Math.round((completedNodesCount / finalNodes.length) * 100);
-        
-        // Check for journey completion (simple check: if progress 100 or last node completed)
-        // Ideally we check if the completed node was a leaf node or if all nodes are completed.
-        // For now, let's use progress === 100 as the trigger if we assume linear.
-        // Or better: if nextNodeId is undefined and node was completed, it might be the end.
-        
-        let status = journey.status;
-        if (progress === 100 && status !== 'completed') {
-            status = 'completed';
-            // Here we could trigger a celebration flag in a local UI state or return something
+      const updatedNodes = journey.nodes.map(node => {
+        if (node.id === nodeId) {
+          if (node.connections.length > 0) {
+            nextNodeId = node.connections[0];
+          }
+          return { ...node, status: 'completed' as const };
         }
+        return node;
+      });
 
-        return { ...journey, nodes: finalNodes, progress, status };
+      const finalNodes = updatedNodes.map(node => {
+        if (node.status === 'completed') completedNodesCount++;
+        if (nextNodeId && node.id === nextNodeId && node.status === 'locked') {
+          return { ...node, status: 'available' as const };
+        }
+        return node;
+      });
+
+      const progress = Math.round((completedNodesCount / finalNodes.length) * 100);
+
+      let status = journey.status;
+      if (progress === 100 && status !== 'completed') {
+        status = 'completed';
+      }
+
+      return { ...journey, nodes: finalNodes, progress, status };
     });
 
     set({ journeys: updatedJourneys });
