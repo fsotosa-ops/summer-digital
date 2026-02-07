@@ -49,8 +49,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { user, logout, initializeSession } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Esperar a que Zustand hidrate desde localStorage
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
+
     if (user) {
       initializeSession().then(() => {
         const currentUser = useAuthStore.getState().user;
@@ -62,12 +70,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       router.push('/login');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrated]);
 
   const handleLogout = async () => {
     await logout();
     router.push('/login');
   };
+
+  // Mostrar loading mientras Zustand hidrata
+  if (!hydrated || !user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold text-slate-900">Oasis Digital</h1>
+          <p className="text-slate-500">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Filter items based on role
   const filteredNavItems = NAV_ITEMS.filter(item => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,21 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, register, requestPasswordRecovery, isLoading, error } = useAuthStore();
+  const { login, register, requestPasswordRecovery, isLoading, error, user } = useAuthStore();
   const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
+
+  // Esperar a que Zustand hidrate desde localStorage antes de renderizar
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  // Si ya hay un usuario autenticado, redirigir al dashboard
+  useEffect(() => {
+    if (hydrated && user) {
+      router.push('/dashboard');
+    }
+  }, [hydrated, user, router]);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
@@ -81,6 +94,18 @@ export default function LoginPage() {
       setGoogleLoading(false);
     }
   };
+
+  // Mostrar loading mientras Zustand hidrata o si ya hay usuario (redirigiendo)
+  if (!hydrated || user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-slate-900">Oasis Digital</h1>
+          <p className="text-slate-500">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
