@@ -17,7 +17,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const hasAccess = user && (user.role === 'Admin' || user.role === 'SuperAdmin');
+  const hasAccess = user?.role === 'SuperAdmin';
 
   useEffect(() => {
     if (!hasAccess) return;
@@ -47,7 +47,6 @@ export default function AnalyticsPage() {
         if (mounted) {
           setLoading(false);
           setError(null);
-          // Style the embedded iframe to fill the container
           const iframe = containerRef.current?.querySelector('iframe');
           if (iframe) {
             iframe.style.width = '100%';
@@ -90,17 +89,11 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Analitica Avanzada
-          </h1>
-          <p className="text-slate-500">
-            {user.role === 'SuperAdmin'
-              ? 'Vision global del impacto de la Fundacion.'
-              : 'Metricas de tu organizacion.'}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Analitica Avanzada
+        </h1>
+        <p className="text-slate-500">Vision global del impacto de la Fundacion.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
