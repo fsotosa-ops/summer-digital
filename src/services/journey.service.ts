@@ -10,11 +10,15 @@ interface FetchJourneysResult {
 
 class JourneyService {
   // For participants: fetch journeys based on their enrollments
-  async fetchJourneys(orgId: string): Promise<FetchJourneysResult> {
+  async fetchJourneys(fallbackOrgId?: string): Promise<FetchJourneysResult> {
     const enrollments = await apiClient.get<ApiEnrollment[]>('/journeys/enrollments/me');
 
     const enrollmentMap = new Map<string, string>();
     const journeyPromises = enrollments.map(async (enrollment) => {
+      // Use org from enrollment (joined from journey), fallback to provided orgId
+      const orgId = enrollment.organization_id || fallbackOrgId;
+      if (!orgId) return null;
+
       enrollmentMap.set(enrollment.journey_id, enrollment.id);
 
       const [journey, stepsProgress] = await Promise.all([
@@ -25,7 +29,8 @@ class JourneyService {
       return mapApiToJourney(enrollment, journey, stepsProgress);
     });
 
-    const journeys = await Promise.all(journeyPromises);
+    const results = await Promise.all(journeyPromises);
+    const journeys = results.filter((j): j is Journey => j !== null);
 
     return { journeys, enrollmentMap };
   }
@@ -49,6 +54,26 @@ class JourneyService {
 
   async listAvailableJourneys(orgId: string): Promise<ApiJourneyRead[]> {
     return apiClient.get<ApiJourneyRead[]>(`/journeys/${orgId}/journeys`);
+  }
+
+  async listAvailableJourneysMultiOrg(orgIds: string[]): Promise<ApiJourneyRead[]> {
+    const results = await Promise.all(
+      orgIds.map(orgId =>
+        apiClient.get<ApiJourneyRead[]>(`/journeys/${orgId}/journeys`).catch(() => [] as ApiJourneyRead[])
+      )
+    );
+    // Deduplicate by journey id
+    const seen = new Set<string>();
+    const merged: ApiJourneyRead[] = [];
+    for (const list of results) {
+      for (const j of list) {
+        if (!seen.has(j.id)) {
+          seen.add(j.id);
+          merged.push(j);
+        }
+      }
+    }
+    return merged;
   }
 
   async enrollInJourney(journeyId: string): Promise<ApiEnrollmentResponse> {

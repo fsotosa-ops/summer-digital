@@ -26,11 +26,10 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
   viewingOrgId: null,
   isPreviewMode: false,
 
-  // For participants: fetch based on enrollments
-  fetchJourneys: async (orgIdOverride?: string) => {
+  // For participants: fetch based on enrollments (multi-org aware)
+  fetchJourneys: async (fallbackOrgId?: string) => {
     const user = useAuthStore.getState().user;
-    const orgId = orgIdOverride || user?.organizationId;
-    if (!orgId) return;
+    const orgId = fallbackOrgId || user?.organizationId;
 
     set({ isLoading: true, isPreviewMode: false });
     try {

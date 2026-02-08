@@ -50,15 +50,15 @@ export default function JourneyPage() {
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const orgId = selectedOrgId || user?.organizationId;
 
-  // Load organizations for SuperAdmin
+  // Load organizations for all users (needed for multi-org participants)
   useEffect(() => {
     const loadOrgs = async () => {
-      if (!isSuperAdmin) return;
+      if (!user) return;
       setLoadingOrgs(true);
       try {
         const orgs = await organizationService.listMyOrganizations();
         setOrganizations(orgs);
-        if (orgs.length > 0 && !selectedOrgId) {
+        if (isSuperAdmin && orgs.length > 0 && !selectedOrgId) {
           setSelectedOrgId(orgs[0].id);
         }
       } catch (err) {
@@ -68,28 +68,28 @@ export default function JourneyPage() {
       }
     };
     loadOrgs();
-  }, [isSuperAdmin, selectedOrgId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isSuperAdmin]);
 
   // Fetch journeys based on role
   useEffect(() => {
-    if (!orgId) return;
-
     if (isSuperAdmin) {
-      // SuperAdmin: fetch all journeys directly (preview mode)
+      if (!orgId) return;
       fetchJourneysForAdmin(orgId);
     } else {
-      // Participants: fetch based on enrollments
+      // Participants: fetch based on enrollments (multi-org aware via enrollment.organization_id)
       fetchJourneys(orgId);
     }
   }, [fetchJourneys, fetchJourneysForAdmin, orgId, isSuperAdmin]);
 
-  // Load available journeys for enrollment (only for non-SuperAdmin)
+  // Load available journeys for enrollment (from ALL user orgs, after enrolled journeys are loaded)
   useEffect(() => {
     const loadAvailable = async () => {
-      if (!orgId || isSuperAdmin) return;
+      if (isSuperAdmin || organizations.length === 0 || isLoading) return;
       setLoadingAvailable(true);
       try {
-        const all = await journeyService.listAvailableJourneys(orgId);
+        const orgIds = organizations.map(o => o.id);
+        const all = await journeyService.listAvailableJourneysMultiOrg(orgIds);
         // Filter out journeys user is already enrolled in
         const enrolledIds = new Set(journeys.map(j => j.id));
         const notEnrolled = all.filter(j => !enrolledIds.has(j.id) && j.is_active);
@@ -101,14 +101,14 @@ export default function JourneyPage() {
       }
     };
     loadAvailable();
-  }, [orgId, journeys, isSuperAdmin]);
+  }, [organizations, journeys, isSuperAdmin, isLoading]);
 
   const handleEnroll = async (journeyId: string) => {
     setEnrollingId(journeyId);
     setEnrollError(null);
     try {
       await journeyService.enrollInJourney(journeyId);
-      await fetchJourneys();
+      await fetchJourneys(orgId);
       setAvailableJourneys(prev => prev.filter(j => j.id !== journeyId));
     } catch (err) {
       console.error('Error enrolling:', err);
@@ -118,8 +118,8 @@ export default function JourneyPage() {
     }
   };
 
-  // Show message if no organization
-  if (!orgId && !isSuperAdmin) {
+  // Show message if no organization (after orgs loaded)
+  if (!orgId && !isSuperAdmin && !loadingOrgs && organizations.length === 0) {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />

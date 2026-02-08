@@ -147,6 +147,7 @@ export interface ApiEnrollment {
   id: string;
   user_id: string;
   journey_id: string;
+  organization_id?: string | null;
   status: ApiEnrollmentStatus;
   current_step_index: number;
   progress_percentage: number;
