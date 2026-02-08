@@ -1,5 +1,6 @@
 import { Journey, JourneyNode, NodeType, NodeStatus } from '@/types';
 import { ApiEnrollment, ApiJourney, ApiJourneyAdminRead, ApiStepAdminRead, ApiStepProgress, ApiStepType } from '@/types/api.types';
+import { detectAndResolveUrl } from '@/lib/url-detection';
 
 const STEP_TYPE_TO_NODE_TYPE: Record<ApiStepType, NodeType> = {
   survey: 'typeform',
@@ -10,13 +11,41 @@ const STEP_TYPE_TO_NODE_TYPE: Record<ApiStepType, NodeType> = {
   resource_consumption: 'article',
 };
 
-const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback'];
+const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback', 'pdf', 'presentation', 'kahoot'];
+
+const RESOURCE_TYPE_TO_NODE_TYPE: Record<string, NodeType> = {
+  youtube: 'video',
+  vimeo: 'video',
+  google_slides: 'presentation',
+  google_drive_pdf: 'pdf',
+  pdf: 'pdf',
+  kahoot: 'kahoot',
+  typeform: 'typeform',
+  generic_link: 'article',
+};
 
 function mapStepTypeToNodeType(stepType: ApiStepType, config?: Record<string, unknown>): NodeType {
+  // Check config.resource.type first (new format)
+  const resource = config?.resource as Record<string, unknown> | undefined;
+  if (resource?.type && RESOURCE_TYPE_TO_NODE_TYPE[resource.type as string]) {
+    return RESOURCE_TYPE_TO_NODE_TYPE[resource.type as string];
+  }
   if (config?.frontend_type && VALID_NODE_TYPES.includes(config.frontend_type as NodeType)) {
     return config.frontend_type as NodeType;
   }
   return STEP_TYPE_TO_NODE_TYPE[stepType] || 'article';
+}
+
+function extractEmbedUrl(config: Record<string, unknown>): string | undefined {
+  const resource = config.resource as Record<string, unknown> | undefined;
+  if (resource?.embed_url) return resource.embed_url as string;
+  // Legacy fallback: convert raw URLs to proper embed URLs
+  const legacyUrl = (config.embed_url as string) || (config.video_url as string) || (config.form_url as string) || (config.url as string);
+  if (legacyUrl) {
+    const detected = detectAndResolveUrl(legacyUrl);
+    return detected?.embedUrl || legacyUrl;
+  }
+  return undefined;
 }
 
 function mapStepStatusToNodeStatus(status: string): NodeStatus {
@@ -60,6 +89,7 @@ export function mapApiToJourney(
     const connections: string[] = index < total - 1 ? [sortedProgress[index + 1].step_id] : [];
 
     const description = (config.description as string) || stepProgress.title;
+    const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
     const isCompleted = stepProgress.status === 'completed';
@@ -76,6 +106,7 @@ export function mapApiToJourney(
       connections,
       externalUrl,
       videoUrl,
+      embedUrl,
       videoWatched: isVideoType && isCompleted ? true : undefined,
     };
   });
@@ -107,6 +138,7 @@ export function mapAdminDataToPreviewJourney(
     const connections: string[] = index < total - 1 ? [sortedSteps[index + 1].id] : [];
 
     const description = (config.description as string) || step.title;
+    const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
 
@@ -121,6 +153,7 @@ export function mapAdminDataToPreviewJourney(
       connections,
       externalUrl,
       videoUrl,
+      embedUrl,
     };
   });
 
@@ -149,6 +182,7 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     const connections: string[] = index < total - 1 ? [sortedSteps[index + 1].id] : [];
 
     const description = (config.description as string) || step.title;
+    const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
 
@@ -163,6 +197,7 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
       connections,
       externalUrl,
       videoUrl,
+      embedUrl,
     };
   });
 

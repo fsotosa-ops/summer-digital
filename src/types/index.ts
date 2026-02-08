@@ -39,7 +39,10 @@ export type NodeType =
   | "article"
   | "challenge"
   | "typeform"
-  | "feedback";
+  | "feedback"
+  | "pdf"
+  | "presentation"
+  | "kahoot";
 export type NodeStatus = "locked" | "available" | "completed" | "in-progress";
 
 export interface Activity {
@@ -64,6 +67,7 @@ export interface JourneyNode {
   // Specific data for new types
   externalUrl?: string; // For typeform
   videoUrl?: string; // For video
+  embedUrl?: string; // Universal embed URL from config.resource
   videoWatched?: boolean;
 }
 

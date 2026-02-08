@@ -12,17 +12,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Check, Lock, Play, Star, Users as UsersIcon, ChevronLeft, RotateCcw } from 'lucide-react';
+import { Check, Lock, Play, Star, Users as UsersIcon, ChevronLeft, RotateCcw, FileDown, Presentation, Gamepad2, ExternalLink, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-function getVideoEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  let match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  if (match) return `https://player.vimeo.com/video/${match[1]}`;
-  return null;
-}
+import { Card, CardContent } from '@/components/ui/card';
 
 interface JourneyPreviewMapProps {
   initialJourney: Journey;
@@ -63,6 +55,87 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
   }, [initialJourney]);
 
   const getNodeById = (id: string) => journey.nodes.find(n => n.id === id);
+
+  const getEmbedSrc = (node: JourneyNode) => node.embedUrl || node.externalUrl || node.videoUrl;
+
+  const renderNodeContent = (node: JourneyNode) => {
+    const embedSrc = getEmbedSrc(node);
+
+    switch (node.type) {
+      case 'video':
+        return embedSrc ? (
+          <div className="w-full rounded-lg overflow-hidden border border-slate-200">
+            <iframe src={embedSrc} className="w-full aspect-video" frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen title={node.title} />
+          </div>
+        ) : (
+          <PreviewPlaceholder node={node} icon={<Play className="h-10 w-10 text-teal-400 opacity-50" />} />
+        );
+
+      case 'typeform':
+        return embedSrc ? (
+          <div className="w-full h-[400px] rounded-lg overflow-hidden border border-slate-200">
+            <iframe src={embedSrc} width="100%" height="100%" frameBorder="0"
+              allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
+          </div>
+        ) : (
+          <PreviewPlaceholder node={node} icon={<FileText className="h-10 w-10 text-teal-400 opacity-50" />} />
+        );
+
+      case 'pdf':
+        return embedSrc ? (
+          <div className="w-full h-[500px] rounded-lg overflow-hidden border border-slate-200">
+            <iframe src={embedSrc} width="100%" height="100%" frameBorder="0"
+              allowFullScreen title="PDF" />
+          </div>
+        ) : (
+          <PreviewPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-teal-400 opacity-50" />} />
+        );
+
+      case 'presentation':
+        return embedSrc ? (
+          <div className="w-full rounded-lg overflow-hidden border border-slate-200">
+            <iframe src={embedSrc} className="w-full aspect-video" frameBorder="0"
+              allowFullScreen title="Presentación" />
+          </div>
+        ) : (
+          <PreviewPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-teal-400 opacity-50" />} />
+        );
+
+      case 'kahoot':
+        return (
+          <Card className="border-purple-200 bg-purple-50">
+            <CardContent className="flex flex-col items-center gap-4 pt-6">
+              <Gamepad2 className="h-12 w-12 text-purple-500" />
+              <p className="text-sm text-purple-700 text-center">
+                Este quiz interactivo se abre en una nueva pestaña.
+              </p>
+              {embedSrc && (
+                <Button asChild className="bg-purple-600 hover:bg-purple-700">
+                  <a href={embedSrc} target="_blank" rel="noopener noreferrer">
+                    Abrir Kahoot <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return (
+          <PreviewPlaceholder
+            node={node}
+            icon={
+              node.type === 'quiz' ? <span className="text-4xl">?</span> :
+              node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" /> :
+              node.type === 'challenge' ? <Star className="h-10 w-10 text-yellow-500 opacity-50" /> :
+              <Play className="h-10 w-10 text-teal-400 opacity-50" />
+            }
+          />
+        );
+    }
+  };
 
   const completedCount = journey.nodes.filter(n => n.status === 'completed').length;
   const totalCount = journey.nodes.length;
@@ -177,7 +250,10 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
 
         {/* Detail Dialog */}
         <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <DialogContent className={cn("sm:max-w-md", (selectedNode?.type === 'typeform' || selectedNode?.type === 'video') && "sm:max-w-2xl")}>
+          <DialogContent className={cn(
+            "sm:max-w-md",
+            selectedNode?.type && ['typeform', 'video', 'pdf', 'presentation'].includes(selectedNode.type) && "sm:max-w-2xl"
+          )}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl text-teal-800">
                 {selectedNode?.title}
@@ -188,50 +264,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
             </DialogHeader>
 
             <div className="py-6">
-              {selectedNode?.type === 'typeform' && selectedNode.externalUrl ? (
-                <div className="w-full h-[400px] rounded-lg overflow-hidden border border-slate-200">
-                  <iframe
-                    src={selectedNode.externalUrl}
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    title="Typeform"
-                  ></iframe>
-                </div>
-              ) : selectedNode?.type === 'video' && selectedNode.videoUrl ? (
-                <div className="w-full rounded-lg overflow-hidden border border-slate-200">
-                  {getVideoEmbedUrl(selectedNode.videoUrl) ? (
-                    <iframe
-                      src={getVideoEmbedUrl(selectedNode.videoUrl)!}
-                      className="w-full aspect-video"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <div className="bg-slate-900 flex items-center justify-center aspect-video">
-                      <Play className="h-12 w-12 text-white opacity-50" />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="bg-slate-50 p-4 rounded-lg flex items-center justify-center h-32 border border-slate-100 border-dashed">
-                    {selectedNode?.type === 'video' && <Play className="h-10 w-10 text-teal-400 opacity-50" />}
-                    {selectedNode?.type === 'quiz' && <span className="text-4xl">?</span>}
-                    {selectedNode?.type === 'workshop' && <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" />}
-                    {selectedNode?.type === 'challenge' && <Star className="h-10 w-10 text-yellow-500 opacity-50" />}
-                    {selectedNode?.type === 'typeform' && <Play className="h-10 w-10 text-teal-400 opacity-50" />}
-                    {selectedNode?.type === 'article' && <Play className="h-10 w-10 text-teal-400 opacity-50" />}
-                    {selectedNode?.type === 'feedback' && <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" />}
-                  </div>
-                  <p className="text-sm text-slate-500 mt-4 text-center italic">
-                    {selectedNode?.status === 'completed'
-                      ? "Ya completaste esta actividad."
-                      : "Esta actividad está lista para comenzar."}
-                  </p>
-                </>
-              )}
+              {selectedNode && renderNodeContent(selectedNode)}
             </div>
 
             <DialogFooter className="sm:justify-center">
@@ -259,6 +292,21 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
   );
 }
 
+function PreviewPlaceholder({ node, icon }: { node: JourneyNode; icon: React.ReactNode }) {
+  return (
+    <>
+      <div className="bg-slate-50 p-4 rounded-lg flex items-center justify-center h-32 border border-slate-100 border-dashed">
+        {icon}
+      </div>
+      <p className="text-sm text-slate-500 mt-4 text-center italic">
+        {node.status === 'completed'
+          ? "Ya completaste esta actividad."
+          : "Esta actividad está lista para comenzar."}
+      </p>
+    </>
+  );
+}
+
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
     completed: "bg-teal-500 text-white shadow-teal-200",
@@ -267,7 +315,19 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
     locked: "bg-slate-200 text-slate-400",
   };
 
-  const Icon = node.status === 'completed' ? Check : node.status === 'locked' ? Lock : node.type === 'challenge' ? Star : Play;
+  const getNodeIcon = () => {
+    if (node.status === 'completed') return Check;
+    if (node.status === 'locked') return Lock;
+    switch (node.type) {
+      case 'challenge': return Star;
+      case 'pdf': return FileDown;
+      case 'presentation': return Presentation;
+      case 'kahoot': return Gamepad2;
+      case 'typeform': return FileText;
+      default: return Play;
+    }
+  };
+  const Icon = getNodeIcon();
 
   return (
     <motion.button

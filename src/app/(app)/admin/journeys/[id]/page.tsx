@@ -38,8 +38,14 @@ import {
   Check,
   X,
   Eye,
+  FileDown,
+  Presentation,
+  Gamepad2,
+  ExternalLink,
+  Link,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
   DndContext,
   closestCenter,
@@ -62,7 +68,7 @@ const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.Elemen
   { value: 'survey', label: 'Encuesta / Typeform', icon: FileText },
   { value: 'event_attendance', label: 'Taller / Evento', icon: Users },
   { value: 'content_view', label: 'Video / Contenido', icon: Video },
-  { value: 'milestone', label: 'Hito / Desafío', icon: Star },
+  { value: 'milestone', label: 'Desafío', icon: Gamepad2 },
   { value: 'social_interaction', label: 'Interacción / Feedback', icon: MessageSquare },
   { value: 'resource_consumption', label: 'Artículo / Recurso', icon: BookOpen },
 ];
@@ -76,26 +82,20 @@ function generateSlug(title: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-function getVideoEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  // YouTube
-  let match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  // Vimeo
-  match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  if (match) return `https://player.vimeo.com/video/${match[1]}`;
-  return null;
-}
-
-function getTypeformEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  // https://form.typeform.com/to/XXXXX or https://XXXXX.typeform.com/to/XXXXX
-  const match = url.match(/typeform\.com\/to\/([a-zA-Z0-9]+)/);
-  if (match) return url;
-  return null;
-}
-
-function getStepIcon(type: ApiStepType) {
+function getStepIcon(type: ApiStepType, config?: Record<string, unknown>) {
+  // Check config.resource.type for specific icons
+  const resource = config?.resource as Record<string, unknown> | undefined;
+  if (resource?.type) {
+    switch (resource.type) {
+      case 'pdf':
+      case 'google_drive_pdf':
+        return FileDown;
+      case 'google_slides':
+        return Presentation;
+      case 'kahoot':
+        return Gamepad2;
+    }
+  }
   const option = STEP_TYPE_OPTIONS.find(o => o.value === type);
   return option?.icon || FileText;
 }
@@ -130,7 +130,7 @@ function SortableStepItem({
     transition,
   };
 
-  const Icon = getStepIcon(step.type);
+  const Icon = getStepIcon(step.type, step.config);
 
   return (
     <div
@@ -188,6 +188,112 @@ function SortableStepItem({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Extract the source URL from step config for display in the URL field (backward compatible) */
+function getStepResourceUrl(config: Record<string, unknown> | undefined, stepType: 'content_view' | 'survey' | 'resource_consumption' | 'milestone'): string {
+  if (!config) return '';
+  const resource = config.resource as Record<string, unknown> | undefined;
+  if (resource?.source_url) return resource.source_url as string;
+  // Legacy fallback
+  if (stepType === 'content_view') return (config.video_url as string) || '';
+  if (stepType === 'survey') return (config.form_url as string) || '';
+  if (stepType === 'resource_consumption') return (config.url as string) || '';
+  if (stepType === 'milestone') return (config.url as string) || '';
+  return '';
+}
+
+/** Reusable URL field with auto-detection, badge, and preview */
+function StepUrlField({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (url: string, detected: DetectedResource | null) => void;
+}) {
+  const [inputUrl, setInputUrl] = useState(value);
+  const detected = inputUrl ? detectAndResolveUrl(inputUrl) : null;
+
+  // Sync when parent value changes (e.g., opening edit dialog)
+  useEffect(() => {
+    setInputUrl(value);
+  }, [value]);
+
+  const handleChange = (newUrl: string) => {
+    setInputUrl(newUrl);
+    const result = detectAndResolveUrl(newUrl);
+    onChange(newUrl, result);
+  };
+
+  const isEmbeddable = detected && detected.type !== 'kahoot' && detected.type !== 'generic_link';
+  const isKahoot = detected?.type === 'kahoot';
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          value={inputUrl}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1"
+        />
+        {detected && (
+          <Badge variant="secondary" className="whitespace-nowrap text-xs">
+            {detected.type === 'pdf' || detected.type === 'google_drive_pdf' ? (
+              <FileDown className="h-3 w-3 mr-1" />
+            ) : detected.type === 'google_slides' ? (
+              <Presentation className="h-3 w-3 mr-1" />
+            ) : detected.type === 'kahoot' ? (
+              <Gamepad2 className="h-3 w-3 mr-1" />
+            ) : detected.type === 'youtube' || detected.type === 'vimeo' ? (
+              <Video className="h-3 w-3 mr-1" />
+            ) : detected.type === 'typeform' ? (
+              <FileText className="h-3 w-3 mr-1" />
+            ) : (
+              <Link className="h-3 w-3 mr-1" />
+            )}
+            {detected.label}
+          </Badge>
+        )}
+      </div>
+
+      {/* Preview iframe for embeddable types */}
+      {isEmbeddable && (
+        <div className="rounded-lg overflow-hidden border border-slate-200">
+          <iframe
+            src={detected.embedUrl}
+            className={cn(
+              'w-full',
+              detected.type === 'youtube' || detected.type === 'vimeo' || detected.type === 'google_slides'
+                ? 'aspect-video'
+                : detected.type === 'typeform'
+                ? 'h-[300px]'
+                : 'h-[400px]'
+            )}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; camera; microphone"
+            allowFullScreen
+          />
+        </div>
+      )}
+
+      {/* Kahoot: external link indicator */}
+      {isKahoot && (
+        <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+          <Gamepad2 className="h-4 w-4" />
+          <span>Kahoot se abrirá en una nueva pestaña para los participantes.</span>
+          <a href={detected.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-purple-600 hover:underline">
+            Probar <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -566,7 +672,7 @@ export default function JourneyEditorPage() {
                 {/* Step Nodes */}
                 {steps.map((step, index) => {
                   const x = steps.length === 1 ? 50 : 10 + (80 / (steps.length - 1)) * index;
-                  const Icon = getStepIcon(step.type);
+                  const Icon = getStepIcon(step.type, step.config);
 
                   return (
                     <div
@@ -644,7 +750,7 @@ export default function JourneyEditorPage() {
 
       {/* Step Dialog */}
       <Dialog open={stepDialogOpen} onOpenChange={setStepDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{editingStep ? 'Editar Step' : 'Nuevo Step'}</DialogTitle>
             <DialogDescription>
@@ -705,60 +811,80 @@ export default function JourneyEditorPage() {
               />
             </div>
 
-            {/* Config fields based on type */}
-            {stepForm.type === 'survey' && (
-              <div className="space-y-2">
-                <Label htmlFor="step-url">URL del formulario (Typeform, etc)</Label>
-                <Input
-                  id="step-url"
-                  value={(stepForm.config?.form_url as string) || ''}
-                  onChange={(e) =>
-                    setStepForm({
-                      ...stepForm,
-                      config: { ...stepForm.config, form_url: e.target.value },
-                    })
+            {/* URL field for content_view (videos only) */}
+            {stepForm.type === 'content_view' && (
+              <StepUrlField
+                label="URL del video"
+                placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
+                value={getStepResourceUrl(stepForm.config, 'content_view')}
+                onChange={(_url, detected) => {
+                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                  delete newConfig.video_url;
+                  if (detected) {
+                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                  } else {
+                    delete newConfig.resource;
                   }
-                  placeholder="https://form.typeform.com/to/..."
-                />
-                {getTypeformEmbedUrl((stepForm.config?.form_url as string) || '') && (
-                  <div className="rounded-lg overflow-hidden border border-slate-200">
-                    <iframe
-                      src={getTypeformEmbedUrl((stepForm.config?.form_url as string) || '') || ''}
-                      className="w-full h-[300px]"
-                      frameBorder="0"
-                      allow="camera; microphone; autoplay; encrypted-media;"
-                    />
-                  </div>
-                )}
-              </div>
+                  setStepForm({ ...stepForm, config: newConfig });
+                }}
+              />
             )}
 
-            {stepForm.type === 'content_view' && (
-              <div className="space-y-2">
-                <Label htmlFor="step-video">URL del video (YouTube, Vimeo)</Label>
-                <Input
-                  id="step-video"
-                  value={(stepForm.config?.video_url as string) || ''}
-                  onChange={(e) =>
-                    setStepForm({
-                      ...stepForm,
-                      config: { ...stepForm.config, video_url: e.target.value },
-                    })
+            {/* URL field for resource_consumption (PDF, Google Slides, Google Drive) */}
+            {stepForm.type === 'resource_consumption' && (
+              <StepUrlField
+                label="URL del recurso"
+                placeholder="Google Slides, PDF, Google Drive..."
+                value={getStepResourceUrl(stepForm.config, 'resource_consumption')}
+                onChange={(_url, detected) => {
+                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                  delete newConfig.url;
+                  if (detected) {
+                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                  } else {
+                    delete newConfig.resource;
                   }
-                  placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
-                />
-                {getVideoEmbedUrl((stepForm.config?.video_url as string) || '') && (
-                  <div className="rounded-lg overflow-hidden border border-slate-200">
-                    <iframe
-                      src={getVideoEmbedUrl((stepForm.config?.video_url as string) || '') || ''}
-                      className="w-full aspect-video"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                )}
-              </div>
+                  setStepForm({ ...stepForm, config: newConfig });
+                }}
+              />
+            )}
+
+            {/* URL field for survey */}
+            {stepForm.type === 'survey' && (
+              <StepUrlField
+                label="URL del formulario"
+                placeholder="https://form.typeform.com/to/..."
+                value={getStepResourceUrl(stepForm.config, 'survey')}
+                onChange={(_url, detected) => {
+                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                  delete newConfig.form_url;
+                  if (detected) {
+                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                  } else {
+                    delete newConfig.resource;
+                  }
+                  setStepForm({ ...stepForm, config: newConfig });
+                }}
+              />
+            )}
+
+            {/* URL field for milestone/desafío (optional — can be presencial) */}
+            {stepForm.type === 'milestone' && (
+              <StepUrlField
+                label="URL del desafío (opcional)"
+                placeholder="Kahoot, Quizizz, Genially... o dejar vacío si es presencial"
+                value={getStepResourceUrl(stepForm.config, 'milestone')}
+                onChange={(_url, detected) => {
+                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                  delete newConfig.url;
+                  if (detected) {
+                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                  } else {
+                    delete newConfig.resource;
+                  }
+                  setStepForm({ ...stepForm, config: newConfig });
+                }}
+              />
             )}
 
             <div className="space-y-2">
