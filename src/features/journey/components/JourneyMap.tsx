@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { JourneyNode } from '@/types';
 import { useJourneyStore } from '@/store/useJourneyStore';
+import { useAuthStore } from '@/store/useAuthStore'; // [NUEVO] Import para obtener datos del usuario
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,9 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function JourneyMap() {
+  const { user } = useAuthStore(); // [NUEVO] Obtenemos el usuario y su org actual
   const { journeys, selectedJourneyId, selectJourney, completeActivity } = useJourneyStore();
+  
   const journey = journeys.find(j => j.id === selectedJourneyId);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedNode, setSelectedNode] = useState<JourneyNode | null>(null);
@@ -33,7 +36,28 @@ export function JourneyMap() {
   // Helper to find node by ID for connection drawing
   const getNodeById = (id: string) => journey.nodes.find(n => n.id === id);
 
-  const getEmbedSrc = (node: JourneyNode) => node.embedUrl || node.externalUrl || node.videoUrl;
+  // [MODIFICADO] Lógica para inyectar Hidden Fields en Typeform
+  const getEmbedSrc = (node: JourneyNode) => {
+    let baseUrl = node.embedUrl || node.externalUrl || node.videoUrl;
+
+    if (!baseUrl) return undefined;
+
+    // Si es un Typeform y tenemos usuario logueado, inyectamos los parámetros de trazabilidad
+    if (node.type === 'typeform' && user) {
+      const hiddenFields = new URLSearchParams({
+        user_id: user.id,
+        org_id: user.organizationId || '', // Org bajo la cual está contestando
+        journey_id: journey.id,
+        step_id: node.id,
+        // enrollment_id: journey.enrollmentId || '' // Descomentar si tu objeto journey ya trae el enrollmentId
+      });
+
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      return `${baseUrl}${separator}${hiddenFields.toString()}`;
+    }
+
+    return baseUrl;
+  };
 
   const renderNodeContent = (node: JourneyNode) => {
     const embedSrc = getEmbedSrc(node);
@@ -47,7 +71,7 @@ export function JourneyMap() {
               allowFullScreen title={node.title} />
           </div>
         ) : (
-          <DefaultPlaceholder node={node} icon={<Play className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <DefaultPlaceholder node={node} icon={<Play className="h-10 w-10 text-brand opacity-50" />} />
         );
 
       case 'typeform':
@@ -57,7 +81,7 @@ export function JourneyMap() {
               allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
           </div>
         ) : (
-          <DefaultPlaceholder node={node} icon={<FileText className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <DefaultPlaceholder node={node} icon={<FileText className="h-10 w-10 text-brand opacity-50" />} />
         );
 
       case 'pdf':
@@ -67,7 +91,7 @@ export function JourneyMap() {
               allowFullScreen title="PDF" />
           </div>
         ) : (
-          <DefaultPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <DefaultPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-brand opacity-50" />} />
         );
 
       case 'presentation':
@@ -77,7 +101,7 @@ export function JourneyMap() {
               allowFullScreen title="Presentación" />
           </div>
         ) : (
-          <DefaultPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <DefaultPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-brand opacity-50" />} />
         );
 
       case 'kahoot':
@@ -107,7 +131,7 @@ export function JourneyMap() {
               node.type === 'quiz' ? <span className="text-4xl">?</span> :
               node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" /> :
               node.type === 'challenge' ? <Star className="h-10 w-10 text-yellow-500 opacity-50" /> :
-              <Play className="h-10 w-10 text-teal-400 opacity-50" />
+              <Play className="h-10 w-10 text-brand opacity-50" />
             }
           />
         );
@@ -192,7 +216,7 @@ export function JourneyMap() {
           selectedNode?.type && ['typeform', 'video', 'pdf', 'presentation'].includes(selectedNode.type) && "sm:max-w-2xl"
         )}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl text-teal-800">
+            <DialogTitle className="flex items-center gap-2 text-xl text-brand">
               {selectedNode?.title}
             </DialogTitle>
             <DialogDescription className="text-base text-slate-600 pt-2">
@@ -216,7 +240,7 @@ export function JourneyMap() {
                 Completar Actividad
               </Button>
             ) : selectedNode?.status === 'completed' ? (
-               <Button variant="outline" className="w-full sm:w-auto border-teal-200 text-teal-700 bg-teal-50">
+               <Button variant="outline" className="w-full sm:w-auto border-brand/20 text-brand bg-brand/5">
                   <Check className="mr-2 h-4 w-4" /> Completado
                </Button>
             ) : (
@@ -248,27 +272,28 @@ function DefaultPlaceholder({ node, icon }: { node: JourneyNode; icon: React.Rea
   );
 }
 
+const getNodeIcon = (node: JourneyNode) => {
+  if (node.status === 'completed') return Check;
+  if (node.status === 'locked') return Lock;
+  switch (node.type) {
+    case 'challenge': return Star;
+    case 'pdf': return FileDown;
+    case 'presentation': return Presentation;
+    case 'kahoot': return Gamepad2;
+    case 'typeform': return FileText;
+    default: return Play;
+  }
+};
+
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
-    completed: "bg-teal-500 text-white shadow-teal-200",
+    completed: "bg-brand text-white shadow-brand/20",
     "in-progress": "bg-amber-400 text-amber-900 shadow-amber-200 animate-pulse-slow",
-    available: "bg-white text-teal-600 border-2 border-teal-500",
+    available: "bg-white text-brand border-2 border-brand",
     locked: "bg-slate-200 text-slate-400",
   };
 
-  const getNodeIcon = () => {
-    if (node.status === 'completed') return Check;
-    if (node.status === 'locked') return Lock;
-    switch (node.type) {
-      case 'challenge': return Star;
-      case 'pdf': return FileDown;
-      case 'presentation': return Presentation;
-      case 'kahoot': return Gamepad2;
-      case 'typeform': return FileText;
-      default: return Play;
-    }
-  };
-  const Icon = getNodeIcon();
+  const IconComponent = getNodeIcon(node);
 
   return (
     <motion.button
@@ -280,9 +305,11 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
         statusColors[node.status] || statusColors.locked
       )}
     >
-      <Icon size={20} fill={node.status === 'completed' ? 'none' : 'currentColor'} className={node.status === 'completed' ? '' : 'opacity-80'} />
+      {React.createElement(IconComponent, {
+        size: 20,
+        fill: node.status === 'completed' ? 'none' : 'currentColor',
+        className: node.status === 'completed' ? '' : 'opacity-80'
+      })}
     </motion.button>
   );
 }
-
-
