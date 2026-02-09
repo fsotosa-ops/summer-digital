@@ -203,7 +203,7 @@ export default function JourneyPage() {
       <section>
         <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-                <Play className="text-fuchsia-500" />
+                <Play className="text-brand" />
                 <h1 className="text-2xl font-bold text-slate-900">
                   {isSuperAdmin ? 'Journeys de la Organizacion' : 'Mis Viajes Activos'}
                 </h1>
@@ -216,7 +216,7 @@ export default function JourneyPage() {
                     <Card
                       key={journey.id}
                       className={`shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-                        isSuperAdmin ? 'border-purple-100' : 'border-fuchsia-100'
+                        isSuperAdmin ? 'border-purple-100' : 'border-brand/20'
                       }`}
                       onClick={() => selectJourney(journey.id)}
                     >
@@ -225,7 +225,7 @@ export default function JourneyPage() {
                                 <Badge variant="outline" className={`mb-2 ${
                                   isSuperAdmin
                                     ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                    : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                                    : 'bg-brand/10 text-brand border-brand/20'
                                 }`}>
                                     {journey.category || "General"}
                                 </Badge>
@@ -234,7 +234,7 @@ export default function JourneyPage() {
                                     {journey.nodes.length} pasos
                                   </Badge>
                                 ) : (
-                                  <span className="text-xs font-semibold text-fuchsia-600">{journey.progress}%</span>
+                                  <span className="text-xs font-semibold text-brand">{journey.progress}%</span>
                                 )}
                             </div>
                             <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
@@ -242,7 +242,7 @@ export default function JourneyPage() {
                         </CardHeader>
                         {!isSuperAdmin && (
                           <CardContent className="pb-2">
-                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-fuchsia-500" />
+                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-brand" />
                           </CardContent>
                         )}
                         <CardFooter>

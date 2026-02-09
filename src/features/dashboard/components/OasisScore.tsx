@@ -7,12 +7,18 @@ import { UserRank } from '@/types';
 interface OasisScoreProps {
   score: number; // 0-100
   rank?: UserRank;
+  maxScore?: number;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function OasisScore({ score, rank }: OasisScoreProps) {
+export function OasisScore({ score, rank, maxScore = 1000, size = 'md' }: OasisScoreProps) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const percentage = Math.min((score / maxScore) * 100, 100);
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  
+  // Color calculation based on defined brand color
+  const strokeColor = '#FF13C0'; // Brand color
   
   // State to trigger "pop" animation when score changes
   const [scale, setScale] = useState(1);
@@ -29,7 +35,7 @@ export function OasisScore({ score, rank }: OasisScoreProps) {
   return (
     <div className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-50 rounded-bl-full -z-0 opacity-50" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full -z-0 opacity-50" />
       
       <div className="relative z-10 flex flex-col items-center">
         <h3 className="text-slate-500 font-medium text-sm uppercase tracking-wider mb-4">Oasis Score</h3>
@@ -54,12 +60,12 @@ export function OasisScore({ score, rank }: OasisScoreProps) {
               cx="80"
               cy="80"
               r={radius}
-              stroke="currentColor"
+              stroke={strokeColor}
               strokeWidth="12"
               fill="transparent"
               strokeDasharray={circumference}
               strokeLinecap="round"
-              className="text-fuchsia-500"
+              className={size === 'sm' ? 'w-20 h-20' : size === 'lg' ? 'w-60 h-60' : 'w-40 h-40'}
             />
           </svg>
           <motion.div 
@@ -77,7 +83,7 @@ export function OasisScore({ score, rank }: OasisScoreProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 key={rank}
-                className="mt-2 px-3 py-1 bg-fuchsia-100 text-fuchsia-700 rounded-full text-xs font-semibold uppercase tracking-wide"
+                className="mt-2 px-3 py-1 bg-brand/10 text-brand rounded-full text-xs font-semibold uppercase tracking-wide"
             >
                 Rango: {rank}
             </motion.div>

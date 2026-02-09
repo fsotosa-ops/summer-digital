@@ -135,7 +135,7 @@ export function OrganizationsTab() {
       <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-teal-600" />
+            <Building2 className="h-5 w-5 text-brand" />
             Organizaciones
           </h2>
           <p className="text-slate-500 text-sm mt-1">Gestiona las organizaciones de la plataforma</p>
@@ -143,7 +143,7 @@ export function OrganizationsTab() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <AnimatedButton className="bg-teal-600 hover:bg-teal-700 text-white">
+            <AnimatedButton className="bg-brand hover:bg-brand/90 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
             </AnimatedButton>
@@ -210,7 +210,7 @@ export function OrganizationsTab() {
               <Button
                 onClick={handleCreate}
                 disabled={creating || !formData.name || !formData.slug}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
+                className="bg-brand hover:bg-brand/90 text-white"
               >
                 {creating ? (
                   <>
@@ -244,7 +244,7 @@ export function OrganizationsTab() {
             <Building2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-600 mb-2">No hay organizaciones</h3>
             <p className="text-slate-500 mb-4">Crea tu primera organización para comenzar</p>
-            <Button onClick={() => setCreateDialogOpen(true)} className="bg-teal-600 hover:bg-teal-700 text-white">
+            <Button onClick={() => setCreateDialogOpen(true)} className="bg-brand hover:bg-brand/90 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
             </Button>
@@ -268,7 +268,7 @@ export function OrganizationsTab() {
                   <TableRow key={org.id} className="hover:bg-slate-50/50">
                     <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center text-teal-700 font-bold">
+                            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center text-brand font-bold">
                                 {org.name.charAt(0).toUpperCase()}
                             </div>
                             {org.name}

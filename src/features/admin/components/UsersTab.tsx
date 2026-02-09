@@ -192,7 +192,7 @@ export function UsersTab() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-teal-600" />
+            <Users className="h-5 w-5 text-brand" />
             Usuarios
           </h2>
            <p className="text-slate-500 text-sm mt-1">
@@ -444,7 +444,7 @@ export function UsersTab() {
             <Button
               onClick={handleSaveEdit}
               disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-brand hover:bg-brand/90 text-white"
             >
               {saving ? (
                 <>

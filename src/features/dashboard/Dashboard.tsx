@@ -31,29 +31,26 @@ export function Dashboard() {
       
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-8 md:p-12 shadow-2xl">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-fuchsia-600 rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-600 rounded-full blur-[100px] opacity-20 translate-y-1/2 -translate-x-1/2" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-600 rounded-full blur-[100px] opacity-10 translate-y-1/2 -translate-x-1/2" />
         
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <Badge variant="outline" className="text-fuchsia-300 border-fuchsia-500/50 bg-fuchsia-500/10 backdrop-blur-md">
+          <div className="space-y-4 max-w-3xl">
+            <Badge variant="outline" className="text-brand border-brand/50 bg-brand/10 backdrop-blur-md">
               <Zap size={12} className="mr-1 fill-current" /> Edición 2024
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-400">{user.name.split(' ')[0]}</span>.
+              Bienvenido a <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-purple-400">Oasis Digital</span>
             </h1>
             <p className="text-slate-300 text-lg md:text-xl leading-relaxed">
-              Tu camino como agente de cambio digital continúa aquí. Tienes nuevas misiones esperando.
+              Nos pone muy contentos que te unas a nuestra comunidad. Obtén tus primeros 5 ptos de tu Oasis Score, completando tus datos y estarás formando parte de la OASIS Community.
             </p>
             <div className="pt-4 flex flex-wrap gap-4">
-              <Link href="/journey">
-                <Button size="lg" className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-0 shadow-lg shadow-fuchsia-900/20 rounded-full px-8">
-                  Continuar Viaje <ArrowRight className="ml-2 h-5 w-5" />
+              <Link href="/profile">
+                <Button size="lg" className="bg-brand hover:bg-brand/90 text-white border-0 shadow-lg shadow-brand/20 rounded-full px-8">
+                  Completar mis datos <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white rounded-full">
-                Ver mis Logros
-              </Button>
             </div>
           </div>
 
@@ -65,12 +62,12 @@ export function Dashboard() {
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
-              <div className="text-3xl font-bold text-fuchsia-400">{user.rank}</div>
+              <div className="text-3xl font-bold text-brand">{user.rank}</div>
               <div className="text-xs text-slate-400 uppercase tracking-wider">Rango</div>
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
-              <div className="text-3xl font-bold text-amber-400">{user.medals.length}</div>
+              <div className="text-3xl font-bold text-slate-200">{user.medals.length}</div>
               <div className="text-xs text-slate-400 uppercase tracking-wider">Medallas</div>
             </div>
           </div>
@@ -87,30 +84,30 @@ export function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Map className="text-fuchsia-500" /> Tu Viaje Actual
+                <Map className="text-brand" /> Tu Viaje Actual
               </h2>
-              <Link href="/journey" className="text-sm text-fuchsia-600 font-medium hover:underline">
+              <Link href="/journey" className="text-sm text-brand font-medium hover:underline">
                 Ver mapa completo
               </Link>
             </div>
             
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-fuchsia-200 transition-colors">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-50 rounded-bl-full -z-0 opacity-50 group-hover:scale-110 transition-transform duration-700" />
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-brand/30 transition-colors">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -z-0 opacity-50 group-hover:scale-110 transition-transform duration-700" />
               
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 border-0 mb-2">En Progreso</Badge>
+                    <Badge className="bg-brand/10 text-brand border-0 mb-2">En Progreso</Badge>
                     <h3 className="text-2xl font-bold text-slate-800">Transformación Digital I</h3>
                     <p className="text-slate-500 mt-1">Módulo 2: Herramientas Colaborativas</p>
                   </div>
                   <div className="h-12 w-12 bg-white rounded-full shadow-sm flex items-center justify-center border border-slate-100">
-                    <span className="font-bold text-fuchsia-600 text-sm">45%</span>
+                    <span className="font-bold text-brand text-sm">45%</span>
                   </div>
                 </div>
 
                 <div className="w-full bg-slate-100 rounded-full h-3 mb-6">
-                  <div className="bg-gradient-to-r from-fuchsia-500 to-purple-600 h-3 rounded-full" style={{ width: '45%' }} />
+                  <div className="bg-brand h-3 rounded-full" style={{ width: '45%' }} />
                 </div>
 
                 <div className="flex gap-3">
@@ -129,7 +126,7 @@ export function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-4">
                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                 <BookOpen className="text-fuchsia-500" /> Destacados para ti
+                 <BookOpen className="text-brand" /> Destacados para ti
                </h2>
                <Link href="/resources" className="text-sm text-slate-500 hover:text-slate-800">Explorar todo</Link>
             </div>
@@ -137,7 +134,7 @@ export function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {[1, 2].map((i) => (
                  <div key={i} className="flex p-4 bg-white rounded-xl border border-slate-200 hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="h-12 w-12 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 mr-4 shrink-0">
+                    <div className="h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 mr-4 shrink-0">
                       <Star size={20} fill="currentColor" className="opacity-20" />
                     </div>
                     <div>
@@ -157,7 +154,7 @@ export function Dashboard() {
            {/* Community Pulse */}
            <section>
              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Users className="text-fuchsia-500" /> Comunidad
+                <Users className="text-brand" /> Comunidad
              </h2>
              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                 <div className="flex items-center gap-4 mb-6">
@@ -172,15 +169,15 @@ export function Dashboard() {
                 </div>
                 
                 <div className="space-y-4">
-                   <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 italic border-l-4 border-fuchsia-400">
+                   <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 italic border-l-4 border-slate-300">
                      &quot;¡Acabo de terminar el módulo de empatía! Increíble.&quot;
                    </div>
-                   <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 italic border-l-4 border-purple-400">
+                   <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-600 italic border-l-4 border-slate-300">
                      &quot;¿Alguien para practicar el pitch mañana?&quot;
                    </div>
                 </div>
 
-                <Button variant="ghost" className="w-full mt-4 text-fuchsia-600 hover:text-fuchsia-700 hover:bg-fuchsia-50">
+                <Button variant="ghost" className="w-full mt-4 text-brand hover:text-brand hover:bg-brand/5">
                   Ir al Foro General
                 </Button>
              </div>

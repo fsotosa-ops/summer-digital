@@ -55,11 +55,12 @@ export default function ResourcesPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-             <BookOpen className="h-8 w-8 text-fuchsia-600" />
-             Recursos
-          </h1>
-          <p className="text-slate-500 text-lg">Material de apoyo y documentación para tu desarrollo.</p>
+           <h1 className="text-3xl font-bold text-slate-900">Recursos de Aprendizaje</h1>
+           <p className="text-slate-500 mt-2">Herramientas y guías desbloqueables según tu nivel.</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+           <span className="text-sm font-medium text-slate-600">Tu Score Actual:</span>
+           <span className="text-lg font-bold text-brand">{user?.oasisScore || 0} pts</span>
         </div>
         {isAdmin && (
             <Button className="bg-slate-900 text-white hover:bg-slate-800">
@@ -136,7 +137,7 @@ export default function ResourcesPage() {
                         <div className="flex items-start justify-between mb-2">
                             <span className={cn(
                                 "text-xs font-semibold px-2 py-1 rounded uppercase tracking-wide",
-                                isLocked ? "bg-slate-100 text-slate-400" : "bg-fuchsia-50 text-fuchsia-700"
+                                isLocked ? "bg-slate-100 text-slate-400" : "bg-brand/10 text-brand"
                             )}>
                                 {resource.type}
                             </span>

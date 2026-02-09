@@ -99,13 +99,14 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600 mb-3" />
-            <p className="text-slate-500">Cargando dashboard...</p>
+       {loading && (
+          <div className="h-full w-full flex items-center justify-center p-8 bg-slate-50 min-h-[400px] rounded-xl border border-slate-200 border-dashed">
+             <div className="flex flex-col items-center gap-4">
+               <Loader2 className="h-8 w-8 animate-spin text-brand" />
+               <p className="text-sm text-slate-500 font-medium">Conectando con Superset...</p>
+             </div>
           </div>
         )}
-
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
             <AlertCircle className="h-10 w-10 text-red-400 mb-3" />

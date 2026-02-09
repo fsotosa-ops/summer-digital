@@ -93,27 +93,25 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
                     variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
                     className="bg-slate-50 p-4 rounded-xl border border-slate-100"
                 >
-                    <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <Target size={14} /> Progreso Oasis
-                        </h4>
-                        <Badge variant="outline" className="bg-white text-fuchsia-700 border-fuchsia-200">
-                            Rango: {user.rank}
-                        </Badge>
-                    </div>
-                    
-                    <div className="flex items-end gap-2 mb-2">
-                        <span className="text-3xl font-bold text-slate-900">{user.score}</span>
-                        <span className="text-sm text-slate-400 mb-1">puntos</span>
-                    </div>
-                    
-                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${user.score}%` }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            className="h-full bg-fuchsia-500 rounded-full bg-gradient-to-r from-fuchsia-400 to-fuchsia-600" 
-                        />
+                    <div className="flex flex-col gap-4">
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                <Target size={14} /> Progreso Oasis
+                            </h4>
+                            <div className="flex items-end gap-1">
+                                <span className="text-xl font-bold text-slate-900">{user.score}</span>
+                                <span className="text-xs text-slate-400 mb-1">pts</span>
+                            </div>
+                        </div>
+                        
+                        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(user.score / 1000) * 100}%` }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                                className="h-full bg-brand rounded-full bg-gradient-to-r from-brand to-purple-600" 
+                            />
+                        </div>
                     </div>
                 </motion.section>
 

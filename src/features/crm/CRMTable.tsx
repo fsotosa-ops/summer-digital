@@ -164,7 +164,7 @@ export function CRMTable() {
                         <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-700 w-6">{user.score}</span>
                             <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-fuchsia-500 rounded-full" style={{ width: `${user.score}%` }} />
+                                <div className="h-full bg-brand rounded-full" style={{ width: `${user.score}%` }} />
                             </div>
                         </div>
                     </TableCell>

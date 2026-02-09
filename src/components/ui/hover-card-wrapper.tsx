@@ -13,10 +13,11 @@ interface HoverCardWrapperProps {
 export function HoverCardWrapper({ children, className, onClick }: HoverCardWrapperProps) {
   return (
     <motion.div
-      whileHover={{ y: -4, borderColor: 'rgb(217, 70, 239)' }} // fuchsia-500
+      whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      style={{ borderColor: 'transparent' }} // Reset defaults
       className={cn(
-        "cursor-pointer transition-colors border border-transparent rounded-xl",
+        "relative group rounded-xl border border-slate-200 bg-white transition-colors hover:border-brand/50",
         className
       )}
       onClick={onClick}

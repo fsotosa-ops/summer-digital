@@ -91,7 +91,7 @@ const NavItemComponent = ({
           >
               <item.icon size={20} className={cn(
                   "transition-colors",
-                  isActive ? "text-fuchsia-400" : "text-slate-400 group-hover:text-slate-600"
+                  isActive ? "text-brand" : "text-slate-400 group-hover:text-slate-600"
               )} />
               
               {(isSidebarOpen || mobile) && (
