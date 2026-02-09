@@ -70,7 +70,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title={node.title} />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<Play className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<Play className="h-10 w-10 text-fuchsia-400 opacity-50" />} />
         );
 
       case 'typeform':
@@ -80,7 +80,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<FileText className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<FileText className="h-10 w-10 text-fuchsia-400 opacity-50" />} />
         );
 
       case 'pdf':
@@ -90,7 +90,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title="PDF" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-fuchsia-400 opacity-50" />} />
         );
 
       case 'presentation':
@@ -100,7 +100,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title="Presentación" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-fuchsia-400 opacity-50" />} />
         );
 
       case 'kahoot':
@@ -130,7 +130,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               node.type === 'quiz' ? <span className="text-4xl">?</span> :
               node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" /> :
               node.type === 'challenge' ? <Star className="h-10 w-10 text-yellow-500 opacity-50" /> :
-              <Play className="h-10 w-10 text-teal-400 opacity-50" />
+              <Play className="h-10 w-10 text-fuchsia-400 opacity-50" />
             }
           />
         );
@@ -172,7 +172,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
         </div>
         <div className="w-full bg-slate-100 rounded-full h-2">
           <div
-            className="bg-teal-500 h-2 rounded-full transition-all duration-500"
+            className="bg-fuchsia-500 h-2 rounded-full transition-all duration-500"
             style={{ width: `${journey.progress}%` }}
           />
         </div>
@@ -187,8 +187,8 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
 
         {/* Success message at 100% */}
         {journey.progress === 100 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-teal-50 border border-teal-200 rounded-lg px-6 py-3 shadow-lg">
-            <p className="text-teal-800 font-semibold text-center">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-fuchsia-50 border border-fuchsia-200 rounded-lg px-6 py-3 shadow-lg">
+            <p className="text-fuchsia-800 font-semibold text-center">
               Journey completado al 100%
             </p>
           </div>
@@ -255,7 +255,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
             selectedNode?.type && ['typeform', 'video', 'pdf', 'presentation'].includes(selectedNode.type) && "sm:max-w-2xl"
           )}>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl text-teal-800">
+              <DialogTitle className="flex items-center gap-2 text-xl text-fuchsia-800">
                 {selectedNode?.title}
               </DialogTitle>
               <DialogDescription className="text-base text-slate-600 pt-2">
@@ -276,7 +276,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
                   Simular Completar
                 </Button>
               ) : selectedNode?.status === 'completed' ? (
-                <Button variant="outline" className="w-full sm:w-auto border-teal-200 text-teal-700 bg-teal-50">
+                <Button variant="outline" className="w-full sm:w-auto border-fuchsia-200 text-fuchsia-700 bg-fuchsia-50">
                   <Check className="mr-2 h-4 w-4" /> Completado
                 </Button>
               ) : (
@@ -322,9 +322,9 @@ const getNodeIcon = (node: JourneyNode) => {
 
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
-    completed: "bg-teal-500 text-white shadow-teal-200",
+    completed: "bg-fuchsia-500 text-white shadow-fuchsia-200",
     "in-progress": "bg-amber-400 text-amber-900 shadow-amber-200 animate-pulse-slow",
-    available: "bg-white text-teal-600 border-2 border-teal-500",
+    available: "bg-white text-fuchsia-600 border-2 border-fuchsia-500",
     locked: "bg-slate-200 text-slate-400",
   };
 

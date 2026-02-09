@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
@@ -130,7 +130,7 @@ function SortableStepItem({
     transition,
   };
 
-  const Icon = getStepIcon(step.type, step.config);
+
 
   return (
     <div
@@ -153,7 +153,7 @@ function SortableStepItem({
       )}
 
       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
-        <Icon className="h-4 w-4" />
+        {React.createElement(getStepIcon(step.type, step.config), { className: "h-4 w-4" })}
       </div>
 
       <div className="flex-1 min-w-0">

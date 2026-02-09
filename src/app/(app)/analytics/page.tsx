@@ -22,10 +22,13 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!hasAccess) return;
     if (!containerRef.current || !SUPERSET_URL || !DASHBOARD_ID) {
-      setLoading(false);
-      if (!SUPERSET_URL || !DASHBOARD_ID) {
-        setError('Superset no esta configurado. Verifica las variables de entorno.');
-      }
+      const timer = setTimeout(() => {
+        setLoading(false);
+        if (!SUPERSET_URL || !DASHBOARD_ID) {
+          setError('Superset no esta configurado. Verifica las variables de entorno.');
+        }
+      }, 0);
+      return () => clearTimeout(timer);
       return;
     }
 
@@ -72,7 +75,6 @@ export default function AnalyticsPage() {
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasAccess]);
 
   if (!hasAccess) {
@@ -99,7 +101,7 @@ export default function AnalyticsPage() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-teal-600 mb-3" />
+            <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600 mb-3" />
             <p className="text-slate-500">Cargando dashboard...</p>
           </div>
         )}

@@ -97,7 +97,7 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                             <Target size={14} /> Progreso Oasis
                         </h4>
-                        <Badge variant="outline" className="bg-white text-teal-700 border-teal-200">
+                        <Badge variant="outline" className="bg-white text-fuchsia-700 border-fuchsia-200">
                             Rango: {user.rank}
                         </Badge>
                     </div>
@@ -112,7 +112,7 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
                             initial={{ width: 0 }}
                             animate={{ width: `${user.score}%` }}
                             transition={{ duration: 1, ease: "easeOut" }}
-                            className="h-full bg-teal-500 rounded-full bg-gradient-to-r from-teal-400 to-teal-600" 
+                            className="h-full bg-fuchsia-500 rounded-full bg-gradient-to-r from-fuchsia-400 to-fuchsia-600" 
                         />
                     </div>
                 </motion.section>

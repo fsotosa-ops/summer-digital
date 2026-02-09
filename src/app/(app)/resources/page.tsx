@@ -56,7 +56,7 @@ export default function ResourcesPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-             <BookOpen className="h-8 w-8 text-teal-600" />
+             <BookOpen className="h-8 w-8 text-fuchsia-600" />
              Recursos
           </h1>
           <p className="text-slate-500 text-lg">Material de apoyo y documentación para tu desarrollo.</p>
@@ -86,7 +86,7 @@ export default function ResourcesPage() {
                     whileHover={{ y: -4 }}
                     className={cn(
                         "bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col transition-all duration-300 relative group",
-                        isLocked ? "border-slate-200" : "border-slate-200 hover:shadow-lg hover:border-teal-100"
+                        isLocked ? "border-slate-200" : "border-slate-200 hover:shadow-lg hover:border-fuchsia-100"
                     )}
                 >
                     {/* Locked Overlay */}
@@ -99,14 +99,14 @@ export default function ResourcesPage() {
                             <p className="text-sm text-slate-500 mb-4">Necesitas {requiredScore} puntos para desbloquear</p>
                             
                             <div className="w-full max-w-[150px] h-2 bg-slate-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-teal-500" style={{ width: `${progress}%` }} />
+                                <div className="h-full bg-fuchsia-500" style={{ width: `${progress}%` }} />
                             </div>
-                            <p className="text-xs text-teal-600 mt-1 font-medium">{Math.floor(progress)}% completado</p>
+                            <p className="text-xs text-fuchsia-600 mt-1 font-medium">{Math.floor(progress)}% completado</p>
                         </div>
                     )}
 
                     <div className={cn("h-32 border-b border-slate-100 flex items-center justify-center relative bg-slate-50")}>
-                         <Icon className={cn("w-12 h-12", isLocked ? "text-slate-300" : "text-teal-600")} />
+                         <Icon className={cn("w-12 h-12", isLocked ? "text-slate-300" : "text-fuchsia-600")} />
                          
                          {/* Admin Min Score Edit */}
                          {isAdmin && (
@@ -136,11 +136,11 @@ export default function ResourcesPage() {
                         <div className="flex items-start justify-between mb-2">
                             <span className={cn(
                                 "text-xs font-semibold px-2 py-1 rounded uppercase tracking-wide",
-                                isLocked ? "bg-slate-100 text-slate-400" : "bg-teal-50 text-teal-700"
+                                isLocked ? "bg-slate-100 text-slate-400" : "bg-fuchsia-50 text-fuchsia-700"
                             )}>
                                 {resource.type}
                             </span>
-                            {isRead && <span className="text-xs text-teal-600 flex items-center gap-1 font-medium"><Check size={12} /> Visto</span>}
+                            {isRead && <span className="text-xs text-fuchsia-600 flex items-center gap-1 font-medium"><Check size={12} /> Visto</span>}
                         </div>
                         
                         <h3 className={cn("font-bold mb-2 text-lg leading-tight", isLocked ? "text-slate-400" : "text-slate-800")}>
@@ -155,7 +155,7 @@ export default function ResourcesPage() {
                             variant={isRead ? "outline" : "default"}
                             className={cn(
                                 "w-full",
-                                isRead ? "border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100" : "bg-slate-900 hover:bg-slate-800 text-white"
+                                isRead ? "border-fuchsia-200 text-fuchsia-700 bg-fuchsia-50 hover:bg-fuchsia-100" : "bg-slate-900 hover:bg-slate-800 text-white"
                             )}
                             onClick={() => handleMarkAsRead(resource.id)}
                             disabled={isRead || isLocked}

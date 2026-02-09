@@ -91,7 +91,7 @@ const NavItemComponent = ({
           >
               <item.icon size={20} className={cn(
                   "transition-colors",
-                  isActive ? "text-teal-400" : "text-slate-400 group-hover:text-slate-600"
+                  isActive ? "text-fuchsia-400" : "text-slate-400 group-hover:text-slate-600"
               )} />
               
               {(isSidebarOpen || mobile) && (
@@ -125,7 +125,7 @@ const ProfileItem = ({
 }: { 
     mobile?: boolean; 
     isProfileActive: boolean; 
-    user: any; // User type available in MainLayout scope, but here extracted. 
+    user: { name: string }; // Minimal type needed for this component, or use ApiUser if available
     isSidebarOpen: boolean; 
     setIsMobileOpen: (open: boolean) => void;
 }) => (
