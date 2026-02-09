@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function JourneyMap() {
   const { user } = useAuthStore(); // [NUEVO] Obtenemos el usuario y su org actual
-  const { journeys, selectedJourneyId, selectJourney, completeActivity } = useJourneyStore();
+  const { journeys, selectedJourneyId, selectJourney, completeActivity, enrollmentMap } = useJourneyStore();
   
   const journey = journeys.find(j => j.id === selectedJourneyId);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,10 +46,10 @@ export function JourneyMap() {
     if (node.type === 'typeform' && user) {
       const hiddenFields = new URLSearchParams({
         user_id: user.id,
-        org_id: user.organizationId || '', // Org bajo la cual está contestando
+        org_id: user.organizationId || '',
         journey_id: journey.id,
         step_id: node.id,
-        // enrollment_id: journey.enrollmentId || '' // Descomentar si tu objeto journey ya trae el enrollmentId
+        enrollment_id: enrollmentMap.get(journey.id) || '',
       });
 
       const separator = baseUrl.includes('?') ? '&' : '?';
@@ -230,15 +230,21 @@ export function JourneyMap() {
 
           <DialogFooter className="sm:justify-center">
             {selectedNode?.status === 'in-progress' || selectedNode?.status === 'available' ? (
-              <Button 
-                onClick={async () => {
-                   if (selectedNode) await completeActivity(selectedNode.id);
-                   setSelectedNode(null);
-                }}
-                className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white"
-              >
-                Completar Actividad
-              </Button>
+              selectedNode?.type === 'typeform' ? (
+                <Button disabled variant="secondary" className="w-full sm:w-auto bg-slate-100 text-slate-500">
+                  <FileText className="mr-2 h-4 w-4" /> Completa el formulario para continuar
+                </Button>
+              ) : (
+                <Button
+                  onClick={async () => {
+                     if (selectedNode) await completeActivity(selectedNode.id);
+                     setSelectedNode(null);
+                  }}
+                  className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white"
+                >
+                  Completar Actividad
+                </Button>
+              )
             ) : selectedNode?.status === 'completed' ? (
                <Button variant="outline" className="w-full sm:w-auto border-brand/20 text-brand bg-brand/5">
                   <Check className="mr-2 h-4 w-4" /> Completado
