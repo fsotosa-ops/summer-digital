@@ -200,7 +200,7 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Users className="h-6 w-6 text-brand" />
+          <Users className="h-6 w-6 text-teal-600" />
           Usuarios
         </h1>
         <p className="text-slate-500 mt-1">
@@ -441,7 +441,7 @@ export default function AdminUsersPage() {
             <Button
               onClick={handleSaveEdit}
               disabled={saving}
-              className="bg-brand hover:bg-brand/90"
+              className="bg-teal-600 hover:bg-teal-700"
             >
               {saving ? (
                 <>

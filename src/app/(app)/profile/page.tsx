@@ -17,7 +17,7 @@ const RANK_COLORS: Record<string, string> = {
   Semilla: 'bg-amber-100 text-amber-700',
   Brote: 'bg-green-100 text-green-700',
   Arbol: 'bg-emerald-100 text-emerald-700',
-  Bosque: 'bg-brand/10 text-brand',
+  Bosque: 'bg-teal-100 text-teal-700',
   Oasis: 'bg-cyan-100 text-cyan-700',
 };
 
@@ -59,7 +59,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
-                <AvatarFallback className="bg-brand/10 text-brand text-lg font-semibold">
+                <AvatarFallback className="bg-teal-100 text-teal-700 text-lg font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -133,16 +133,16 @@ export default function ProfilePage() {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <p className="text-sm text-slate-500">Oasis Score</p>
-                <p className="text-2xl font-bold text-brand">{user.oasisScore}</p>
+                <p className="text-2xl font-bold text-teal-600">{user.oasisScore}</p>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-3">
                 <div
-                  className="bg-brand h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(user.oasisScore / 1000) * 100}%` }}
+                  className="bg-teal-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${user.oasisScore}%` }}
                 />
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                {1000 - user.oasisScore} puntos para el siguiente nivel
+                {100 - user.oasisScore} puntos para el siguiente nivel
               </p>
             </div>
 

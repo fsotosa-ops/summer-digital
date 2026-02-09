@@ -146,7 +146,7 @@ export default function AdminOrganizationsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-brand" />
+            <Building2 className="h-6 w-6 text-teal-600" />
             Organizaciones
           </h1>
           <p className="text-slate-500 mt-1">Gestiona las organizaciones de la plataforma</p>
@@ -154,7 +154,7 @@ export default function AdminOrganizationsPage() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-brand hover:bg-brand/90">
+            <Button className="bg-teal-600 hover:bg-teal-700">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organizacion
             </Button>
@@ -221,7 +221,7 @@ export default function AdminOrganizationsPage() {
               <Button
                 onClick={handleCreate}
                 disabled={creating || !formData.name || !formData.slug}
-                className="bg-brand hover:bg-brand/90"
+                className="bg-teal-600 hover:bg-teal-700"
               >
                 {creating ? (
                   <>
@@ -255,7 +255,7 @@ export default function AdminOrganizationsPage() {
             <Building2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-600 mb-2">No hay organizaciones</h3>
             <p className="text-slate-500 mb-4">Crea tu primera organizacion para comenzar</p>
-            <Button onClick={() => setCreateDialogOpen(true)} className="bg-brand hover:bg-brand/90">
+            <Button onClick={() => setCreateDialogOpen(true)} className="bg-teal-600 hover:bg-teal-700">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organizacion
             </Button>

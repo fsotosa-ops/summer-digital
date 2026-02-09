@@ -22,13 +22,10 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!hasAccess) return;
     if (!containerRef.current || !SUPERSET_URL || !DASHBOARD_ID) {
-      const timer = setTimeout(() => {
-        setLoading(false);
-        if (!SUPERSET_URL || !DASHBOARD_ID) {
-          setError('Superset no esta configurado. Verifica las variables de entorno.');
-        }
-      }, 0);
-      return () => clearTimeout(timer);
+      setLoading(false);
+      if (!SUPERSET_URL || !DASHBOARD_ID) {
+        setError('Superset no esta configurado. Verifica las variables de entorno.');
+      }
       return;
     }
 
@@ -75,6 +72,7 @@ export default function AnalyticsPage() {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasAccess]);
 
   if (!hasAccess) {
@@ -99,14 +97,13 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
-       {loading && (
-          <div className="h-full w-full flex items-center justify-center p-8 bg-slate-50 min-h-[400px] rounded-xl border border-slate-200 border-dashed">
-             <div className="flex flex-col items-center gap-4">
-               <Loader2 className="h-8 w-8 animate-spin text-brand" />
-               <p className="text-sm text-slate-500 font-medium">Conectando con Superset...</p>
-             </div>
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-600 mb-3" />
+            <p className="text-slate-500">Cargando dashboard...</p>
           </div>
         )}
+
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
             <AlertCircle className="h-10 w-10 text-red-400 mb-3" />

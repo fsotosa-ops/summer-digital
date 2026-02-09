@@ -30,7 +30,6 @@ export interface User {
   organizationId?: string;
   avatarUrl?: string;
   lastConnection: string; // ISO Date
-  is_profile_complete?: boolean;
 }
 
 export type NodeType =
@@ -105,13 +104,4 @@ export interface UserActivityLog {
   description: string;
   date: string; // ISO Date
   scoreEarned?: number;
-}
-
-export interface Resource {
-  id: number;
-  title: string;
-  type: 'video' | 'article' | 'pdf';
-  description: string;
-  points: number;
-  min_score?: number; // New field for locking
 }

@@ -34,7 +34,7 @@ function useWindowDimensions() {
 
 export default function JourneyPage() {
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading } = useJourneyStore();
+  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading, isPreviewMode } = useJourneyStore();
   const { width, height } = useWindowDimensions();
 
   const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
@@ -203,7 +203,7 @@ export default function JourneyPage() {
       <section>
         <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-                <Play className="text-brand" />
+                <Play className="text-teal-500" />
                 <h1 className="text-2xl font-bold text-slate-900">
                   {isSuperAdmin ? 'Journeys de la Organizacion' : 'Mis Viajes Activos'}
                 </h1>
@@ -216,7 +216,7 @@ export default function JourneyPage() {
                     <Card
                       key={journey.id}
                       className={`shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-                        isSuperAdmin ? 'border-purple-100' : 'border-brand/20'
+                        isSuperAdmin ? 'border-purple-100' : 'border-teal-100'
                       }`}
                       onClick={() => selectJourney(journey.id)}
                     >
@@ -225,7 +225,7 @@ export default function JourneyPage() {
                                 <Badge variant="outline" className={`mb-2 ${
                                   isSuperAdmin
                                     ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                    : 'bg-brand/10 text-brand border-brand/20'
+                                    : 'bg-teal-50 text-teal-700 border-teal-200'
                                 }`}>
                                     {journey.category || "General"}
                                 </Badge>
@@ -234,7 +234,7 @@ export default function JourneyPage() {
                                     {journey.nodes.length} pasos
                                   </Badge>
                                 ) : (
-                                  <span className="text-xs font-semibold text-brand">{journey.progress}%</span>
+                                  <span className="text-xs font-semibold text-teal-600">{journey.progress}%</span>
                                 )}
                             </div>
                             <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
@@ -242,7 +242,7 @@ export default function JourneyPage() {
                         </CardHeader>
                         {!isSuperAdmin && (
                           <CardContent className="pb-2">
-                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-brand" />
+                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
                           </CardContent>
                         )}
                         <CardFooter>
@@ -342,7 +342,7 @@ export default function JourneyPage() {
                              <CardTitle className="text-base text-slate-600 font-medium">{journey.title}</CardTitle>
                         </CardHeader>
                         <CardFooter>
-                             <Button variant="ghost" className="w-full text-slate-500 hover:text-fuchsia-600 text-sm" onClick={() => selectJourney(journey.id)}>
+                             <Button variant="ghost" className="w-full text-slate-500 hover:text-teal-600 text-sm" onClick={() => selectJourney(journey.id)}>
                                  Ver Certificado / Repasar
                              </Button>
                         </CardFooter>

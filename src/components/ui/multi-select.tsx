@@ -125,7 +125,7 @@ export function MultiSelect({
                     key={opt.value}
                     className={cn(
                       'flex items-center gap-2 rounded-sm px-3 py-2 text-sm cursor-pointer transition-colors',
-                      isSelected ? 'bg-brand/10 text-brand' : 'hover:bg-accent'
+                      isSelected ? 'bg-teal-50 text-teal-900' : 'hover:bg-accent'
                     )}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -136,7 +136,7 @@ export function MultiSelect({
                       className={cn(
                         'h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center',
                         isSelected
-                          ? 'bg-brand border-brand text-white'
+                          ? 'bg-teal-600 border-teal-600 text-white'
                           : 'border-input'
                       )}
                     >

@@ -93,7 +93,7 @@ export class ApiError extends Error {
           // Si solo devuelve access_token, reutiliza el refresh_token actual
           this.setTokens(data.access_token, data.refresh_token || refreshToken);
   
-        } catch (error: unknown) { // Changed from any to unknown
+        } catch (error) {
           // Si el refresh falla, es irrecuperable: logout forzado
           this.clearTokens();
           if (typeof window !== 'undefined') {
