@@ -90,6 +90,8 @@ export interface ApiUser {
   full_name?: string | null;
   avatar_url?: string | null;
   is_platform_admin: boolean;
+  is_profile_complete?: boolean; // New field
+  oasis_score?: number; // New field
   status?: ApiAccountStatus;
   created_at?: string | null;
   updated_at?: string | null;
@@ -107,6 +109,8 @@ export interface ApiAdminUserUpdate {
   full_name?: string;
   status?: ApiAccountStatus;
   is_platform_admin?: boolean;
+  is_profile_complete?: boolean; // New field
+  oasis_score?: number; // New field
 }
 
 // --- Journey & Steps DTOs ---

@@ -16,6 +16,7 @@ interface AuthState {
   initializeSession: () => Promise<void>;
   addPoints: (points: number) => void;
   awardMedal: (medalId: string) => void;
+  completeProfile: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -123,6 +124,34 @@ export const useAuthStore = create<AuthState>()(
               medals: [...currentUser.medals, newMedal]
             }
           });
+        }
+      },
+
+      completeProfile: async () => {
+        const currentUser = get().user;
+        if (currentUser && !currentUser.is_profile_complete) {
+            // Award 50 points
+            const newScore = Math.min((currentUser.oasisScore || 0) + 50, 100);
+            
+            // Optimistic update
+            set({
+                user: {
+                    ...currentUser,
+                    is_profile_complete: true,
+                    oasisScore: newScore,
+                }
+            });
+
+            try {
+                // Backend persistence
+                await authService.updateProfile({
+                    is_profile_complete: true,
+                    oasis_score: newScore
+                });
+            } catch (error) {
+                console.error('Failed to sync profile completion with backend:', error);
+                // Revert or show error? For now just log.
+            }
         }
       }
     }),

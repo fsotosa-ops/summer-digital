@@ -26,7 +26,8 @@ export default function LoginPage() {
 
   // Esperar a que Zustand hidrate desde localStorage antes de renderizar
   useEffect(() => {
-    setHydrated(true);
+    const timer = setTimeout(() => setHydrated(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Si ya hay un usuario autenticado, redirigir al dashboard

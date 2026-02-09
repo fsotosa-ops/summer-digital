@@ -58,6 +58,11 @@ class AuthService {
       return null;
     }
   }
+
+  async updateProfile(data: Partial<ApiUser>): Promise<User> {
+    const apiUser = await apiClient.patch<ApiUser>('/auth/users/me', data);
+    return mapApiUserToUser(apiUser);
+  }
 }
 
 export const authService = new AuthService();

@@ -307,6 +307,19 @@ function PreviewPlaceholder({ node, icon }: { node: JourneyNode; icon: React.Rea
   );
 }
 
+const getNodeIcon = (node: JourneyNode) => {
+  if (node.status === 'completed') return Check;
+  if (node.status === 'locked') return Lock;
+  switch (node.type) {
+    case 'challenge': return Star;
+    case 'pdf': return FileDown;
+    case 'presentation': return Presentation;
+    case 'kahoot': return Gamepad2;
+    case 'typeform': return FileText;
+    default: return Play;
+  }
+};
+
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
     completed: "bg-teal-500 text-white shadow-teal-200",
@@ -315,19 +328,7 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
     locked: "bg-slate-200 text-slate-400",
   };
 
-  const getNodeIcon = () => {
-    if (node.status === 'completed') return Check;
-    if (node.status === 'locked') return Lock;
-    switch (node.type) {
-      case 'challenge': return Star;
-      case 'pdf': return FileDown;
-      case 'presentation': return Presentation;
-      case 'kahoot': return Gamepad2;
-      case 'typeform': return FileText;
-      default: return Play;
-    }
-  };
-  const Icon = getNodeIcon();
+  const IconComponent = getNodeIcon(node);
 
   return (
     <motion.button
@@ -339,7 +340,11 @@ function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void 
         statusColors[node.status] || statusColors.locked
       )}
     >
-      <Icon size={20} fill={node.status === 'completed' ? 'none' : 'currentColor'} className={node.status === 'completed' ? '' : 'opacity-80'} />
+      {React.createElement(IconComponent, {
+        size: 20,
+        fill: node.status === 'completed' ? 'none' : 'currentColor',
+        className: node.status === 'completed' ? '' : 'opacity-80'
+      })}
     </motion.button>
   );
 }
