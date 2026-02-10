@@ -204,10 +204,11 @@ export class ApiError extends Error {
     public post<T>(endpoint: string, body: any, headers?: HeadersInit): Promise<T> {
       // Soporte automático para x-www-form-urlencoded si body es URLSearchParams
       const isUrlEncoded = body instanceof URLSearchParams;
-      
+      const isFormData = body instanceof FormData;
+
       return this.request<T>(endpoint, {
         method: 'POST',
-        body: isUrlEncoded ? body : JSON.stringify(body),
+        body: isUrlEncoded || isFormData ? body : JSON.stringify(body),
         headers
       });
     }

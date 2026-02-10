@@ -446,3 +446,109 @@ export interface ApiStepCompleteResponse {
   enrollment_progress: number;
   points_earned: number;
 }
+
+// --- Resource DTOs ---
+
+export type ApiResourceType = 'video' | 'podcast' | 'pdf' | 'capsula' | 'actividad';
+export type ApiUnlockLogic = 'AND' | 'OR';
+export type ApiConditionType = 'points_threshold' | 'level_required' | 'reward_required' | 'journey_completed';
+
+export interface ApiUnlockConditionCreate {
+  condition_type: ApiConditionType;
+  reference_id?: string | null;
+  reference_value?: number | null;
+}
+
+export interface ApiUnlockConditionRead {
+  id: string;
+  resource_id: string;
+  condition_type: ApiConditionType;
+  reference_id?: string | null;
+  reference_value?: number | null;
+  created_at: string;
+}
+
+export interface ApiResourceCreate {
+  title: string;
+  description?: string | null;
+  type: ApiResourceType;
+  content_url?: string | null;
+  thumbnail_url?: string | null;
+  points_on_completion?: number;
+  unlock_logic?: ApiUnlockLogic;
+  metadata?: Record<string, unknown>;
+  unlock_conditions?: ApiUnlockConditionCreate[];
+}
+
+export interface ApiResourceUpdate {
+  title?: string | null;
+  description?: string | null;
+  type?: ApiResourceType | null;
+  content_url?: string | null;
+  thumbnail_url?: string | null;
+  points_on_completion?: number | null;
+  unlock_logic?: ApiUnlockLogic | null;
+  metadata?: Record<string, unknown> | null;
+  unlock_conditions?: ApiUnlockConditionCreate[] | null;
+}
+
+export interface ApiResourceAdminRead {
+  id: string;
+  organization_id: string;
+  title: string;
+  description?: string | null;
+  type: ApiResourceType;
+  content_url?: string | null;
+  storage_path?: string | null;
+  thumbnail_url?: string | null;
+  is_published: boolean;
+  points_on_completion: number;
+  unlock_logic: ApiUnlockLogic;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  unlock_conditions: ApiUnlockConditionRead[];
+  consumption_count: number;
+}
+
+export interface ApiResourceParticipantRead {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: ApiResourceType;
+  content_url?: string | null;
+  storage_path?: string | null;
+  thumbnail_url?: string | null;
+  points_on_completion: number;
+  is_unlocked: boolean;
+  is_consumed: boolean;
+  lock_reasons: string[];
+}
+
+export interface ApiConsumptionCreate {
+  time_on_page_seconds?: number;
+}
+
+export interface ApiConsumptionRead {
+  id: string;
+  resource_id: string;
+  user_id: string;
+  opened_at: string;
+  completed_at?: string | null;
+  time_on_page_seconds: number;
+  points_awarded: number;
+}
+
+export interface ApiResourceOrganizationRead {
+  id: string;
+  resource_id: string;
+  organization_id: string;
+  assigned_at: string;
+  assigned_by?: string | null;
+}
+
+export interface ApiResourceOrganizationsResponse {
+  resource_id: string;
+  organizations: ApiResourceOrganizationRead[];
+  total: number;
+}
