@@ -186,6 +186,22 @@ export default function ResourceDetailPage() {
                 className="w-full h-full rounded-lg"
               />
             </div>
+          ) : detected && detected.type === 'typeform' ? (
+            <div className="w-full" style={{ height: '70vh' }}>
+              <iframe
+                src={detected.embedUrl}
+                className="w-full h-full rounded-lg"
+                allow="camera; microphone; autoplay; encrypted-media;"
+              />
+            </div>
+          ) : detected && detected.type === 'kahoot' ? (
+            <div className="w-full" style={{ height: '70vh' }}>
+              <iframe
+                src={detected.embedUrl}
+                className="w-full h-full rounded-lg"
+                allowFullScreen
+              />
+            </div>
           ) : resource.content_url ? (
             <div className="p-8 text-center space-y-4">
               <ExternalLink className="h-12 w-12 mx-auto text-slate-400" />

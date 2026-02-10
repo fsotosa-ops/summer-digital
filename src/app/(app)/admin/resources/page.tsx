@@ -67,6 +67,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { ResourceContentPreview } from '@/components/resources/ResourceContentPreview';
 import { toast } from 'sonner';
 
 const RESOURCE_TYPES: { value: ApiResourceType; label: string; icon: React.ElementType }[] = [
@@ -99,6 +100,7 @@ export default function AdminResourcesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<ApiResourceAdminRead | null>(null);
+  const [previewResource, setPreviewResource] = useState<ApiResourceAdminRead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
 
@@ -480,6 +482,16 @@ export default function AdminResourcesPage() {
                     {canEdit && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {(resource.content_url || resource.storage_path) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setPreviewResource(resource)}
+                              title="Vista previa"
+                            >
+                              <Eye className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -605,11 +617,23 @@ export default function AdminResourcesPage() {
               </div>
 
               {contentSource === 'url' ? (
-                <Input
-                  value={formData.content_url || ''}
-                  onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
-                  placeholder="https://youtube.com/watch?v=... o URL directa"
-                />
+                <div className="space-y-3">
+                  <Input
+                    value={formData.content_url || ''}
+                    onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
+                    placeholder="https://youtube.com/watch?v=... o URL directa"
+                  />
+                  {/* Live preview */}
+                  {formData.content_url && formData.content_url.length > 8 && (
+                    <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                      <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Vista previa
+                      </p>
+                      <ResourceContentPreview contentUrl={formData.content_url} compact />
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Input
@@ -795,6 +819,52 @@ export default function AdminResourcesPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-blue-600" />
+              Vista previa: {previewResource?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Asi se vera el recurso para los participantes.
+            </DialogDescription>
+          </DialogHeader>
+          {previewResource && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="capitalize">{previewResource.type}</Badge>
+                <Badge variant={previewResource.is_published ? 'default' : 'outline'}>
+                  {previewResource.is_published ? 'Publicado' : 'Borrador'}
+                </Badge>
+                {previewResource.points_on_completion > 0 && (
+                  <Badge variant="secondary">+{previewResource.points_on_completion} pts</Badge>
+                )}
+                {previewResource.unlock_conditions.length > 0 && (
+                  <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
+                    <Lock className="h-3 w-3 mr-1" />
+                    {previewResource.unlock_conditions.length} condicion(es)
+                  </Badge>
+                )}
+                {previewResource.unlock_conditions.length === 0 && (
+                  <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+                    Recurso libre
+                  </Badge>
+                )}
+              </div>
+              {previewResource.description && (
+                <p className="text-sm text-slate-500">{previewResource.description}</p>
+              )}
+              <ResourceContentPreview
+                contentUrl={previewResource.content_url}
+                storagePath={previewResource.storage_path}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
