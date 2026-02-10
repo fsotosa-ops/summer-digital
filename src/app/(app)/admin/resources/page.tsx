@@ -67,7 +67,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { ResourceContentPreview } from '@/components/resources/ResourceContentPreview';
+import { ResourceContentPreview } from '@/features/resources/ResourceContentPreview';
 import { toast } from 'sonner';
 
 const RESOURCE_TYPES: { value: ApiResourceType; label: string; icon: React.ElementType }[] = [
