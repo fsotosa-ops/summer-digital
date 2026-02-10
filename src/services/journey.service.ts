@@ -48,8 +48,12 @@ class JourneyService {
     return Promise.all(journeyPromises);
   }
 
-  async completeNode(enrollmentId: string, stepId: string): Promise<void> {
-    await apiClient.post(`/journeys/enrollments/${enrollmentId}/steps/${stepId}/complete`, {});
+  async completeNode(enrollmentId: string, stepId: string, externalReference?: string): Promise<void> {
+    const body: Record<string, unknown> = {};
+    if (externalReference) {
+      body.external_reference = externalReference;
+    }
+    await apiClient.post(`/journeys/enrollments/${enrollmentId}/steps/${stepId}/complete`, body);
   }
 
   async listAvailableJourneys(orgId: string): Promise<ApiJourneyRead[]> {

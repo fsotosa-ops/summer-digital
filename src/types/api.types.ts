@@ -352,3 +352,97 @@ export interface ApiJourneyRead {
   is_active: boolean;
   total_steps: number;
 }
+
+// --- Gamification DTOs ---
+
+export interface ApiLevelRead {
+  id: string;
+  organization_id?: string | null;
+  name: string;
+  min_points: number;
+  icon_url?: string | null;
+  benefits: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ApiLevelCreate {
+  name: string;
+  min_points: number;
+  icon_url?: string | null;
+  benefits?: Record<string, unknown>;
+}
+
+export interface ApiLevelUpdate {
+  name?: string | null;
+  min_points?: number | null;
+  icon_url?: string | null;
+  benefits?: Record<string, unknown> | null;
+}
+
+export interface ApiRewardRead {
+  id: string;
+  organization_id?: string | null;
+  name: string;
+  description?: string | null;
+  type: string;
+  icon_url?: string | null;
+  unlock_condition: Record<string, unknown>;
+}
+
+export interface ApiRewardCreate {
+  name: string;
+  description?: string | null;
+  type: string;
+  icon_url?: string | null;
+  unlock_condition?: Record<string, unknown>;
+}
+
+export interface ApiRewardUpdate {
+  name?: string | null;
+  description?: string | null;
+  type?: string | null;
+  icon_url?: string | null;
+  unlock_condition?: Record<string, unknown> | null;
+}
+
+export interface ApiUserRewardRead {
+  id: string;
+  user_id: string;
+  reward_id: string;
+  earned_at: string;
+  journey_id?: string | null;
+  metadata: Record<string, unknown>;
+  reward?: ApiRewardRead | null;
+}
+
+export interface ApiActivityRead {
+  id: string;
+  user_id: string;
+  type: string;
+  points_awarded: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ApiUserPointsSummary {
+  total_points: number;
+  current_level?: ApiLevelRead | null;
+  next_level?: ApiLevelRead | null;
+  points_to_next_level?: number | null;
+  rewards: ApiUserRewardRead[];
+  recent_activities: ApiActivityRead[];
+}
+
+export interface ApiUserRewardGrant {
+  user_id: string;
+  reward_id: string;
+  journey_id?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApiStepCompleteResponse {
+  step_id: string;
+  completed_at: string;
+  enrollment_progress: number;
+  points_earned: number;
+}

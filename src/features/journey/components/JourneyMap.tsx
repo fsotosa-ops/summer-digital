@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Check, Lock, Play, Star, Users as UsersIcon, ChevronLeft, FileDown, Presentation, Gamepad2, ExternalLink, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import { Widget as TypeformWidget } from '@typeform/embed-react';
 
 export function JourneyMap() {
   const { user } = useAuthStore(); // [NUEVO] Obtenemos el usuario y su org actual
-  const { journeys, selectedJourneyId, selectJourney, completeActivity } = useJourneyStore();
+  const { journeys, selectedJourneyId, selectJourney, completeActivity, enrollmentMap } = useJourneyStore();
   
   const journey = journeys.find(j => j.id === selectedJourneyId);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -31,32 +32,36 @@ export function JourneyMap() {
   //   fetchJourney();
   // }, [fetchJourney]);
 
+  const [typeformSubmitted, setTypeformSubmitted] = useState(false);
+
   if (!journey) return <div className="p-10 text-center text-slate-500">Selecciona un viaje para comenzar.</div>;
 
   // Helper to find node by ID for connection drawing
   const getNodeById = (id: string) => journey.nodes.find(n => n.id === id);
 
-  // [MODIFICADO] Lógica para inyectar Hidden Fields en Typeform
+  // Extract Typeform form ID from URL (e.g. https://form.typeform.com/to/FORM_ID)
+  const getTypeformId = (node: JourneyNode): string | null => {
+    const url = node.embedUrl || node.externalUrl;
+    if (!url) return null;
+    const match = url.match(/typeform\.com\/to\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Build hidden fields object for Typeform SDK
+  const getTypeformHiddenFields = (node: JourneyNode): Record<string, string> => {
+    if (!user) return {};
+    return {
+      user_id: user.id,
+      org_id: user.organizationId || '',
+      journey_id: journey.id,
+      step_id: node.id,
+      enrollment_id: enrollmentMap.get(journey.id) || '',
+    };
+  };
+
+  // Obtener URL de embed para tipos no-Typeform (Typeform usa el SDK directamente)
   const getEmbedSrc = (node: JourneyNode) => {
-    let baseUrl = node.embedUrl || node.externalUrl || node.videoUrl;
-
-    if (!baseUrl) return undefined;
-
-    // Si es un Typeform y tenemos usuario logueado, inyectamos los parámetros de trazabilidad
-    if (node.type === 'typeform' && user) {
-      const hiddenFields = new URLSearchParams({
-        user_id: user.id,
-        org_id: user.organizationId || '', // Org bajo la cual está contestando
-        journey_id: journey.id,
-        step_id: node.id,
-        // enrollment_id: journey.enrollmentId || '' // Descomentar si tu objeto journey ya trae el enrollmentId
-      });
-
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      return `${baseUrl}${separator}${hiddenFields.toString()}`;
-    }
-
-    return baseUrl;
+    return node.embedUrl || node.externalUrl || node.videoUrl || undefined;
   };
 
   const renderNodeContent = (node: JourneyNode) => {
@@ -74,15 +79,24 @@ export function JourneyMap() {
           <DefaultPlaceholder node={node} icon={<Play className="h-10 w-10 text-brand opacity-50" />} />
         );
 
-      case 'typeform':
-        return embedSrc ? (
+      case 'typeform': {
+        const formId = getTypeformId(node);
+        return formId ? (
           <div className="w-full h-[400px] rounded-lg overflow-hidden border border-slate-200">
-            <iframe src={embedSrc} width="100%" height="100%" frameBorder="0"
-              allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
+            <TypeformWidget
+              id={formId}
+              style={{ width: '100%', height: '100%' }}
+              hidden={getTypeformHiddenFields(node)}
+              onSubmit={async (data) => {
+                await completeActivity(node.id, data.responseId);
+                setTypeformSubmitted(true);
+              }}
+            />
           </div>
         ) : (
           <DefaultPlaceholder node={node} icon={<FileText className="h-10 w-10 text-brand opacity-50" />} />
         );
+      }
 
       case 'pdf':
         return embedSrc ? (
@@ -210,7 +224,7 @@ export function JourneyMap() {
       ))}
 
       {/* Detail Dialog */}
-      <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+      <Dialog open={!!selectedNode} onOpenChange={(open) => { if (!open) { setSelectedNode(null); setTypeformSubmitted(false); } }}>
         <DialogContent className={cn(
           "sm:max-w-md",
           selectedNode?.type && ['typeform', 'video', 'pdf', 'presentation'].includes(selectedNode.type) && "sm:max-w-2xl"
@@ -230,15 +244,31 @@ export function JourneyMap() {
 
           <DialogFooter className="sm:justify-center">
             {selectedNode?.status === 'in-progress' || selectedNode?.status === 'available' ? (
-              <Button 
-                onClick={async () => {
-                   if (selectedNode) await completeActivity(selectedNode.id);
-                   setSelectedNode(null);
-                }}
-                className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white"
-              >
-                Completar Actividad
-              </Button>
+              selectedNode?.type === 'typeform' ? (
+                typeformSubmitted ? (
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto border-brand/20 text-brand bg-brand/5"
+                    onClick={() => { setSelectedNode(null); setTypeformSubmitted(false); }}
+                  >
+                    <Check className="mr-2 h-4 w-4" /> Formulario enviado
+                  </Button>
+                ) : (
+                  <Button disabled variant="secondary" className="w-full sm:w-auto bg-slate-100 text-slate-500">
+                    <FileText className="mr-2 h-4 w-4" /> Completa el formulario para continuar
+                  </Button>
+                )
+              ) : (
+                <Button
+                  onClick={async () => {
+                     if (selectedNode) await completeActivity(selectedNode.id);
+                     setSelectedNode(null);
+                  }}
+                  className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white"
+                >
+                  Completar Actividad
+                </Button>
+              )
             ) : selectedNode?.status === 'completed' ? (
                <Button variant="outline" className="w-full sm:w-auto border-brand/20 text-brand bg-brand/5">
                   <Check className="mr-2 h-4 w-4" /> Completado
