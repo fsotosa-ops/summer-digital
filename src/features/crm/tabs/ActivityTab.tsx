@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
 import { crmService } from '@/services/crm.service';
 import { ApiCrmStats, ApiCrmTask } from '@/types/api.types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FieldOptionsManager } from '../components/FieldOptionsManager';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -48,6 +50,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function ActivityTab() {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SuperAdmin';
   const [stats, setStats] = useState<ApiCrmStats | null>(null);
   const [tasks, setTasks] = useState<ApiCrmTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -279,6 +283,24 @@ export function ActivityTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Field Options Manager — solo SuperAdmin */}
+      {isSuperAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-teal-600" />
+              Opciones de campos del perfil
+            </CardTitle>
+            <CardDescription>
+              Configura las opciones disponibles para género, nivel educativo y ocupación.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldOptionsManager />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

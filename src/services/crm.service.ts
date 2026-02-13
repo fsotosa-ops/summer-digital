@@ -8,6 +8,9 @@ import {
   ApiCrmTaskCreate,
   ApiCrmTimelineItem,
   ApiCrmStats,
+  ApiFieldOption,
+  ApiFieldOptionCreate,
+  ApiFieldOptionUpdate,
 } from '@/types/api.types';
 
 class CrmService {
@@ -111,6 +114,27 @@ class CrmService {
   async deleteNote(noteId: string): Promise<void> {
     return apiClient.delete(`/crm/notes/${noteId}`);
   }
+
+  // Field Options
+  async listFieldOptions(fieldName?: string, includeInactive = false): Promise<ApiFieldOption[]> {
+    const params = new URLSearchParams();
+    if (fieldName) params.set('field_name', fieldName);
+    if (includeInactive) params.set('include_inactive', 'true');
+    return apiClient.get<ApiFieldOption[]>(`/crm/field-options/?${params.toString()}`);
+  }
+
+  async createFieldOption(data: ApiFieldOptionCreate): Promise<ApiFieldOption> {
+    return apiClient.post<ApiFieldOption>('/crm/field-options/', data);
+  }
+
+  async updateFieldOption(id: string, data: ApiFieldOptionUpdate): Promise<ApiFieldOption> {
+    return apiClient.patch<ApiFieldOption>(`/crm/field-options/${id}`, data);
+  }
+
+  async deleteFieldOption(id: string): Promise<void> {
+    return apiClient.delete(`/crm/field-options/${id}`);
+  }
+
 }
 
 export const crmService = new CrmService();
