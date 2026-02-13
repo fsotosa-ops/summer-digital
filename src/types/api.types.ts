@@ -489,13 +489,45 @@ export interface ApiCrmContact {
   last_name?: string | null;
   email: string;
   phone?: string | null;
-  city?: string | null;
+  // Location
   country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  // Demographics
+  birth_date?: string | null;
+  gender?: string | null;
+  education_level?: string | null;
+  occupation?: string | null;
   avatar_url?: string | null;
   status: ApiContactStatus;
   last_seen_at?: string | null;
   created_at?: string | null;
   oasis_score?: number | null;
+}
+
+export interface ApiFieldOption {
+  id: string;
+  field_name: string;
+  value: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiFieldOptionCreate {
+  field_name: string;
+  value: string;
+  label: string;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface ApiFieldOptionUpdate {
+  label?: string;
+  sort_order?: number;
+  is_active?: boolean;
 }
 
 export interface ApiCrmContactsResponse {
