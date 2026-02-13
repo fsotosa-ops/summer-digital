@@ -329,6 +329,8 @@ export default function JourneyEditorPage() {
     config: {},
     gamification_rules: { base_points: 10 },
   });
+  // In-session cache: preserves config per type when switching types in the dialog
+  const [configsByType, setConfigsByType] = useState<Partial<Record<ApiStepType, Record<string, unknown>>>>({});
 
   const fetchData = async (effectiveOrgId?: string) => {
     const oid = effectiveOrgId || orgId;
@@ -393,6 +395,7 @@ export default function JourneyEditorPage() {
       config: {},
       gamification_rules: { base_points: 10 },
     });
+    setConfigsByType({});
     setStepDialogOpen(true);
   };
 
@@ -404,6 +407,7 @@ export default function JourneyEditorPage() {
       config: step.config || {},
       gamification_rules: step.gamification_rules || { base_points: 10 },
     });
+    setConfigsByType({ [step.type]: step.config || {} });
     setStepDialogOpen(true);
   };
 
@@ -749,7 +753,10 @@ export default function JourneyEditorPage() {
       </Card>
 
       {/* Step Dialog */}
-      <Dialog open={stepDialogOpen} onOpenChange={setStepDialogOpen}>
+      <Dialog open={stepDialogOpen} onOpenChange={(open) => {
+        setStepDialogOpen(open);
+        if (!open) setConfigsByType({});
+      }}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{editingStep ? 'Editar Step' : 'Nuevo Step'}</DialogTitle>
@@ -774,7 +781,20 @@ export default function JourneyEditorPage() {
               <Label htmlFor="step-type">Tipo de Step</Label>
               <Select
                 value={stepForm.type}
-                onValueChange={(value: ApiStepType) => setStepForm({ ...stepForm, type: value })}
+                onValueChange={(value: ApiStepType) => {
+                  const currentType = stepForm.type;
+                  if (value === currentType) return;
+                  // Save current config keyed by current type
+                  const currentDescription = stepForm.config?.description;
+                  setConfigsByType((prev) => ({ ...prev, [currentType]: stepForm.config || {} }));
+                  // Restore cached config for new type, or start fresh
+                  const restored = configsByType[value] || {};
+                  // Carry over description if the restored config doesn't have one
+                  if (currentDescription && !restored.description) {
+                    restored.description = currentDescription;
+                  }
+                  setStepForm({ ...stepForm, type: value, config: restored });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un tipo" />
