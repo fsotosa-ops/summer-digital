@@ -46,18 +46,15 @@ const NAV_ITEMS: NavItem[] = [
   // Admin Group
   { 
     label: 'Administración', 
-    href: '/admin/overview', // Unified entry point
-    icon: Settings, 
+    href: '/crm', // CRM as unified entry point
+    icon: Settings,
     allowedRoles: ['Admin', 'SuperAdmin'],
     children: [
-        { label: 'Resumen', href: '/admin/overview', icon: Layout, allowedRoles: ['Admin', 'SuperAdmin'] },
-        { label: 'Organizaciones', href: '/admin/organizations', icon: Building2, allowedRoles: ['SuperAdmin'] },
-        { label: 'Usuarios', href: '/admin/users', icon: Users, allowedRoles: ['SuperAdmin'] },
+        { label: 'CRM', href: '/crm', icon: Users, allowedRoles: ['Admin', 'SuperAdmin'] },
         { label: 'Mi Organización', href: '/admin/my-organization', icon: Building2, allowedRoles: ['Admin'] },
         { label: 'Journeys', href: '/admin/journeys', icon: Route, allowedRoles: ['Admin', 'SuperAdmin'] },
         { label: 'Recursos', href: '/admin/resources', icon: BookOpen, allowedRoles: ['Admin', 'SuperAdmin'] },
         { label: 'Gamificacion', href: '/admin/gamification', icon: Trophy, allowedRoles: ['Admin', 'SuperAdmin'] },
-        { label: 'Gestión CRM', href: '/crm', icon: Users, allowedRoles: ['Admin', 'SuperAdmin'] },
         { label: 'Analítica', href: '/analytics', icon: BarChart2, allowedRoles: ['SuperAdmin'] },
     ]
   },

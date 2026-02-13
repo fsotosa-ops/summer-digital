@@ -477,6 +477,95 @@ export interface ApiStepCompleteResponse {
   points_earned: number;
 }
 
+// --- CRM DTOs ---
+
+export type ApiContactStatus = 'active' | 'inactive' | 'risk';
+export type ApiCrmTaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type ApiCrmTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface ApiCrmContact {
+  user_id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
+  phone?: string | null;
+  city?: string | null;
+  country?: string | null;
+  avatar_url?: string | null;
+  status: ApiContactStatus;
+  last_seen_at?: string | null;
+  created_at?: string | null;
+  oasis_score?: number | null;
+}
+
+export interface ApiCrmContactsResponse {
+  contacts: ApiCrmContact[];
+  count: number;
+}
+
+export interface ApiCrmNote {
+  id: string;
+  contact_user_id: string;
+  organization_id: string;
+  author_id: string;
+  content: string;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiCrmNoteCreate {
+  content: string;
+  tags?: string[];
+}
+
+export interface ApiCrmTask {
+  id: string;
+  contact_user_id: string;
+  organization_id: string;
+  created_by: string;
+  assigned_to?: string | null;
+  title: string;
+  description?: string | null;
+  status: ApiCrmTaskStatus;
+  priority: ApiCrmTaskPriority;
+  due_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiCrmTaskCreate {
+  title: string;
+  description?: string | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  priority?: ApiCrmTaskPriority;
+}
+
+export interface ApiCrmTimelineItem {
+  type: 'note' | 'task';
+  id: string;
+  content?: string;
+  title?: string;
+  status?: string;
+  priority?: string;
+  tags?: string[];
+  created_at: string;
+  author_id?: string;
+}
+
+export interface ApiCrmStats {
+  total_contacts: number;
+  active_contacts: number;
+  inactive_contacts: number;
+  risk_contacts: number;
+  total_tasks: number;
+  pending_tasks: number;
+  in_progress_tasks: number;
+  completed_tasks: number;
+  total_notes: number;
+}
+
 // --- Resource DTOs ---
 
 export type ApiResourceType = 'video' | 'podcast' | 'pdf' | 'capsula' | 'actividad';
