@@ -420,6 +420,7 @@ export interface ApiActivityRead {
   user_id: string;
   type: string;
   points_awarded: number;
+  organization_id?: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
 }
@@ -438,6 +439,35 @@ export interface ApiUserRewardGrant {
   reward_id: string;
   journey_id?: string | null;
   metadata?: Record<string, unknown>;
+}
+
+// Gamification Config
+export interface ApiGamificationConfigRead {
+  id: string;
+  organization_id: string;
+  points_enabled: boolean;
+  levels_enabled: boolean;
+  rewards_enabled: boolean;
+  points_multiplier: number;
+  default_step_points: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiGamificationConfigCreate {
+  points_enabled?: boolean;
+  levels_enabled?: boolean;
+  rewards_enabled?: boolean;
+  points_multiplier?: number;
+  default_step_points?: number;
+}
+
+export interface ApiGamificationConfigUpdate {
+  points_enabled?: boolean | null;
+  levels_enabled?: boolean | null;
+  rewards_enabled?: boolean | null;
+  points_multiplier?: number | null;
+  default_step_points?: number | null;
 }
 
 export interface ApiStepCompleteResponse {

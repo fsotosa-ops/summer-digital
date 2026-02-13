@@ -32,7 +32,7 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchGamification() {
       try {
-        const data = await gamificationService.getUserSummary();
+        const data = await gamificationService.getUserSummary(user?.organizationId);
         setSummary(data);
       } catch (error) {
         console.error('Error fetching gamification summary:', error);

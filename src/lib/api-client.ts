@@ -213,6 +213,14 @@ export class ApiError extends Error {
       });
     }
   
+    public put<T>(endpoint: string, body: any, headers?: HeadersInit): Promise<T> {
+      return this.request<T>(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers
+      });
+    }
+
     public patch<T>(endpoint: string, body: any, headers?: HeadersInit): Promise<T> {
       return this.request<T>(endpoint, {
         method: 'PATCH',

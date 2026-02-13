@@ -1,6 +1,9 @@
 import { apiClient } from '@/lib/api-client';
 import {
   ApiActivityRead,
+  ApiGamificationConfigCreate,
+  ApiGamificationConfigRead,
+  ApiGamificationConfigUpdate,
   ApiLevelCreate,
   ApiLevelRead,
   ApiLevelUpdate,
@@ -13,22 +16,26 @@ import {
 } from '@/types/api.types';
 
 class GamificationService {
-  // --- User Progress ---
+  // --- User Progress (org-scoped via query param) ---
 
-  async getUserSummary(): Promise<ApiUserPointsSummary> {
-    return apiClient.get<ApiUserPointsSummary>('/gamification/me/summary');
+  async getUserSummary(orgId?: string): Promise<ApiUserPointsSummary> {
+    const params = orgId ? `?org_id=${orgId}` : '';
+    return apiClient.get<ApiUserPointsSummary>(`/gamification/me/summary${params}`);
   }
 
-  async getUserPoints(): Promise<number> {
-    return apiClient.get<number>('/gamification/me/points');
+  async getUserPoints(orgId?: string): Promise<number> {
+    const params = orgId ? `?org_id=${orgId}` : '';
+    return apiClient.get<number>(`/gamification/me/points${params}`);
   }
 
   async getUserRewards(): Promise<ApiUserRewardRead[]> {
     return apiClient.get<ApiUserRewardRead[]>('/gamification/me/rewards');
   }
 
-  async getUserActivities(limit = 20): Promise<ApiActivityRead[]> {
-    return apiClient.get<ApiActivityRead[]>(`/gamification/me/activities?limit=${limit}`);
+  async getUserActivities(limit = 20, orgId?: string): Promise<ApiActivityRead[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (orgId) params.set('org_id', orgId);
+    return apiClient.get<ApiActivityRead[]>(`/gamification/me/activities?${params}`);
   }
 
   // --- Admin: Levels ---
@@ -79,6 +86,20 @@ class GamificationService {
 
   async getUserRewardsAdmin(orgId: string, userId: string): Promise<ApiUserRewardRead[]> {
     return apiClient.get<ApiUserRewardRead[]>(`/gamification/${orgId}/admin/user-rewards/${userId}`);
+  }
+
+  // --- Admin: Gamification Config ---
+
+  async getConfig(orgId: string): Promise<ApiGamificationConfigRead | null> {
+    return apiClient.get<ApiGamificationConfigRead | null>(`/gamification/${orgId}/admin/config`);
+  }
+
+  async upsertConfig(orgId: string, data: ApiGamificationConfigCreate): Promise<ApiGamificationConfigRead> {
+    return apiClient.put<ApiGamificationConfigRead>(`/gamification/${orgId}/admin/config`, data);
+  }
+
+  async updateConfig(orgId: string, data: ApiGamificationConfigUpdate): Promise<ApiGamificationConfigRead> {
+    return apiClient.patch<ApiGamificationConfigRead>(`/gamification/${orgId}/admin/config`, data);
   }
 }
 

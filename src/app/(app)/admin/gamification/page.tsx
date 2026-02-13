@@ -10,6 +10,8 @@ import {
   ApiRewardRead,
   ApiRewardCreate,
   ApiRewardUpdate,
+  ApiGamificationConfigRead,
+  ApiGamificationConfigCreate,
 } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,10 +36,11 @@ import {
   Star,
   Award,
   TrendingUp,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Tab = 'levels' | 'rewards';
+type Tab = 'levels' | 'rewards' | 'config';
 
 export default function GamificationAdminPage() {
   const { user } = useAuthStore();
@@ -64,8 +67,42 @@ export default function GamificationAdminPage() {
     unlock_condition: {},
   });
 
+  // Config state
+  const [config, setConfig] = useState<ApiGamificationConfigRead | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [configForm, setConfigForm] = useState<ApiGamificationConfigCreate>({
+    points_enabled: true,
+    levels_enabled: true,
+    rewards_enabled: true,
+    points_multiplier: 1.0,
+    default_step_points: 10,
+  });
+
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch config
+  const fetchConfig = async () => {
+    if (!orgId) return;
+    setIsLoadingConfig(true);
+    try {
+      const data = await gamificationService.getConfig(orgId);
+      setConfig(data);
+      if (data) {
+        setConfigForm({
+          points_enabled: data.points_enabled,
+          levels_enabled: data.levels_enabled,
+          rewards_enabled: data.rewards_enabled,
+          points_multiplier: data.points_multiplier,
+          default_step_points: data.default_step_points,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching config:', err);
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
 
   // Fetch levels
   const fetchLevels = async () => {
@@ -98,6 +135,7 @@ export default function GamificationAdminPage() {
   useEffect(() => {
     fetchLevels();
     fetchRewards();
+    fetchConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
@@ -208,6 +246,21 @@ export default function GamificationAdminPage() {
     }
   };
 
+  // --- Config Save ---
+  const handleSaveConfig = async () => {
+    if (!orgId) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const saved = await gamificationService.upsertConfig(orgId, configForm);
+      setConfig(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar configuracion');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Unlock condition helpers
   const unlockType = (rewardForm.unlock_condition as Record<string, string>)?.type || 'manual';
 
@@ -280,6 +333,18 @@ export default function GamificationAdminPage() {
         >
           <Award className="h-4 w-4 inline mr-1.5" />
           Recompensas ({rewards.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('config')}
+          className={cn(
+            'px-4 py-2 rounded-md text-sm font-medium transition-colors',
+            activeTab === 'config'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          )}
+        >
+          <Settings className="h-4 w-4 inline mr-1.5" />
+          Configuracion
         </button>
       </div>
 
@@ -420,6 +485,142 @@ export default function GamificationAdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Config Tab */}
+      {activeTab === 'config' && (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Configuracion de Gamificacion</CardTitle>
+              <CardDescription>
+                Ajusta las opciones de gamificacion para tu organizacion.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingConfig ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+              </div>
+            ) : (
+              <div className="space-y-6 max-w-lg">
+                {/* Toggles */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">Puntos</p>
+                      <p className="text-sm text-slate-500">Habilitar sistema de puntos</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={configForm.points_enabled}
+                      onClick={() => setConfigForm({ ...configForm, points_enabled: !configForm.points_enabled })}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                        configForm.points_enabled ? 'bg-teal-500' : 'bg-slate-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          configForm.points_enabled ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">Niveles</p>
+                      <p className="text-sm text-slate-500">Habilitar sistema de niveles</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={configForm.levels_enabled}
+                      onClick={() => setConfigForm({ ...configForm, levels_enabled: !configForm.levels_enabled })}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                        configForm.levels_enabled ? 'bg-teal-500' : 'bg-slate-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          configForm.levels_enabled ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">Recompensas</p>
+                      <p className="text-sm text-slate-500">Habilitar sistema de recompensas</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={configForm.rewards_enabled}
+                      onClick={() => setConfigForm({ ...configForm, rewards_enabled: !configForm.rewards_enabled })}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                        configForm.rewards_enabled ? 'bg-teal-500' : 'bg-slate-200'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                          configForm.rewards_enabled ? 'translate-x-6' : 'translate-x-1'
+                        )}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Numeric fields */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Multiplicador de puntos</Label>
+                    <Input
+                      type="number"
+                      min="0.01"
+                      max="99.99"
+                      step="0.01"
+                      value={configForm.points_multiplier}
+                      onChange={(e) => setConfigForm({ ...configForm, points_multiplier: parseFloat(e.target.value) || 1 })}
+                    />
+                    <p className="text-xs text-slate-400">
+                      1.0 = normal, 1.5 = 50% bonus, 2.0 = doble puntos
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Puntos por defecto por step</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={configForm.default_step_points}
+                      onChange={(e) => setConfigForm({ ...configForm, default_step_points: parseInt(e.target.value) || 0 })}
+                    />
+                    <p className="text-xs text-slate-400">
+                      Se usa cuando un step no tiene puntos configurados.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t">
+                  <Button onClick={handleSaveConfig} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Guardar Configuracion
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
