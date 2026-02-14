@@ -16,6 +16,7 @@ import {
   ApiCrmTaskPriority,
   ApiOrganization,
   ApiEnrollmentDetailResponse,
+  ApiStepProgressRead,
   ApiUserPointsSummary,
   ApiMemberRole,
 } from '@/types/api.types';
@@ -1315,7 +1316,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                             enrollmentDetails.map((enrollment) => {
                               const isExpanded = expandedEnrollment === enrollment.id;
                               const journeyTitle = enrollment.journey?.title || 'Journey';
-                              const completedSteps = enrollment.completed_steps || enrollment.steps_progress.filter((s) => s.status === 'completed').length;
+                              const completedSteps = enrollment.completed_steps || enrollment.steps_progress.filter((s: ApiStepProgressRead) => s.status === 'completed').length;
                               const totalSteps = enrollment.total_steps || enrollment.steps_progress.length;
 
                               return (
@@ -1395,7 +1396,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                                         Detalle de pasos
                                       </p>
                                       <div className="space-y-1">
-                                        {enrollment.steps_progress.map((step, idx) => (
+                                        {enrollment.steps_progress.map((step: ApiStepProgressRead, idx: number) => (
                                           <div
                                             key={step.step_id}
                                             className="flex items-center gap-3 py-2 px-3 rounded-md bg-white border border-slate-100"
