@@ -342,6 +342,40 @@ export interface ApiEnrollmentResponse {
   completed_at?: string | null;
 }
 
+export interface ApiStepProgressRead {
+  step_id: string;
+  title: string;
+  type: string;
+  order_index: number;
+  status: 'locked' | 'available' | 'completed';
+  completed_at?: string | null;
+  points_earned: number;
+}
+
+export interface ApiJourneyBasicInfo {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  thumbnail_url?: string | null;
+  total_steps: number;
+}
+
+export interface ApiEnrollmentDetailResponse {
+  id: string;
+  user_id: string;
+  journey_id: string;
+  status: string;
+  current_step_index: number;
+  progress_percentage: number;
+  started_at: string;
+  completed_at?: string | null;
+  journey?: ApiJourneyBasicInfo | null;
+  steps_progress: ApiStepProgressRead[];
+  completed_steps: number;
+  total_steps: number;
+}
+
 // --- Journey Read (public) ---
 
 export interface ApiJourneyRead {
