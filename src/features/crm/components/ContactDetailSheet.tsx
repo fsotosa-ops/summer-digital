@@ -139,11 +139,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
   const [crmLoading, setCrmLoading] = useState(false);
 
   // Field options
-  const [fieldOptions, setFieldOptions] = useState<Record<string, ApiFieldOption[]>>({
-    gender: [],
-    education_level: [],
-    occupation: [],
-  });
+  const [fieldOptions, setFieldOptions] = useState<Record<string, ApiFieldOption[]>>({});
 
   // Edit user profile dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -204,13 +200,10 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
     ])
       .then(([contact, options]) => {
         setCrmContact(contact);
-        const grouped: Record<string, ApiFieldOption[]> = {
-          gender: [],
-          education_level: [],
-          occupation: [],
-        };
+        const grouped: Record<string, ApiFieldOption[]> = {};
         for (const o of options) {
-          if (grouped[o.field_name]) grouped[o.field_name].push(o);
+          if (!grouped[o.field_name]) grouped[o.field_name] = [];
+          grouped[o.field_name].push(o);
         }
         setFieldOptions(grouped);
       })
@@ -611,7 +604,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                             <SelectItem value={NONE}>
                               <span className="text-slate-400">Sin especificar</span>
                             </SelectItem>
-                            {fieldOptions.gender.map((o) => (
+                            {(fieldOptions.gender || []).map((o) => (
                               <SelectItem key={o.value} value={o.value}>
                                 {o.label}
                               </SelectItem>
@@ -636,7 +629,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                             <SelectItem value={NONE}>
                               <span className="text-slate-400">Sin especificar</span>
                             </SelectItem>
-                            {fieldOptions.education_level.map((o) => (
+                            {(fieldOptions.education_level || []).map((o) => (
                               <SelectItem key={o.value} value={o.value}>
                                 {o.label}
                               </SelectItem>
@@ -661,7 +654,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                             <SelectItem value={NONE}>
                               <span className="text-slate-400">Sin especificar</span>
                             </SelectItem>
-                            {fieldOptions.occupation.map((o) => (
+                            {(fieldOptions.occupation || []).map((o) => (
                               <SelectItem key={o.value} value={o.value}>
                                 {o.label}
                               </SelectItem>
@@ -738,7 +731,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                         label="Género"
                         value={
                           crmContact?.gender
-                            ? fieldOptions.gender.find((o) => o.value === crmContact.gender)
+                            ? (fieldOptions.gender || []).find((o) => o.value === crmContact.gender)
                                 ?.label || crmContact.gender
                             : null
                         }
@@ -748,7 +741,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                         label="Nivel Educativo"
                         value={
                           crmContact?.education_level
-                            ? fieldOptions.education_level.find(
+                            ? (fieldOptions.education_level || []).find(
                                 (o) => o.value === crmContact.education_level,
                               )?.label || crmContact.education_level
                             : null
@@ -759,7 +752,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                         label="Ocupación"
                         value={
                           crmContact?.occupation
-                            ? fieldOptions.occupation.find(
+                            ? (fieldOptions.occupation || []).find(
                                 (o) => o.value === crmContact.occupation,
                               )?.label || crmContact.occupation
                             : null
@@ -1222,7 +1215,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                             >
                               <div className="flex items-center justify-between">
                                 <p className="text-sm font-medium text-slate-700 truncate">
-                                  Journey
+                                  {e.journey_title || 'Journey'}
                                 </p>
                                 <Badge
                                   variant="outline"

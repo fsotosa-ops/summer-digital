@@ -334,6 +334,7 @@ export interface ApiEnrollmentResponse {
   id: string;
   user_id: string;
   journey_id: string;
+  journey_title?: string | null;
   status: string;
   current_step_index: number;
   progress_percentage: number;
