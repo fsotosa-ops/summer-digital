@@ -77,12 +77,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!hydrated) return;
 
     if (user) {
-      initializeSession().then(() => {
-        const currentUser = useAuthStore.getState().user;
-        if (!currentUser) {
-          router.push('/login');
-        }
-      });
+      // Refrescar datos del usuario en background, sin redirigir si falla.
+      // initializeSession() ya no limpia el user en caso de error.
+      initializeSession();
     } else {
       router.push('/login');
     }

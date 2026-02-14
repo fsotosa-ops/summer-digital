@@ -94,11 +94,9 @@ export class ApiError extends Error {
           this.setTokens(data.access_token, data.refresh_token || refreshToken);
   
         } catch (error) {
-          // Si el refresh falla, es irrecuperable: logout forzado
+          // Si el refresh falla, limpiamos tokens pero NO redirigimos aquí.
+          // La redirección la maneja el store/componentes de React.
           this.clearTokens();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login'; // Redirección fuerte
-          }
           throw error;
         } finally {
           // Limpiamos la promesa para permitir futuros refrescos

@@ -82,11 +82,13 @@ export const useAuthStore = create<AuthState>()(
           if (user) {
             const rank = calculateRank(user.oasisScore);
             set({ user: { ...user, rank } });
-          } else {
-            set({ user: null });
           }
+          // Si user es null (error de API), NO limpiamos la sesión.
+          // Mantenemos el usuario cacheado y dejamos que las llamadas
+          // subsiguientes manejen errores de auth naturalmente.
         } catch {
-          set({ user: null });
+          // No limpiar user en error - mantener sesión cacheada.
+          // El 401 handler del apiClient redirigirá si realmente no hay auth.
         }
       },
 
