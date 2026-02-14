@@ -6,6 +6,10 @@ import {
 } from '@/types/api.types';
 
 class UserService {
+  async getUser(userId: string): Promise<ApiUser> {
+    return apiClient.get<ApiUser>(`/auth/users/${userId}`);
+  }
+
   async listUsers(
     offset: number = 0,
     limit: number = 50,

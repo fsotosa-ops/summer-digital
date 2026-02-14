@@ -1,19 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { userService } from '@/services/user.service';
 import { crmService } from '@/services/crm.service';
+import { organizationService } from '@/services/organization.service';
 import {
   ApiUser,
   ApiAccountStatus,
   ApiCrmContact,
   ApiFieldOption,
+  ApiCrmNote,
+  ApiCrmTask,
+  ApiCrmTaskStatus,
+  ApiCrmTaskPriority,
+  ApiOrganization,
+  ApiEnrollmentResponse,
+  ApiUserPointsSummary,
+  ApiMemberRole,
 } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -51,6 +61,15 @@ import {
   User,
   Save,
   X,
+  StickyNote,
+  CheckSquare,
+  Plus,
+  Clock,
+  Trophy,
+  Star,
+  Activity,
+  UserPlus,
+  UserMinus,
 } from 'lucide-react';
 
 const STATUS_OPTIONS: { value: ApiAccountStatus; label: string }[] = [
@@ -72,6 +91,27 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
   facilitador: 'Facilitador',
   participante: 'Participante',
+};
+
+const TASK_STATUS_LABELS: Record<ApiCrmTaskStatus, string> = {
+  pending: 'Pendiente',
+  in_progress: 'En progreso',
+  completed: 'Completada',
+  cancelled: 'Cancelada',
+};
+
+const TASK_STATUS_COLORS: Record<ApiCrmTaskStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  in_progress: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-slate-100 text-slate-500',
+};
+
+const PRIORITY_LABELS: Record<ApiCrmTaskPriority, string> = {
+  low: 'Baja',
+  medium: 'Media',
+  high: 'Alta',
+  urgent: 'Urgente',
 };
 
 const NONE = '__none__';
@@ -122,12 +162,39 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Notes & Tasks
+  const [notes, setNotes] = useState<ApiCrmNote[]>([]);
+  const [tasks, setTasks] = useState<ApiCrmTask[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<ApiCrmTaskPriority>('medium');
+  const [savingTask, setSavingTask] = useState(false);
+
+  // Org management
+  const [availableOrgs, setAvailableOrgs] = useState<ApiOrganization[]>([]);
+  const [showAddOrg, setShowAddOrg] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [selectedRole, setSelectedRole] = useState<ApiMemberRole>('participante');
+  const [addingOrg, setAddingOrg] = useState(false);
+  const [removingOrgId, setRemovingOrgId] = useState<string | null>(null);
+
+  // Activity tab (enrollments + gamification)
+  const [enrollments, setEnrollments] = useState<ApiEnrollmentResponse[]>([]);
+  const [gamification, setGamification] = useState<ApiUserPointsSummary | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // Load CRM contact + field options when user changes
   useEffect(() => {
     if (!user) {
       setCrmContact(null);
+      setNotes([]);
+      setTasks([]);
+      setEnrollments([]);
+      setGamification(null);
       return;
     }
     setCrmLoading(true);
@@ -150,6 +217,46 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       .catch(() => {})
       .finally(() => setCrmLoading(false));
   }, [user]);
+
+  // Load notes & tasks
+  const loadNotesAndTasks = useCallback(async (userId: string) => {
+    setNotesLoading(true);
+    try {
+      const [n, t] = await Promise.all([
+        crmService.getContactNotes(userId).catch(() => []),
+        crmService.getContactTasks(userId).catch(() => []),
+      ]);
+      setNotes(n);
+      setTasks(t);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, []);
+
+  // Load activity (enrollments + gamification)
+  const loadActivity = useCallback(async (userId: string) => {
+    setActivityLoading(true);
+    try {
+      const [enr, gam] = await Promise.all([
+        crmService.getAdminUserEnrollments(userId).catch(() => []),
+        crmService.getAdminUserGamificationSummary(userId).catch(() => null),
+      ]);
+      setEnrollments(enr);
+      setGamification(gam);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, []);
+
+  // Load available orgs for org management
+  const loadAvailableOrgs = useCallback(async () => {
+    try {
+      const orgs = await organizationService.listMyOrganizations();
+      setAvailableOrgs(orgs);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   if (!user) return null;
 
@@ -215,6 +322,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       gender: crmContact?.gender || '',
       education_level: crmContact?.education_level || '',
       occupation: crmContact?.occupation || '',
+      company: crmContact?.company || '',
     });
     setEditingCrm(true);
   };
@@ -236,6 +344,109 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
   const selectOption = (field: string, value: string) => {
     setCrmDraft((prev) => ({ ...prev, [field]: value === NONE ? '' : value }));
   };
+
+  // Notes handlers
+  const handleCreateNote = async () => {
+    if (!newNoteContent.trim()) return;
+    setSavingNote(true);
+    try {
+      const note = await crmService.createNote(user.id, { content: newNoteContent.trim() });
+      setNotes((prev) => [note, ...prev]);
+      setNewNoteContent('');
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear nota');
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await crmService.deleteNote(noteId);
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar nota');
+    }
+  };
+
+  // Tasks handlers
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    setSavingTask(true);
+    try {
+      const task = await crmService.createTask(user.id, {
+        title: newTaskTitle.trim(),
+        priority: newTaskPriority,
+      });
+      setTasks((prev) => [task, ...prev]);
+      setNewTaskTitle('');
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear tarea');
+    } finally {
+      setSavingTask(false);
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, status: ApiCrmTaskStatus) => {
+    try {
+      const updated = await crmService.updateTask(taskId, { status });
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar tarea');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await crmService.deleteTask(taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar tarea');
+    }
+  };
+
+  // Org management handlers
+  const handleAddToOrg = async () => {
+    if (!selectedOrgId || !user) return;
+    setAddingOrg(true);
+    try {
+      await organizationService.addMember(selectedOrgId, {
+        email: user.email,
+        role: selectedRole,
+      });
+      // Refresh user data to get updated orgs
+      const updatedUser = await userService.getUser(user.id);
+      onUserUpdated(updatedUser);
+      setShowAddOrg(false);
+      setSelectedOrgId('');
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al agregar a organización');
+    } finally {
+      setAddingOrg(false);
+    }
+  };
+
+  const handleRemoveFromOrg = async (orgId: string, membershipId: string) => {
+    setRemovingOrgId(membershipId);
+    try {
+      await organizationService.removeMember(orgId, membershipId);
+      const updatedUser = await userService.getUser(user.id);
+      onUserUpdated(updatedUser);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al quitar de organización');
+    } finally {
+      setRemovingOrgId(null);
+    }
+  };
+
+  // Filter orgs user is NOT already in
+  const orgsNotJoined = availableOrgs.filter(
+    (org) => !user.organizations.some((m) => m.organization_id === org.id),
+  );
 
   return (
     <>
@@ -286,20 +497,36 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
               <Separator />
 
-              {/* Tabs: Perfil / Organizaciones */}
+              {/* Tabs */}
               <Tabs defaultValue="profile">
                 <TabsList className="w-full">
                   <TabsTrigger value="profile" className="flex-1">
                     <User className="h-4 w-4 mr-1.5" />
-                    Perfil CRM
+                    Perfil
                   </TabsTrigger>
-                  <TabsTrigger value="orgs" className="flex-1">
+                  <TabsTrigger value="orgs" className="flex-1" onClick={() => loadAvailableOrgs()}>
                     <Building2 className="h-4 w-4 mr-1.5" />
-                    Organizaciones ({user.organizations.length})
+                    Orgs ({user.organizations.length})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="notes"
+                    className="flex-1"
+                    onClick={() => loadNotesAndTasks(user.id)}
+                  >
+                    <StickyNote className="h-4 w-4 mr-1.5" />
+                    Notas
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="activity"
+                    className="flex-1"
+                    onClick={() => loadActivity(user.id)}
+                  >
+                    <Activity className="h-4 w-4 mr-1.5" />
+                    Actividad
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Perfil CRM */}
+                {/* ===== TAB: Perfil CRM ===== */}
                 <TabsContent value="profile" className="mt-4 space-y-4">
                   {crmLoading ? (
                     <div className="flex justify-center py-6">
@@ -308,6 +535,21 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                   ) : editingCrm ? (
                     /* ---- EDIT MODE ---- */
                     <div className="space-y-4">
+                      {/* Company */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-slate-500 flex items-center gap-1">
+                          <Building2 className="h-3 w-3" /> Empresa
+                        </Label>
+                        <Input
+                          value={crmDraft.company || ''}
+                          onChange={(e) =>
+                            setCrmDraft((p) => ({ ...p, company: e.target.value }))
+                          }
+                          placeholder="Nombre de la empresa"
+                          className="h-9"
+                        />
+                      </div>
+
                       {/* Phone */}
                       <div className="space-y-1.5">
                         <Label className="text-xs text-slate-500 flex items-center gap-1">
@@ -455,6 +697,11 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                     /* ---- VIEW MODE ---- */
                     <div className="space-y-3">
                       <ProfileField
+                        icon={<Building2 className="h-3.5 w-3.5" />}
+                        label="Empresa"
+                        value={crmContact?.company}
+                      />
+                      <ProfileField
                         icon={<Phone className="h-3.5 w-3.5" />}
                         label="Teléfono"
                         value={crmContact?.phone}
@@ -519,6 +766,21 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                         }
                       />
 
+                      {/* Last seen */}
+                      {crmContact?.last_seen_at && (
+                        <ProfileField
+                          icon={<Clock className="h-3.5 w-3.5" />}
+                          label="Última conexión"
+                          value={new Date(crmContact.last_seen_at).toLocaleDateString('es-CL', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        />
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -532,9 +794,9 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                   )}
                 </TabsContent>
 
-                {/* Organizaciones */}
-                <TabsContent value="orgs" className="mt-4 space-y-2">
-                  {user.organizations.length === 0 ? (
+                {/* ===== TAB: Organizaciones ===== */}
+                <TabsContent value="orgs" className="mt-4 space-y-3">
+                  {user.organizations.length === 0 && !showAddOrg ? (
                     <p className="text-sm text-slate-400 italic text-center py-4">
                       Sin organizaciones
                     </p>
@@ -564,9 +826,455 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                           >
                             {org.status === 'active' ? 'Activo' : org.status}
                           </Badge>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              disabled={removingOrgId === org.id}
+                              onClick={() => handleRemoveFromOrg(org.organization_id, org.id)}
+                            >
+                              {removingOrgId === org.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <UserMinus className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))
+                  )}
+
+                  {/* Add to org form */}
+                  {showAddOrg ? (
+                    <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-slate-500">Organización</Label>
+                        <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecciona organización" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {orgsNotJoined.length === 0 ? (
+                              <SelectItem value="__empty__" disabled>
+                                Ya está en todas las organizaciones
+                              </SelectItem>
+                            ) : (
+                              orgsNotJoined.map((org) => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  {org.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-slate-500">Rol</Label>
+                        <Select
+                          value={selectedRole}
+                          onValueChange={(v) => setSelectedRole(v as ApiMemberRole)}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="participante">Participante</SelectItem>
+                            <SelectItem value="facilitador">Facilitador</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleAddToOrg}
+                          disabled={addingOrg || !selectedOrgId}
+                          className="bg-teal-600 hover:bg-teal-700 h-8"
+                        >
+                          {addingOrg && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                          Agregar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAddOrg(false)}
+                          className="h-8"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    isSuperAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          loadAvailableOrgs();
+                          setShowAddOrg(true);
+                        }}
+                        className="w-full"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Agregar a organización
+                      </Button>
+                    )
+                  )}
+                </TabsContent>
+
+                {/* ===== TAB: Notas & Tareas ===== */}
+                <TabsContent value="notes" className="mt-4 space-y-5">
+                  {notesLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* --- Notes section --- */}
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <StickyNote className="h-3.5 w-3.5" />
+                          Notas ({notes.length})
+                        </p>
+
+                        {/* Create note */}
+                        <div className="space-y-2">
+                          <Textarea
+                            value={newNoteContent}
+                            onChange={(e) => setNewNoteContent(e.target.value)}
+                            placeholder="Escribir una nota..."
+                            className="min-h-[60px] text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={handleCreateNote}
+                            disabled={savingNote || !newNoteContent.trim()}
+                            className="bg-teal-600 hover:bg-teal-700 h-8"
+                          >
+                            {savingNote && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Agregar nota
+                          </Button>
+                        </div>
+
+                        {/* Notes list */}
+                        {notes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="p-3 bg-yellow-50 rounded-lg border border-yellow-100 group"
+                          >
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                              {note.content}
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-[11px] text-slate-400">
+                                {new Date(note.created_at).toLocaleDateString('es-CL', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleDeleteNote(note.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        {notes.length === 0 && (
+                          <p className="text-xs text-slate-400 italic text-center py-2">
+                            Sin notas
+                          </p>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* --- Tasks section --- */}
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <CheckSquare className="h-3.5 w-3.5" />
+                          Tareas ({tasks.length})
+                        </p>
+
+                        {/* Create task */}
+                        <div className="flex gap-2">
+                          <Input
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            placeholder="Nueva tarea..."
+                            className="h-8 text-sm flex-1"
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreateTask()}
+                          />
+                          <Select
+                            value={newTaskPriority}
+                            onValueChange={(v) => setNewTaskPriority(v as ApiCrmTaskPriority)}
+                          >
+                            <SelectTrigger className="h-8 w-24 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Baja</SelectItem>
+                              <SelectItem value="medium">Media</SelectItem>
+                              <SelectItem value="high">Alta</SelectItem>
+                              <SelectItem value="urgent">Urgente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            onClick={handleCreateTask}
+                            disabled={savingTask || !newTaskTitle.trim()}
+                            className="bg-teal-600 hover:bg-teal-700 h-8"
+                          >
+                            {savingTask ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+
+                        {/* Tasks list */}
+                        {tasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="p-3 bg-slate-50 rounded-lg border border-slate-100 group"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`text-sm font-medium ${
+                                    task.status === 'completed'
+                                      ? 'text-slate-400 line-through'
+                                      : 'text-slate-700'
+                                  }`}
+                                >
+                                  {task.title}
+                                </p>
+                                {task.description && (
+                                  <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                onClick={() => handleDeleteTask(task.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Select
+                                value={task.status}
+                                onValueChange={(v) =>
+                                  handleUpdateTaskStatus(task.id, v as ApiCrmTaskStatus)
+                                }
+                              >
+                                <SelectTrigger className="h-6 text-[11px] w-auto border-0 p-0 px-1.5">
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] ${TASK_STATUS_COLORS[task.status]}`}
+                                  >
+                                    {TASK_STATUS_LABELS[task.status]}
+                                  </Badge>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pendiente</SelectItem>
+                                  <SelectItem value="in_progress">En progreso</SelectItem>
+                                  <SelectItem value="completed">Completada</SelectItem>
+                                  <SelectItem value="cancelled">Cancelada</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px]"
+                              >
+                                {PRIORITY_LABELS[task.priority]}
+                              </Badge>
+                              {task.due_date && (
+                                <span className="text-[10px] text-slate-400">
+                                  {new Date(task.due_date).toLocaleDateString('es-CL', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {tasks.length === 0 && (
+                          <p className="text-xs text-slate-400 italic text-center py-2">
+                            Sin tareas
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* ===== TAB: Actividad (Journeys, Puntos, Recompensas) ===== */}
+                <TabsContent value="activity" className="mt-4 space-y-5">
+                  {activityLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Last seen */}
+                      {crmContact?.last_seen_at && (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <div>
+                            <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">
+                              Última conexión
+                            </p>
+                            <p className="text-sm text-slate-700">
+                              {new Date(crmContact.last_seen_at).toLocaleDateString('es-CL', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Points summary */}
+                      {gamification && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Star className="h-3.5 w-3.5" />
+                            Puntos & Nivel
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 text-center">
+                              <p className="text-2xl font-bold text-amber-600">
+                                {gamification.total_points}
+                              </p>
+                              <p className="text-[11px] text-amber-500 uppercase tracking-wider">
+                                Puntos
+                              </p>
+                            </div>
+                            <div className="p-3 bg-purple-50 rounded-lg border border-purple-100 text-center">
+                              <p className="text-sm font-bold text-purple-600">
+                                {gamification.current_level?.name || 'Sin nivel'}
+                              </p>
+                              <p className="text-[11px] text-purple-500 uppercase tracking-wider">
+                                Nivel actual
+                              </p>
+                              {gamification.points_to_next_level != null && (
+                                <p className="text-[10px] text-purple-400 mt-0.5">
+                                  {gamification.points_to_next_level} pts al siguiente
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rewards */}
+                      {gamification && gamification.rewards.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Trophy className="h-3.5 w-3.5" />
+                            Recompensas ({gamification.rewards.length})
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {gamification.rewards.map((r) => (
+                              <Badge
+                                key={r.id}
+                                variant="outline"
+                                className="bg-teal-50 text-teal-700 border-teal-200"
+                              >
+                                {r.reward?.name || 'Reward'}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Enrollments */}
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Activity className="h-3.5 w-3.5" />
+                          Journeys ({enrollments.length})
+                        </p>
+                        {enrollments.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic text-center py-2">
+                            Sin inscripciones
+                          </p>
+                        ) : (
+                          enrollments.map((e) => (
+                            <div
+                              key={e.id}
+                              className="p-3 bg-slate-50 rounded-lg border border-slate-100"
+                            >
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-slate-700 truncate">
+                                  Journey
+                                </p>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    e.status === 'completed'
+                                      ? 'bg-green-50 text-green-700 border-green-200'
+                                      : e.status === 'active'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : 'bg-slate-50 text-slate-500'
+                                  }
+                                >
+                                  {e.status === 'active'
+                                    ? 'Activo'
+                                    : e.status === 'completed'
+                                      ? 'Completado'
+                                      : e.status === 'dropped'
+                                        ? 'Abandonado'
+                                        : e.status}
+                                </Badge>
+                              </div>
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                                  <span>Progreso</span>
+                                  <span>{Math.round(e.progress_percentage)}%</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-1.5">
+                                  <div
+                                    className="bg-teal-500 h-1.5 rounded-full transition-all"
+                                    style={{ width: `${e.progress_percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1.5">
+                                Iniciado:{' '}
+                                {new Date(e.started_at).toLocaleDateString('es-CL', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Empty state if no gamification data at all */}
+                      {!gamification && enrollments.length === 0 && (
+                        <p className="text-sm text-slate-400 italic text-center py-4">
+                          Sin datos de actividad disponibles
+                        </p>
+                      )}
+                    </>
                   )}
                 </TabsContent>
               </Tabs>

@@ -498,6 +498,7 @@ export interface ApiCrmContact {
   gender?: string | null;
   education_level?: string | null;
   occupation?: string | null;
+  company?: string | null;
   avatar_url?: string | null;
   status: ApiContactStatus;
   last_seen_at?: string | null;

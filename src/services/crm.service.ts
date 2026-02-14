@@ -11,6 +11,8 @@ import {
   ApiFieldOption,
   ApiFieldOptionCreate,
   ApiFieldOptionUpdate,
+  ApiEnrollmentResponse,
+  ApiUserPointsSummary,
 } from '@/types/api.types';
 
 class CrmService {
@@ -135,6 +137,19 @@ class CrmService {
     return apiClient.delete(`/crm/field-options/${id}`);
   }
 
+  // --- Admin: user enrollments & gamification ---
+
+  async getAdminUserEnrollments(userId: string): Promise<ApiEnrollmentResponse[]> {
+    return apiClient.get<ApiEnrollmentResponse[]>(
+      `/journeys/admin/enrollments/user/${userId}`,
+    );
+  }
+
+  async getAdminUserGamificationSummary(userId: string): Promise<ApiUserPointsSummary> {
+    return apiClient.get<ApiUserPointsSummary>(
+      `/gamification/admin/progress/user/${userId}/summary`,
+    );
+  }
 }
 
 export const crmService = new CrmService();
