@@ -12,6 +12,7 @@ import {
   ApiFieldOptionCreate,
   ApiFieldOptionUpdate,
   ApiEnrollmentResponse,
+  ApiEnrollmentDetailResponse,
   ApiUserPointsSummary,
 } from '@/types/api.types';
 
@@ -27,7 +28,7 @@ class CrmService {
     });
     if (search) params.set('search', search);
     return apiClient.get<ApiCrmContactsResponse>(
-      `/crm/contacts?${params.toString()}`,
+      `/crm/contacts/?${params.toString()}`,
     );
   }
 
@@ -40,6 +41,10 @@ class CrmService {
     data: Partial<ApiCrmContact>,
   ): Promise<ApiCrmContact> {
     return apiClient.patch<ApiCrmContact>(`/crm/contacts/${contactId}`, data);
+  }
+
+  async updateMyContact(data: Partial<ApiCrmContact>): Promise<ApiCrmContact> {
+    return apiClient.patch<ApiCrmContact>('/crm/contacts/me', data);
   }
 
   async getContactNotes(contactId: string): Promise<ApiCrmNote[]> {
@@ -142,6 +147,12 @@ class CrmService {
   async getAdminUserEnrollments(userId: string): Promise<ApiEnrollmentResponse[]> {
     return apiClient.get<ApiEnrollmentResponse[]>(
       `/journeys/admin/enrollments/user/${userId}`,
+    );
+  }
+
+  async getAdminUserEnrollmentDetails(userId: string): Promise<ApiEnrollmentDetailResponse[]> {
+    return apiClient.get<ApiEnrollmentDetailResponse[]>(
+      `/journeys/admin/enrollments/user/${userId}/details`,
     );
   }
 

@@ -50,6 +50,11 @@ class AuthService {
     }
   }
 
+  async updateMyProfile(data: { full_name?: string }): Promise<User> {
+    const apiUser = await apiClient.patch<ApiUser>('/auth/users/me', data);
+    return mapApiUserToUser(apiUser);
+  }
+
   async refreshSession(): Promise<User | null> {
     try {
       const apiUser = await apiClient.get<ApiUser>('/auth/users/me');

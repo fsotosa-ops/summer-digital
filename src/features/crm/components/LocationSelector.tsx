@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Country, State, City } from 'country-state-city';
 import {
   Select,
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
 
 interface LocationValue {
@@ -26,7 +27,17 @@ interface LocationSelectorProps {
 const NONE = '__none__';
 
 export function LocationSelector({ value, onChange, disabled }: LocationSelectorProps) {
-  const countries = Country.getAllCountries();
+  const countryOptions = useMemo(
+    () =>
+      [
+        { value: NONE, label: 'Sin país' },
+        ...Country.getAllCountries().map((c) => ({
+          value: c.isoCode,
+          label: `${c.flag} ${c.name}`,
+        })),
+      ],
+    [],
+  );
 
   const states = value.country
     ? State.getStatesOfCountry(value.country)
@@ -51,28 +62,18 @@ export function LocationSelector({ value, onChange, disabled }: LocationSelector
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {/* Country */}
+      {/* Country - searchable */}
       <div className="space-y-1.5">
         <Label className="text-xs text-slate-500">País</Label>
-        <Select
+        <SearchableSelect
+          options={countryOptions}
           value={value.country || NONE}
           onValueChange={handleCountryChange}
+          placeholder="Selecciona país"
+          searchPlaceholder="Buscar país..."
+          emptyMessage="País no encontrado."
           disabled={disabled}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Selecciona país" />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            <SelectItem value={NONE}>
-              <span className="text-slate-400">Sin país</span>
-            </SelectItem>
-            {countries.map((c) => (
-              <SelectItem key={c.isoCode} value={c.isoCode}>
-                {c.flag} {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
 
       {/* State / Region */}

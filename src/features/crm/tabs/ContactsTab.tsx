@@ -25,7 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { ContactDetailSheet } from '../components/ContactDetailSheet';
+import { ContactDetailSheet } from '../components/contact-detail';
 
 const STATUS_OPTIONS: { value: ApiAccountStatus; label: string }[] = [
   { value: 'active', label: 'Activo' },
