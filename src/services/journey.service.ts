@@ -1,6 +1,6 @@
 import { Journey } from '@/types';
 import { apiClient } from '@/lib/api-client';
-import { ApiEnrollment, ApiJourney, ApiStepProgress, ApiJourneyRead, ApiEnrollmentResponse } from '@/types/api.types';
+import { ApiEnrollment, ApiJourney, ApiStepProgress, ApiJourneyRead, ApiEnrollmentResponse, ApiJourneyAdminRead, ApiStepAdminRead } from '@/types/api.types';
 import { mapApiToJourney, mapApiJourneyToPreview } from '@/lib/mappers';
 
 interface FetchJourneysResult {
@@ -86,6 +86,16 @@ class JourneyService {
 
   async getMyEnrollments(): Promise<ApiEnrollment[]> {
     return apiClient.get<ApiEnrollment[]>('/journeys/enrollments/me');
+  }
+
+  // Admin: list all journeys for an org
+  async listAdminJourneys(orgId: string): Promise<ApiJourneyAdminRead[]> {
+    return apiClient.get<ApiJourneyAdminRead[]>(`/journeys/${orgId}/admin/journeys`);
+  }
+
+  // Admin: list steps of a specific journey
+  async listAdminSteps(orgId: string, journeyId: string): Promise<ApiStepAdminRead[]> {
+    return apiClient.get<ApiStepAdminRead[]>(`/journeys/${orgId}/admin/journeys/${journeyId}/steps`);
   }
 }
 

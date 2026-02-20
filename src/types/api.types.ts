@@ -414,6 +414,18 @@ export interface ApiLevelUpdate {
   benefits?: Record<string, unknown> | null;
 }
 
+export interface ApiUnlockConditionItem {
+  type: 'profile_completion' | 'min_points' | 'journey_completed' | 'step_completed';
+  value?: number;       // para min_points: puntos mínimos requeridos
+  journey_id?: string;  // para journey_completed y step_completed
+  step_id?: string;     // para step_completed
+}
+
+export interface ApiUnlockCondition {
+  operator: 'AND' | 'OR';
+  conditions: ApiUnlockConditionItem[];
+}
+
 export interface ApiRewardRead {
   id: string;
   organization_id?: string | null;
@@ -421,7 +433,8 @@ export interface ApiRewardRead {
   description?: string | null;
   type: string;
   icon_url?: string | null;
-  unlock_condition: Record<string, unknown>;
+  points: number;
+  unlock_condition: ApiUnlockCondition | Record<string, unknown>;
 }
 
 export interface ApiRewardCreate {
@@ -429,7 +442,8 @@ export interface ApiRewardCreate {
   description?: string | null;
   type: string;
   icon_url?: string | null;
-  unlock_condition?: Record<string, unknown>;
+  points?: number;
+  unlock_condition?: ApiUnlockCondition;
 }
 
 export interface ApiRewardUpdate {
@@ -437,7 +451,8 @@ export interface ApiRewardUpdate {
   description?: string | null;
   type?: string | null;
   icon_url?: string | null;
-  unlock_condition?: Record<string, unknown> | null;
+  points?: number | null;
+  unlock_condition?: ApiUnlockCondition | null;
 }
 
 export interface ApiUserRewardRead {
@@ -474,6 +489,20 @@ export interface ApiUserRewardGrant {
   reward_id: string;
   journey_id?: string | null;
   metadata?: Record<string, unknown>;
+}
+
+// Reward-Organization assignment
+export interface ApiRewardOrganizationRead {
+  id: string;
+  reward_id: string;
+  organization_id: string;
+  assigned_at: string;
+}
+
+export interface ApiRewardOrganizationsResponse {
+  reward_id: string;
+  organizations: ApiRewardOrganizationRead[];
+  total: number;
 }
 
 // Gamification Config

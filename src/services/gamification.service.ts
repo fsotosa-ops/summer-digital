@@ -14,6 +14,7 @@ import {
   ApiUserPointsSummary,
   ApiUserRewardGrant,
   ApiUserRewardRead,
+  ApiRewardOrganizationsResponse,
 } from '@/types/api.types';
 
 class GamificationService {
@@ -88,6 +89,20 @@ class GamificationService {
 
   async deleteReward(orgId: string, rewardId: string): Promise<void> {
     await apiClient.delete(`/gamification/${orgId}/admin/rewards/${rewardId}`);
+  }
+
+  // --- Admin: Reward Organizations ---
+
+  async getRewardOrganizations(rewardId: string): Promise<ApiRewardOrganizationsResponse> {
+    return apiClient.get<ApiRewardOrganizationsResponse>(`/gamification/admin/rewards/${rewardId}/organizations`);
+  }
+
+  async assignRewardOrgs(rewardId: string, organizationIds: string[]): Promise<ApiRewardOrganizationsResponse> {
+    return apiClient.post<ApiRewardOrganizationsResponse>(`/gamification/admin/rewards/${rewardId}/organizations`, { organization_ids: organizationIds });
+  }
+
+  async unassignRewardOrgs(rewardId: string, organizationIds: string[]): Promise<ApiRewardOrganizationsResponse> {
+    return apiClient.delete<ApiRewardOrganizationsResponse>(`/gamification/admin/rewards/${rewardId}/organizations`, { organization_ids: organizationIds });
   }
 
   // --- Admin: User Rewards ---
