@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2 } from 'lucide-react';
+import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AdminJourneysPage() {
@@ -55,6 +55,7 @@ export default function AdminJourneysPage() {
 
   // Orgs disponibles + orgs asignadas al journey en creación (patrón de recompensas)
   const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
+  const [orgsExpanded, setOrgsExpanded] = useState(false);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit = isSuperAdmin || user?.role === 'Admin';
@@ -169,6 +170,7 @@ export default function AdminJourneysPage() {
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
       setAssignedOrgIds(new Set());
+      setOrgsExpanded(false);
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear journey');
@@ -283,46 +285,66 @@ export default function AdminJourneysPage() {
                 />
               </div>
 
-              {/* Organizaciones habilitadas — solo visible para SuperAdmin */}
+              {/* Organizaciones habilitadas — sección desplegable, solo SuperAdmin */}
               {isSuperAdmin && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5">
-                    <Building2 className="h-4 w-4 text-slate-500" />
-                    Organizaciones habilitadas
-                  </Label>
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOrgsExpanded((v) => !v)}
+                    className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+                      <Building2 className="h-4 w-4 text-slate-500" />
+                      Organizaciones habilitadas
+                      {assignedOrgIds.size > 0 && (
+                        <span className="ml-1.5 text-xs bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full">
+                          {assignedOrgIds.size}
+                        </span>
+                      )}
+                    </span>
+                    {orgsExpanded ? (
+                      <ChevronUp className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    )}
+                  </button>
 
-                  {organizations.length === 0 ? (
-                    <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
-                  ) : (
-                    <div className="max-h-44 overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
-                      {organizations.map((org) => {
-                        const checked = assignedOrgIds.has(org.id);
-                        return (
-                          <label
-                            key={org.id}
-                            className={cn(
-                              'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
-                              checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleOrgAssignment(org.id)}
-                              className="h-4 w-4 rounded accent-fuchsia-600"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
-                              {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
-                            </div>
-                          </label>
-                        );
-                      })}
+                  {orgsExpanded && (
+                    <div className="border-t border-slate-200 px-3 py-2 space-y-1">
+                      {organizations.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-1">No hay organizaciones disponibles.</p>
+                      ) : (
+                        <div className="max-h-44 overflow-y-auto space-y-1">
+                          {organizations.map((org) => {
+                            const checked = assignedOrgIds.has(org.id);
+                            return (
+                              <label
+                                key={org.id}
+                                className={cn(
+                                  'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
+                                  checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleOrgAssignment(org.id)}
+                                  className="h-4 w-4 rounded accent-fuchsia-600"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
+                                  {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-400 pt-1">
+                        Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
+                      </p>
                     </div>
                   )}
-                  <p className="text-xs text-slate-400">
-                    Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
-                  </p>
                 </div>
               )}
 
