@@ -281,19 +281,35 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <SheetHeader className="p-4 border-b border-white/5">
               <SheetTitle className="text-left font-bold text-xl text-white">Menú</SheetTitle>
             </SheetHeader>
-            <nav className="flex flex-col gap-1 p-4 mt-2">
+            <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
               {filteredNavItems.map((item) => renderNavItem(item, true))}
-              <div className="border-t border-white/5 mt-2 pt-2">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={20} />
-                  Cerrar Sesión
-                </Button>
-              </div>
             </nav>
+            {/* Mobile: User profile + logout */}
+            <div className="p-4 border-t border-white/5">
+              <div className="flex items-center gap-3 mb-3">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover border border-white/10" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
+                    <span className="text-sm font-semibold text-white">
+                      {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                  <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                onClick={handleLogout}
+              >
+                <LogOut size={20} />
+                Cerrar Sesión
+              </Button>
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -333,8 +349,38 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {filteredNavItems.map((item) => renderNavItem(item))}
         </nav>
 
-        {/* Bottom section */}
-        <div className="p-3 bg-neutral-900/50 backdrop-blur-sm border-t border-white/5">
+        {/* Bottom section - User profile */}
+        <div className="p-3 bg-neutral-900/50 backdrop-blur-sm border-t border-white/5 space-y-2">
+          {/* User info */}
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3 px-2 py-1.5">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10 flex-shrink-0" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10 flex-shrink-0">
+                  <span className="text-xs font-semibold text-white">
+                    {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center py-1">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
+                  <span className="text-xs font-semibold text-white">
+                    {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           <Button
             variant="ghost"
             className={cn(

@@ -38,6 +38,11 @@ class GamificationService {
     return apiClient.get<ApiActivityRead[]>(`/gamification/me/activities?${params}`);
   }
 
+  async getMyConfig(orgId?: string): Promise<ApiGamificationConfigRead | null> {
+    const params = orgId ? `?org_id=${orgId}` : '';
+    return apiClient.get<ApiGamificationConfigRead | null>(`/gamification/me/config${params}`);
+  }
+
   // --- Admin: Levels ---
 
   async listLevels(orgId: string): Promise<ApiLevelRead[]> {

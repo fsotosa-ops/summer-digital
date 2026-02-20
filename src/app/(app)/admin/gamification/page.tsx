@@ -76,6 +76,7 @@ export default function GamificationAdminPage() {
     rewards_enabled: true,
     points_multiplier: 1.0,
     default_step_points: 10,
+    profile_completion_points: 0,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +96,7 @@ export default function GamificationAdminPage() {
           rewards_enabled: data.rewards_enabled,
           points_multiplier: data.points_multiplier,
           default_step_points: data.default_step_points,
+          profile_completion_points: data.profile_completion_points ?? 0,
         });
       }
     } catch (err) {
@@ -611,6 +613,19 @@ export default function GamificationAdminPage() {
                     />
                     <p className="text-xs text-slate-400">
                       Se usa cuando un step no tiene puntos configurados.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Puntos por completar perfil</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={configForm.profile_completion_points}
+                      onChange={(e) => setConfigForm({ ...configForm, profile_completion_points: parseInt(e.target.value) || 0 })}
+                    />
+                    <p className="text-xs text-slate-400">
+                      Puntos que recibe un usuario al completar toda su informacion de perfil por primera vez. 0 = sin puntos.
                     </p>
                   </div>
                 </div>
