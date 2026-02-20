@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { User } from '@/types';
-import { AlertTriangle } from 'lucide-react';
+import { Sparkles, ChevronRight } from 'lucide-react';
 import { CompleteProfileModal } from './CompleteProfileModal';
+import { motion } from 'framer-motion';
 
 interface UserProfileCardProps {
   user: User;
@@ -29,21 +30,10 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-sky-500 via-purple-500 to-amber-400 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-        {/* Noise overlay */}
-        <div
-          className="absolute inset-0 opacity-20 mix-blend-soft-light pointer-events-none"
-          style={{ backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')" }}
-        />
-
-        {/* SVG decoration */}
-        <svg
-          className="absolute -bottom-8 -right-8 w-40 h-40 text-white/10 pointer-events-none"
-          viewBox="0 0 100 100"
-          fill="currentColor"
-        >
-          <circle cx="50" cy="50" r="50" />
-        </svg>
+      <div className="bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-fuchsia-500/20 to-purple-500/10 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-teal-500/15 to-cyan-500/10 rounded-full translate-y-6 -translate-x-6 blur-2xl" />
 
         {/* Centered content */}
         <div className="relative z-10 flex flex-col items-center text-center gap-3">
@@ -52,36 +42,47 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
             <img
               src={user.avatarUrl}
               alt={user.name}
-              className="h-20 w-20 rounded-full object-cover border-4 border-black/20 ring-2 ring-white/20 drop-shadow"
+              className="h-20 w-20 rounded-full object-cover border-2 border-white/10 ring-2 ring-fuchsia-500/30 drop-shadow"
             />
           ) : (
-            <div className="h-20 w-20 rounded-full bg-white/20 border-4 border-black/20 ring-2 ring-white/20 flex items-center justify-center drop-shadow">
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 border-2 border-white/10 ring-2 ring-fuchsia-500/30 flex items-center justify-center drop-shadow">
               <span className="text-2xl font-bold text-white drop-shadow">{initials}</span>
             </div>
           )}
 
           {/* Info */}
           <div>
-            <p className="font-bold text-lg leading-tight drop-shadow">{user.name}</p>
-            <p className="text-white/80 text-sm mt-0.5">{user.email}</p>
-            <span className="mt-2 inline-block px-3 py-0.5 bg-white/20 rounded-full text-xs font-medium">
+            <p className="font-bold text-lg leading-tight">{user.name}</p>
+            <p className="text-white/50 text-sm mt-0.5">{user.email}</p>
+            <span className="mt-2 inline-block px-3 py-0.5 bg-white/10 rounded-full text-xs font-medium text-white/80">
               {ROLE_LABELS[user.role] ?? user.role}
             </span>
           </div>
         </div>
 
-        {/* Alerta perfil incompleto — clickable */}
+        {/* Banner de perfil incompleto - rediseñado */}
         {isIncomplete && (
-          <button
+          <motion.button
             onClick={() => setModalOpen(true)}
-            className="relative z-10 mt-4 w-full flex items-start gap-2 bg-amber-400/30 border border-amber-300/40 rounded-xl px-3 py-2.5 text-sm text-left hover:bg-amber-400/40 transition-colors cursor-pointer"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="relative z-10 mt-5 w-full group cursor-pointer"
           >
-            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-amber-100" />
-            <span className="text-amber-50 leading-snug">
-              Completa tu perfil para empezar a acumular puntos.{' '}
-              <span className="underline underline-offset-2 font-medium">Completar ahora →</span>
-            </span>
-          </button>
+            <div className="bg-gradient-to-r from-fuchsia-600/90 to-purple-600/90 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 border border-fuchsia-400/20 shadow-lg shadow-fuchsia-500/10 transition-all group-hover:shadow-fuchsia-500/20 group-hover:border-fuchsia-400/30">
+              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={16} className="text-amber-300" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-white leading-tight">
+                  Completa tu perfil
+                </p>
+                <p className="text-xs text-white/60 mt-0.5">
+                  Gana puntos y personaliza tu experiencia
+                </p>
+              </div>
+              <ChevronRight size={16} className="text-white/40 group-hover:text-white/70 transition-colors flex-shrink-0" />
+            </div>
+          </motion.button>
         )}
       </div>
 

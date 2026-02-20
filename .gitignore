@@ -42,3 +42,5 @@ next-env.d.ts
 
 #api backend
 openapi_oasis_backend.json
+
+error-component.json

@@ -485,6 +485,7 @@ export interface ApiGamificationConfigRead {
   rewards_enabled: boolean;
   points_multiplier: number;
   default_step_points: number;
+  profile_completion_points: number;
   created_at: string;
   updated_at: string;
 }
@@ -495,6 +496,7 @@ export interface ApiGamificationConfigCreate {
   rewards_enabled?: boolean;
   points_multiplier?: number;
   default_step_points?: number;
+  profile_completion_points?: number;
 }
 
 export interface ApiGamificationConfigUpdate {
@@ -503,6 +505,7 @@ export interface ApiGamificationConfigUpdate {
   rewards_enabled?: boolean | null;
   points_multiplier?: number | null;
   default_step_points?: number | null;
+  profile_completion_points?: number | null;
 }
 
 export interface ApiStepCompleteResponse {
@@ -510,6 +513,16 @@ export interface ApiStepCompleteResponse {
   completed_at: string;
   enrollment_progress: number;
   points_earned: number;
+}
+
+export interface ApiPointsLedgerRead {
+  id: string;
+  user_id: string;
+  amount: number;
+  reason: string;
+  reference_id?: string | null;
+  organization_id?: string | null;
+  created_at: string;
 }
 
 // --- CRM DTOs ---

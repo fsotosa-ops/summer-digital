@@ -7,6 +7,7 @@ import {
   ApiLevelCreate,
   ApiLevelRead,
   ApiLevelUpdate,
+  ApiPointsLedgerRead,
   ApiRewardCreate,
   ApiRewardRead,
   ApiRewardUpdate,
@@ -36,6 +37,21 @@ class GamificationService {
     const params = new URLSearchParams({ limit: String(limit) });
     if (orgId) params.set('org_id', orgId);
     return apiClient.get<ApiActivityRead[]>(`/gamification/me/activities?${params}`);
+  }
+
+  async getMyConfig(orgId?: string): Promise<ApiGamificationConfigRead | null> {
+    const params = orgId ? `?org_id=${orgId}` : '';
+    return apiClient.get<ApiGamificationConfigRead | null>(`/gamification/config${params}`);
+  }
+
+  async getUserLedger(limit = 50, orgId?: string): Promise<ApiPointsLedgerRead[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (orgId) params.set('org_id', orgId);
+    return apiClient.get<ApiPointsLedgerRead[]>(`/gamification/me/ledger?${params}`);
+  }
+
+  async getUserProgressAdmin(userId: string): Promise<ApiUserPointsSummary> {
+    return apiClient.get<ApiUserPointsSummary>(`/gamification/admin/progress/user/${userId}/summary`);
   }
 
   // --- Admin: Levels ---
