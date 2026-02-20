@@ -26,18 +26,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MultiSelect } from '@/components/ui/multi-select';
 
 export default function AdminJourneysPage() {
   const router = useRouter();
@@ -60,11 +52,21 @@ export default function AdminJourneysPage() {
     category: '',
     is_active: false,
   });
-  const [accessOrgIds, setAccessOrgIds] = useState<string[]>([]);
+
+  // Orgs disponibles + orgs asignadas al journey en creación (patrón de recompensas)
+  const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit = isSuperAdmin || user?.role === 'Admin';
   const orgId = isSuperAdmin ? selectedOrgId : user?.organizationId;
+
+  const toggleOrgAssignment = (id: string) => {
+    setAssignedOrgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  };
 
   // Load organizations for SuperAdmin
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function AdminJourneysPage() {
           return 0;
         });
         setOrganizations(sorted);
-        // Auto-select fundacion-summer (or first) if none selected
+        // Auto-select fundacion-summer (or first) — sin dropdown visible
         if (sorted.length > 0 && !selectedOrgId) {
           setSelectedOrgId(sorted[0].id);
         }
@@ -137,22 +139,36 @@ export default function AdminJourneysPage() {
   const handleCreateJourney = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Admin uses their own org; SuperAdmin uses multi-select
-    const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
-    if (effectiveOrgIds.length === 0) return;
-
-    const [ownerOrgId, ...extraOrgIds] = effectiveOrgIds;
+    // Admin usa su propia org; SuperAdmin usa la org por defecto (fundacion-summer)
+    const ownerOrgId = isSuperAdmin ? selectedOrgId : user?.organizationId;
+    if (!ownerOrgId) return;
 
     setIsCreating(true);
     try {
       const newJourney = await adminService.createJourney(ownerOrgId, formData);
-      // Assign extra organizations (owner is auto-assigned by backend)
-      if (extraOrgIds.length > 0) {
-        await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
+
+      // Sincronizar asignación de orgs (solo SuperAdmin)
+      if (isSuperAdmin && organizations.length > 0) {
+        if (assignedOrgIds.size === 0) {
+          // Sin selección = abierto para todas las organizaciones
+          const allOrgIds = organizations
+            .map((o) => o.id)
+            .filter((id) => id !== ownerOrgId); // owner ya fue asignado por backend
+          if (allOrgIds.length > 0) {
+            await adminService.assignJourneyOrganizations(newJourney.id, allOrgIds);
+          }
+        } else {
+          // Asignar solo las seleccionadas (owner ya fue asignado por backend)
+          const extraOrgIds = [...assignedOrgIds].filter((id) => id !== ownerOrgId);
+          if (extraOrgIds.length > 0) {
+            await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
+          }
+        }
       }
+
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
-      setAccessOrgIds([]);
+      setAssignedOrgIds(new Set());
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear journey');
@@ -206,24 +222,6 @@ export default function AdminJourneysPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {/* Organization Selector for SuperAdmin */}
-          {isSuperAdmin && organizations.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-slate-400" />
-              <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Selecciona organizacion" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           {canEdit && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -232,7 +230,7 @@ export default function AdminJourneysPage() {
               Nuevo Journey
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Crear nuevo Journey</DialogTitle>
               <DialogDescription>
@@ -285,19 +283,46 @@ export default function AdminJourneysPage() {
                 />
               </div>
 
-              {/* Organization access selector */}
-              {isSuperAdmin && organizations.length > 0 && (
+              {/* Organizaciones habilitadas — solo visible para SuperAdmin */}
+              {isSuperAdmin && (
                 <div className="space-y-2">
-                  <Label>Organizaciones con acceso <span className="text-red-500">*</span></Label>
-                  <p className="text-xs text-slate-500">
-                    Selecciona las organizaciones que tendran acceso a este journey.
+                  <Label className="flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-slate-500" />
+                    Organizaciones habilitadas
+                  </Label>
+
+                  {organizations.length === 0 ? (
+                    <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
+                  ) : (
+                    <div className="max-h-44 overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
+                      {organizations.map((org) => {
+                        const checked = assignedOrgIds.has(org.id);
+                        return (
+                          <label
+                            key={org.id}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
+                              checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleOrgAssignment(org.id)}
+                              className="h-4 w-4 rounded accent-fuchsia-600"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
+                              {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-400">
+                    Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
                   </p>
-                  <MultiSelect
-                    options={organizations.map((o) => ({ value: o.id, label: o.name }))}
-                    selected={accessOrgIds}
-                    onChange={setAccessOrgIds}
-                    placeholder="Seleccionar organizaciones..."
-                  />
                 </div>
               )}
 
@@ -310,7 +335,7 @@ export default function AdminJourneysPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isCreating || (isSuperAdmin && accessOrgIds.length === 0)}>
+                <Button type="submit" disabled={isCreating}>
                   {isCreating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
