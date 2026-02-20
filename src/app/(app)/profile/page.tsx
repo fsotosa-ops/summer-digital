@@ -187,6 +187,11 @@ export default function ProfilePage() {
       setIsEditing(false);
       setDraft({});
       toast.success('Perfil actualizado');
+
+      // Re-fetch gamification data (profile completion may have awarded points)
+      gamificationService.getUserSummary(user.organizationId).then((data) => {
+        if (data) setSummary(data);
+      }).catch(() => {});
     } catch (err) {
       console.error('Error saving profile:', err);
       toast.error('Error al guardar. Intenta nuevamente.');
@@ -589,6 +594,7 @@ export default function ProfilePage() {
                           <span className="text-slate-600">
                             {activity.type === 'step_completed' ? 'Paso completado' :
                              activity.type === 'journey_completed' ? 'Journey completado' :
+                             activity.type === 'profile_completed' ? 'Perfil completado' :
                              activity.type}
                           </span>
                           <span className="text-teal-600 font-medium">
