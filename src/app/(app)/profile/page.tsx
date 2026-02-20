@@ -76,6 +76,7 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState<Partial<ApiCrmContact> & { fullName?: string }>({});
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [gamificationError, setGamificationError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -88,7 +89,11 @@ export default function ProfilePage() {
     if (!user) return;
 
     Promise.all([
-      gamificationService.getUserSummary(user.organizationId).catch(() => null),
+      gamificationService.getUserSummary(user.organizationId).catch((err) => {
+        console.error('[Profile] gamification summary error:', err);
+        setGamificationError(true);
+        return null;
+      }),
       crmService.getMyContact().catch(() => null),
       crmService.listFieldOptions().catch(() => [] as ApiFieldOption[]),
     ]).then(([gamifData, contact, options]) => {
@@ -223,7 +228,7 @@ export default function ProfilePage() {
     .slice(0, 2);
 
   const totalPoints = summary?.total_points ?? user.oasisScore;
-  const currentLevelName = summary?.current_level?.name ?? user.rank;
+  const currentLevelName = summary?.current_level?.name ?? user.rank ?? 'Sin nivel';
   const pointsToNext = summary?.points_to_next_level;
   const nextLevelMin = summary?.next_level?.min_points;
   const badges = summary?.rewards ?? [];
@@ -235,7 +240,7 @@ export default function ProfilePage() {
     const nextMin = summary.next_level.min_points;
     const range = nextMin - currentMin;
     progressPercent = range > 0 ? Math.round(((totalPoints - currentMin) / range) * 100) : 100;
-  } else if (!summary?.next_level) {
+  } else if (summary?.current_level && !summary?.next_level) {
     progressPercent = 100;
   }
 
@@ -525,6 +530,11 @@ export default function ProfilePage() {
               <div className="text-center text-slate-400 py-4">Cargando datos...</div>
             ) : (
               <>
+                {gamificationError && (
+                  <p className="text-sm text-slate-400 mb-2">
+                    No se pudo cargar tu progreso. Intenta recargar la página.
+                  </p>
+                )}
                 {/* Points & Level */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -541,8 +551,10 @@ export default function ProfilePage() {
                     <p className="text-xs text-slate-400 mt-1">
                       {pointsToNext} puntos para {summary?.next_level?.name ?? 'el siguiente nivel'}
                     </p>
-                  ) : (
+                  ) : summary?.current_level ? (
                     <p className="text-xs text-slate-400 mt-1">Nivel máximo alcanzado</p>
+                  ) : (
+                    <p className="text-xs text-slate-400 mt-1">Completa actividades para ganar tus primeros puntos</p>
                   )}
                 </div>
 

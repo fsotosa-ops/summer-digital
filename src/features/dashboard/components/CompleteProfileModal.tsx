@@ -148,14 +148,14 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
         Object.entries(draft).map(([k, v]) => [k, v === '' ? null : v])
       ) as Partial<ApiCrmContact>;
 
-      await crmService.updateMyContact(sanitized);
+      const updatedContact = await crmService.updateMyContact(sanitized);
 
       if (fullName.trim() && fullName.trim() !== user.name) {
         await authService.updateMyProfile({ full_name: fullName.trim() });
       }
 
       const refreshed = await authService.getUserProfile();
-      setUser(refreshed);
+      setUser({ ...refreshed, oasisScore: updatedContact.oasis_score ?? 0 });
 
       // Show celebration instead of closing
       setShowCelebration(true);
