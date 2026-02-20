@@ -553,6 +553,8 @@ export default function ProfilePage() {
                     </p>
                   ) : summary?.current_level ? (
                     <p className="text-xs text-slate-400 mt-1">Nivel máximo alcanzado</p>
+                  ) : totalPoints > 0 ? (
+                    <p className="text-xs text-slate-400 mt-1">{totalPoints} punto{totalPoints !== 1 ? 's' : ''} acumulado{totalPoints !== 1 ? 's' : ''}</p>
                   ) : (
                     <p className="text-xs text-slate-400 mt-1">Completa actividades para ganar tus primeros puntos</p>
                   )}
