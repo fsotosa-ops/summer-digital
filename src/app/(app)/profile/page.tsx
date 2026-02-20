@@ -89,7 +89,7 @@ export default function ProfilePage() {
     if (!user) return;
 
     Promise.all([
-      gamificationService.getUserSummary(user.organizationId).catch((err) => {
+      gamificationService.getUserSummary().catch((err) => {
         console.error('[Profile] gamification summary error:', err);
         setGamificationError(true);
         return null;
@@ -194,7 +194,7 @@ export default function ProfilePage() {
       toast.success('Perfil actualizado');
 
       // Re-fetch gamification data (profile completion may have awarded points)
-      gamificationService.getUserSummary(user.organizationId).then((data) => {
+      gamificationService.getUserSummary().then((data) => {
         if (data) setSummary(data);
       }).catch(() => {});
     } catch (err) {
