@@ -50,7 +50,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
     setLoading(true);
 
     Promise.all([
-      crmService.getContact(user.id).catch(() => null),
+      crmService.getMyContact().catch(() => null),
       crmService.listFieldOptions().catch(() => [] as ApiFieldOption[]),
     ]).then(([contact, options]) => {
       if (contact) {
