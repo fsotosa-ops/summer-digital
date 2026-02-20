@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
-import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType } from '@/types/api.types';
+import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,9 @@ import {
   Gamepad2,
   ExternalLink,
   Link,
+  Building2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
@@ -332,6 +335,28 @@ export default function JourneyEditorPage() {
   // In-session cache: preserves config per type when switching types in the dialog
   const [configsByType, setConfigsByType] = useState<Partial<Record<ApiStepType, Record<string, unknown>>>>({});
 
+  // Org assignment management (SuperAdmin only)
+  const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
+  const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
+  const [initialOrgIds, setInitialOrgIds] = useState<Set<string>>(new Set());
+  const [loadingOrgAssign, setLoadingOrgAssign] = useState(false);
+  const [savingOrgs, setSavingOrgs] = useState(false);
+  const [orgsExpanded, setOrgsExpanded] = useState(false);
+
+  const toggleOrgAssignment = (id: string) => {
+    setAssignedOrgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  };
+
+  const orgsDirty = (() => {
+    if (assignedOrgIds.size !== initialOrgIds.size) return true;
+    for (const id of assignedOrgIds) { if (!initialOrgIds.has(id)) return true; }
+    return false;
+  })();
+
   const fetchData = async (effectiveOrgId?: string) => {
     const oid = effectiveOrgId || orgId;
     if (!oid) return;
@@ -386,6 +411,46 @@ export default function JourneyEditorPage() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId, user?.organizationId]);
+
+  // Load all orgs + current journey org assignments (SuperAdmin only)
+  useEffect(() => {
+    if (!isSuperAdmin || !journey) return;
+    const load = async () => {
+      setLoadingOrgAssign(true);
+      try {
+        const [orgs, resp] = await Promise.all([
+          organizationService.listMyOrganizations(),
+          adminService.getJourneyOrganizations(journeyId),
+        ]);
+        const sorted = [...orgs].sort((a, b) => {
+          if (a.slug === 'fundacion-summer') return -1;
+          if (b.slug === 'fundacion-summer') return 1;
+          return 0;
+        });
+        setAllOrgs(sorted);
+        const currentIds = new Set(resp.organizations.map((o) => o.organization_id));
+        setAssignedOrgIds(currentIds);
+        setInitialOrgIds(new Set(currentIds));
+      } catch { /* silencioso */ }
+      finally { setLoadingOrgAssign(false); }
+    };
+    load();
+  }, [isSuperAdmin, journey, journeyId]);
+
+  const handleSaveOrgs = async () => {
+    setSavingOrgs(true);
+    try {
+      const toAssign = [...assignedOrgIds].filter((id) => !initialOrgIds.has(id));
+      const toUnassign = [...initialOrgIds].filter((id) => !assignedOrgIds.has(id));
+      if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
+      if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
+      setInitialOrgIds(new Set(assignedOrgIds));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar organizaciones');
+    } finally {
+      setSavingOrgs(false);
+    }
+  };
 
   const openCreateDialog = () => {
     setEditingStep(null);
@@ -751,6 +816,98 @@ export default function JourneyEditorPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Organizaciones habilitadas — solo SuperAdmin */}
+      {isSuperAdmin && (
+        <Card>
+          <CardHeader
+            className="cursor-pointer select-none"
+            onClick={() => setOrgsExpanded((v) => !v)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-slate-500" />
+                <CardTitle className="text-base">Organizaciones habilitadas</CardTitle>
+                {assignedOrgIds.size > 0 && (
+                  <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
+                    {assignedOrgIds.size}
+                  </span>
+                )}
+              </div>
+              {orgsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              )}
+            </div>
+            <CardDescription>
+              Selecciona las organizaciones que tienen acceso a este journey.
+            </CardDescription>
+          </CardHeader>
+
+          {orgsExpanded && (
+            <CardContent className="space-y-3">
+              {loadingOrgAssign ? (
+                <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                </div>
+              ) : allOrgs.length === 0 ? (
+                <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
+              ) : (
+                <>
+                  <div className="max-h-56 overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
+                    {allOrgs.map((org) => {
+                      const checked = assignedOrgIds.has(org.id);
+                      return (
+                        <label
+                          key={org.id}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
+                            checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleOrgAssignment(org.id)}
+                            className="h-4 w-4 rounded accent-fuchsia-600"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
+                            {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                      {assignedOrgIds.size === 0
+                        ? 'Sin selección = abierto para todas las organizaciones.'
+                        : `${assignedOrgIds.size} organización(es) seleccionada(s).`}
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveOrgs}
+                      disabled={savingOrgs || !orgsDirty}
+                    >
+                      {savingOrgs ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        'Guardar organizaciones'
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Step Dialog */}
       <Dialog open={stepDialogOpen} onOpenChange={(open) => {
