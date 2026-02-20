@@ -36,6 +36,10 @@ class CrmService {
     return apiClient.get<ApiCrmContact>(`/crm/contacts/${contactId}`);
   }
 
+  async getMyContact(): Promise<ApiCrmContact> {
+    return apiClient.get<ApiCrmContact>('/crm/contacts/me');
+  }
+
   async updateContact(
     contactId: string,
     data: Partial<ApiCrmContact>,
