@@ -50,7 +50,7 @@ class AuthService {
     }
   }
 
-  async updateMyProfile(data: { full_name?: string }): Promise<User> {
+  async updateMyProfile(data: { full_name?: string; avatar_url?: string }): Promise<User> {
     const apiUser = await apiClient.patch<ApiUser>('/auth/users/me', data);
     return mapApiUserToUser(apiUser);
   }

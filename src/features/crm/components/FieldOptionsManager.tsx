@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { crmService } from '@/services/crm.service';
 import { ApiFieldOption } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
@@ -16,21 +16,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Plus, Pencil, Trash2, Loader2, GripVertical, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, GripVertical, EyeOff, Tag } from 'lucide-react';
 
-const FIELD_NAMES = [
-  { value: 'gender', label: 'Género' },
-  { value: 'education_level', label: 'Nivel Educativo' },
-  { value: 'occupation', label: 'Ocupación' },
-];
+// Known labels for built-in fields
+const KNOWN_LABELS: Record<string, string> = {
+  gender: 'Género',
+  education_level: 'Nivel Educativo',
+  occupation: 'Ocupación',
+};
 
 interface EditState {
   option: ApiFieldOption;
@@ -38,29 +31,67 @@ interface EditState {
   sort_order: number;
 }
 
+const generateSlug = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+
 export function FieldOptionsManager() {
   const [options, setOptions] = useState<ApiFieldOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeField, setActiveField] = useState('gender');
   const [error, setError] = useState<string | null>(null);
 
-  // Create
-  const [createOpen, setCreateOpen] = useState(false);
+  // Derive unique field names dynamically
+  const fieldList = useMemo(() => {
+    const map = new Map<string, string>();
+    options.forEach((o) => {
+      if (!map.has(o.field_name)) {
+        map.set(o.field_name, KNOWN_LABELS[o.field_name] || o.field_name.replace(/_/g, ' '));
+      }
+    });
+    // Keep known fields at the top
+    const known = Object.keys(KNOWN_LABELS).filter((k) => map.has(k));
+    const extra = [...map.keys()].filter((k) => !KNOWN_LABELS[k]);
+    return [...known, ...extra].map((key) => ({ value: key, label: map.get(key)! }));
+  }, [options]);
+
+  const [activeField, setActiveField] = useState('gender');
+
+  // Sync active field when list changes and current selection disappears
+  useEffect(() => {
+    if (fieldList.length > 0 && !fieldList.find((f) => f.value === activeField)) {
+      setActiveField(fieldList[0].value);
+    }
+  }, [fieldList, activeField]);
+
+  // ── Add Option ──────────────────────────────────────────────
+  const [addOptionOpen, setAddOptionOpen] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newValue, setNewValue] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Edit
+  // ── Add New Field ────────────────────────────────────────────
+  const [addFieldOpen, setAddFieldOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldKey, setNewFieldKey] = useState('');
+  const [newFieldFirstLabel, setNewFieldFirstLabel] = useState('');
+  const [newFieldFirstValue, setNewFieldFirstValue] = useState('');
+  const [creatingField, setCreatingField] = useState(false);
+
+  // ── Edit Option ──────────────────────────────────────────────
   const [editState, setEditState] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Delete
+  // ── Delete ───────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadOptions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await crmService.listFieldOptions(undefined, true); // include inactive
+      const data = await crmService.listFieldOptions(undefined, true);
       setOptions(data);
       setError(null);
     } catch (err) {
@@ -78,20 +109,9 @@ export function FieldOptionsManager() {
     .filter((o) => o.field_name === activeField)
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  const generateValue = (label: string) =>
-    label
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_|_$/g, '');
+  // ── Handlers ─────────────────────────────────────────────────
 
-  const handleLabelChange = (label: string) => {
-    setNewLabel(label);
-    setNewValue(generateValue(label));
-  };
-
-  const handleCreate = async () => {
+  const handleAddOption = async () => {
     if (!newLabel.trim() || !newValue.trim()) return;
     setCreating(true);
     try {
@@ -103,7 +123,7 @@ export function FieldOptionsManager() {
         is_active: true,
       });
       setOptions((prev) => [...prev, created]);
-      setCreateOpen(false);
+      setAddOptionOpen(false);
       setNewLabel('');
       setNewValue('');
       setError(null);
@@ -111,6 +131,32 @@ export function FieldOptionsManager() {
       setError(err instanceof Error ? err.message : 'Error al crear opción');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleCreateField = async () => {
+    if (!newFieldKey.trim() || !newFieldFirstLabel.trim() || !newFieldFirstValue.trim()) return;
+    setCreatingField(true);
+    try {
+      const created = await crmService.createFieldOption({
+        field_name: newFieldKey,
+        value: newFieldFirstValue,
+        label: newFieldFirstLabel,
+        sort_order: 1,
+        is_active: true,
+      });
+      setOptions((prev) => [...prev, created]);
+      setActiveField(newFieldKey);
+      setAddFieldOpen(false);
+      setNewFieldName('');
+      setNewFieldKey('');
+      setNewFieldFirstLabel('');
+      setNewFieldFirstValue('');
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear campo');
+    } finally {
+      setCreatingField(false);
     }
   };
 
@@ -158,85 +204,161 @@ export function FieldOptionsManager() {
     }
   };
 
+  const activeFieldLabel = fieldList.find((f) => f.value === activeField)?.label ?? activeField;
+
   return (
     <div className="space-y-4">
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{error}</p>
       )}
 
-      {/* Field tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {FIELD_NAMES.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setActiveField(f.value)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeField === f.value
-                ? 'bg-teal-600 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Field selector + New Field button */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+        ) : (
+          fieldList.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setActiveField(f.value)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                activeField === f.value
+                  ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))
+        )}
+
+        {/* New Field dialog */}
+        <Dialog open={addFieldOpen} onOpenChange={setAddFieldOpen}>
+          <DialogTrigger asChild>
+            <button className="px-4 py-1.5 rounded-full text-sm font-medium border-2 border-dashed border-slate-300 text-slate-500 hover:border-fuchsia-400 hover:text-fuchsia-600 transition-colors flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5" />
+              Nuevo campo
+            </button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Crear nuevo campo de perfil</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Nombre del campo (visible) *</Label>
+                <Input
+                  value={newFieldName}
+                  onChange={(e) => {
+                    setNewFieldName(e.target.value);
+                    setNewFieldKey(generateSlug(e.target.value));
+                  }}
+                  placeholder="Ej: Sector de Trabajo"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Clave interna (auto-generada)</Label>
+                <Input
+                  value={newFieldKey}
+                  onChange={(e) => setNewFieldKey(e.target.value)}
+                  className="font-mono text-sm text-slate-500"
+                  placeholder="sector_de_trabajo"
+                />
+                <p className="text-xs text-slate-400">
+                  Identificador único del campo en la base de datos.
+                </p>
+              </div>
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-sm text-slate-600 font-medium">Primera opción del campo *</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-500">Etiqueta</Label>
+                  <Input
+                    value={newFieldFirstLabel}
+                    onChange={(e) => {
+                      setNewFieldFirstLabel(e.target.value);
+                      setNewFieldFirstValue(generateSlug(e.target.value));
+                    }}
+                    placeholder="Ej: Tecnología"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-500">Valor interno</Label>
+                  <Input
+                    value={newFieldFirstValue}
+                    onChange={(e) => setNewFieldFirstValue(e.target.value)}
+                    className="font-mono text-sm text-slate-500"
+                    placeholder="tecnologia"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddFieldOpen(false)}>Cancelar</Button>
+              <Button
+                onClick={handleCreateField}
+                disabled={creatingField || !newFieldKey || !newFieldFirstLabel || !newFieldFirstValue}
+                className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
+              >
+                {creatingField ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Crear campo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Options list */}
+      {/* Options list for active field */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm">
-              {FIELD_NAMES.find((f) => f.value === activeField)?.label} —{' '}
-              <span className="text-slate-400 font-normal">{filteredOptions.length} opciones</span>
+              {activeFieldLabel}{' '}
+              <span className="text-slate-400 font-normal">— {filteredOptions.length} opciones</span>
             </CardTitle>
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <Dialog open={addOptionOpen} onOpenChange={setAddOptionOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-teal-600 hover:bg-teal-700 h-8">
+                <Button size="sm" className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white h-8">
                   <Plus className="h-4 w-4 mr-1" />
                   Nueva opción
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-sm">
                 <DialogHeader>
-                  <DialogTitle>
-                    Nueva opción — {FIELD_NAMES.find((f) => f.value === activeField)?.label}
-                  </DialogTitle>
+                  <DialogTitle>Nueva opción — {activeFieldLabel}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div className="space-y-1.5">
-                    <Label>Etiqueta (visible para el usuario) *</Label>
+                    <Label>Etiqueta (visible) *</Label>
                     <Input
                       value={newLabel}
-                      onChange={(e) => handleLabelChange(e.target.value)}
-                      placeholder="Ej: Maestría en Educación"
+                      onChange={(e) => {
+                        setNewLabel(e.target.value);
+                        setNewValue(generateSlug(e.target.value));
+                      }}
+                      placeholder="Ej: Maestría"
                       autoFocus
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Valor interno (auto-generado)</Label>
+                    <Label>Valor interno</Label>
                     <Input
                       value={newValue}
                       onChange={(e) => setNewValue(e.target.value)}
-                      placeholder="master_educacion"
                       className="font-mono text-sm text-slate-500"
+                      placeholder="maestria"
                     />
-                    <p className="text-xs text-slate-400">
-                      Valor técnico que se guarda en la base de datos.
-                    </p>
+                    <p className="text-xs text-slate-400">Valor que se guarda en la base de datos.</p>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                    Cancelar
-                  </Button>
+                  <Button variant="outline" onClick={() => setAddOptionOpen(false)}>Cancelar</Button>
                   <Button
-                    onClick={handleCreate}
+                    onClick={handleAddOption}
                     disabled={creating || !newLabel || !newValue}
-                    className="bg-teal-600 hover:bg-teal-700"
+                    className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
                   >
-                    {creating ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Crear
                   </Button>
                 </DialogFooter>
@@ -252,7 +374,7 @@ export function FieldOptionsManager() {
             </div>
           ) : filteredOptions.length === 0 ? (
             <p className="text-center text-slate-400 text-sm py-6">
-              No hay opciones para este campo
+              No hay opciones para este campo. Crea la primera con el botón de arriba.
             </p>
           ) : (
             <div className="divide-y">
@@ -261,7 +383,6 @@ export function FieldOptionsManager() {
                   <GripVertical className="h-4 w-4 text-slate-300 shrink-0" />
 
                   {editState?.option.id === opt.id ? (
-                    // Inline edit
                     <div className="flex flex-1 items-center gap-2">
                       <Input
                         value={editState.label}
@@ -286,7 +407,7 @@ export function FieldOptionsManager() {
                         size="sm"
                         onClick={handleSaveEdit}
                         disabled={saving}
-                        className="h-8 bg-teal-600 hover:bg-teal-700"
+                        className="h-8 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white"
                       >
                         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Guardar'}
                       </Button>
@@ -300,7 +421,6 @@ export function FieldOptionsManager() {
                       </Button>
                     </div>
                   ) : (
-                    // Display row
                     <>
                       <div className="flex-1 min-w-0">
                         <span
@@ -320,13 +440,9 @@ export function FieldOptionsManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-slate-600"
+                          className="h-7 w-7 text-slate-400 hover:text-fuchsia-600"
                           onClick={() =>
-                            setEditState({
-                              option: opt,
-                              label: opt.label,
-                              sort_order: opt.sort_order,
-                            })
+                            setEditState({ option: opt, label: opt.label, sort_order: opt.sort_order })
                           }
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -334,7 +450,7 @@ export function FieldOptionsManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className={`h-7 w-7 ${opt.is_active ? 'text-slate-400 hover:text-orange-500' : 'text-orange-400 hover:text-teal-600'}`}
+                          className={`h-7 w-7 ${opt.is_active ? 'text-slate-400 hover:text-orange-500' : 'text-orange-400 hover:text-green-600'}`}
                           onClick={() => handleToggleActive(opt)}
                           title={opt.is_active ? 'Desactivar' : 'Activar'}
                         >
@@ -343,7 +459,7 @@ export function FieldOptionsManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
                           onClick={() => handleDelete(opt.id)}
                           disabled={deletingId === opt.id}
                         >

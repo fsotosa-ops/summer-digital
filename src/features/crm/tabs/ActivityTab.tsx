@@ -1,305 +1,196 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
 import { crmService } from '@/services/crm.service';
-import { ApiCrmStats, ApiCrmTask } from '@/types/api.types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FieldOptionsManager } from '../components/FieldOptionsManager';
+import { ApiCrmStats, ApiCrmTask, ApiCrmTaskStatus } from '@/types/api.types';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Users,
   UserCheck,
   UserX,
   AlertTriangle,
-  CheckCircle2,
   Clock,
   Loader2,
-  ListTodo,
-  FileText,
-  Activity,
+  RefreshCw,
+  Calendar,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-700',
-  medium: 'bg-blue-100 text-blue-700',
-  high: 'bg-orange-100 text-orange-700',
+  low:    'bg-slate-100 text-slate-600',
+  medium: 'bg-sky-100 text-sky-700',
+  high:   'bg-orange-100 text-orange-700',
   urgent: 'bg-red-100 text-red-700',
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  urgent: 'Urgente',
+  low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Urgente',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendiente',
-  in_progress: 'En progreso',
-  completed: 'Completada',
-  cancelled: 'Cancelada',
+const COLUMNS: { key: ApiCrmTaskStatus; label: string; color: string; dot: string }[] = [
+  { key: 'pending',     label: 'Pendientes',   color: 'border-t-amber-400',  dot: 'bg-amber-400'  },
+  { key: 'in_progress', label: 'En Progreso',  color: 'border-t-blue-500',   dot: 'bg-blue-500'   },
+  { key: 'completed',   label: 'Completadas',  color: 'border-t-green-500',  dot: 'bg-green-500'  },
+];
+
+const NEXT_STATUS: Record<string, ApiCrmTaskStatus> = {
+  pending: 'in_progress',
+  in_progress: 'completed',
 };
 
 export function ActivityTab() {
-  const { user } = useAuthStore();
-  const isSuperAdmin = user?.role === 'SuperAdmin';
   const [stats, setStats] = useState<ApiCrmStats | null>(null);
   const [tasks, setTasks] = useState<ApiCrmTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [statsData, tasksData] = await Promise.allSettled([
+      const [statsResult, tasksResult] = await Promise.allSettled([
         crmService.getStats(),
-        crmService.listTasks(0, 10, 'pending'),
+        crmService.listTasks(0, 100),
       ]);
-
-      if (statsData.status === 'fulfilled') {
-        setStats(statsData.value);
-      }
-      if (tasksData.status === 'fulfilled') {
-        setTasks(tasksData.value);
-      }
-      setError(null);
-    } catch (err) {
-      console.error('Error loading activity data:', err);
-      setError(err instanceof Error ? err.message : 'Error al cargar datos');
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
+      if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value);
     } finally {
       setLoading(false);
     }
   };
 
+  const moveTask = async (task: ApiCrmTask) => {
+    const next = NEXT_STATUS[task.status];
+    if (!next) return;
+    setMovingId(task.id);
+    try {
+      const updated = await crmService.updateTask(task.id, { status: next });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch {
+      toast.error('Error al mover la tarea');
+    } finally {
+      setMovingId(null);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
+      <div className="flex justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
-  if (error && !stats) {
-    return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-4">
-          <p className="text-red-600 text-sm">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const tasksByStatus = (status: ApiCrmTaskStatus) =>
+    tasks.filter((t) => t.status === status);
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Total Contactos</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
-                  {stats?.total_contacts ?? 0}
-                </p>
+      {/* KPI row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Contactos', value: stats?.total_contacts ?? 0,  icon: Users,         cls: 'text-slate-700', bg: 'bg-slate-100'  },
+          { label: 'Activos',   value: stats?.active_contacts ?? 0, icon: UserCheck,     cls: 'text-green-600', bg: 'bg-green-100'  },
+          { label: 'En Riesgo', value: stats?.risk_contacts ?? 0,   icon: AlertTriangle, cls: 'text-red-600',   bg: 'bg-red-100'    },
+          { label: 'Inactivos', value: stats?.inactive_contacts ?? 0, icon: UserX,       cls: 'text-slate-500', bg: 'bg-slate-100'  },
+        ].map(({ label, value, icon: Icon, cls, bg }) => (
+          <Card key={label} className="rounded-2xl shadow-sm border-0 bg-white">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">{label}</p>
+                  <p className={`text-2xl font-bold mt-0.5 ${cls}`}>{value}</p>
+                </div>
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${bg}`}>
+                  <Icon className={`h-5 w-5 ${cls}`} />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
-                <Users className="h-6 w-6 text-slate-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Activos</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
-                  {stats?.active_contacts ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <UserCheck className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">En Riesgo</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">
-                  {stats?.risk_contacts ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Tasks Pendientes</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">
-                  {stats?.pending_tasks ?? 0}
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <ListTodo className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Tasks Totales</p>
-                <p className="text-xl font-bold text-slate-900">{stats?.total_tasks ?? 0}</p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-3 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" /> {stats?.in_progress_tasks ?? 0} en progreso
-              </span>
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> {stats?.completed_tasks ?? 0} completadas
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Notas Totales</p>
-                <p className="text-xl font-bold text-slate-900">{stats?.total_notes ?? 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                <UserX className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Inactivos</p>
-                <p className="text-xl font-bold text-slate-900">
-                  {stats?.inactive_contacts ?? 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Pipeline header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-700">Pipeline de Tareas</h3>
+        <Button variant="ghost" size="sm" onClick={loadData} className="h-8 text-slate-500 hover:text-fuchsia-600">
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Actualizar
+        </Button>
       </div>
 
-      {/* Pending Tasks */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Activity className="h-4 w-4 text-teal-600" />
-            Tasks Pendientes
-          </CardTitle>
-          <CardDescription>Tareas que requieren atención</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tasks.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              No hay tasks pendientes
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead>Tarea</TableHead>
-                  <TableHead>Prioridad</TableHead>
-                  <TableHead>Fecha Límite</TableHead>
-                  <TableHead>Creada</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm">{task.title}</p>
-                        {task.description && (
-                          <p className="text-xs text-slate-500 truncate max-w-[300px]">
-                            {task.description}
-                          </p>
+      {/* Kanban columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {COLUMNS.map(({ key, label, color, dot }) => {
+          const col = tasksByStatus(key);
+          return (
+            <div key={key} className={`rounded-2xl border-t-4 ${color} bg-white shadow-sm border border-slate-100 flex flex-col`}>
+              {/* Column header */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+                <span className={`h-2 w-2 rounded-full ${dot}`} />
+                <span className="text-sm font-semibold text-slate-700">{label}</span>
+                <span className="ml-auto text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{col.length}</span>
+              </div>
+
+              {/* Task cards */}
+              <div className="flex-1 p-3 space-y-2 min-h-[120px]">
+                {col.length === 0 ? (
+                  <p className="text-xs text-slate-300 text-center pt-6">Sin tareas</p>
+                ) : (
+                  col.map((task) => (
+                    <div
+                      key={task.id}
+                      className="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100 hover:border-fuchsia-200 transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-slate-800 leading-tight">{task.title}</p>
+                      {task.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`text-xs ${PRIORITY_COLORS[task.priority]}`}>
+                          {PRIORITY_LABELS[task.priority] || task.priority}
+                        </Badge>
+                        {task.due_date && (
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(task.due_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                          </span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={PRIORITY_COLORS[task.priority]}>
-                        {PRIORITY_LABELS[task.priority] || task.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-500">
-                      {task.due_date
-                        ? new Date(task.due_date).toLocaleDateString('es-CL')
-                        : 'Sin fecha'}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-500">
-                      {new Date(task.created_at).toLocaleDateString('es-CL')}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                      {NEXT_STATUS[task.status] && (
+                        <button
+                          onClick={() => moveTask(task)}
+                          disabled={movingId === task.id}
+                          className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-fuchsia-600 opacity-0 group-hover:opacity-100 transition-all pt-1 border-t border-slate-100"
+                        >
+                          {movingId === task.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : key === 'pending' ? (
+                            <><ArrowRight className="h-3 w-3" /> Mover a En Progreso</>
+                          ) : (
+                            <><CheckCircle2 className="h-3 w-3" /> Marcar Completada</>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-      {/* Field Options Manager — solo SuperAdmin */}
-      {isSuperAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-4 w-4 text-teal-600" />
-              Opciones de campos del perfil
-            </CardTitle>
-            <CardDescription>
-              Configura las opciones disponibles para género, nivel educativo y ocupación.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldOptionsManager />
-          </CardContent>
-        </Card>
+      {tasks.length === 0 && (
+        <div className="text-center py-8 text-slate-400 text-sm">
+          <Clock className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+          No hay tareas registradas en el CRM aún.
+        </div>
       )}
     </div>
   );

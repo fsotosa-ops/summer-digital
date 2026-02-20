@@ -19,14 +19,31 @@ import {
   Building2,
   Settings,
   ChevronDown,
+  ChevronUp,
   Trophy,
+  Pencil,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/types';
 import { Toaster } from 'sonner';
+
+const ROLE_LABELS: Record<string, string> = {
+  SuperAdmin: 'Super Administrador',
+  Admin: 'Administrador',
+  Participant: 'Participante',
+  Subscriber: 'Suscriptor',
+};
 
 interface NavItem {
   label: string;
@@ -41,7 +58,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Mi Viaje', href: '/journey', icon: MapIcon, allowedRoles: ['Participant'] },
   { label: 'Actividades Abiertas', href: '/open-activities', icon: Layout, allowedRoles: ['Subscriber'] },
   { label: 'Recursos', href: '/resources', icon: BookOpen, allowedRoles: ['Subscriber', 'Participant'] },
-  { label: 'Mi Perfil', href: '/profile', icon: User, allowedRoles: ['Participant', 'Admin', 'SuperAdmin'] },
 
   // Admin Group
   {
@@ -284,7 +300,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
               {filteredNavItems.map((item) => renderNavItem(item, true))}
             </nav>
-            {/* Mobile: User profile + logout */}
+            {/* Mobile: User profile + actions */}
             <div className="p-4 border-t border-white/5">
               <div className="flex items-center gap-3 mb-3">
                 {user.avatarUrl ? (
@@ -301,14 +317,32 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   <p className="text-xs text-neutral-500 truncate">{user.email}</p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
-                onClick={handleLogout}
-              >
-                <LogOut size={20} />
-                Cerrar Sesión
-              </Button>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                  onClick={() => { router.push('/profile'); document.getElementById('close-sheet')?.click(); }}
+                >
+                  <User size={20} />
+                  Mi Perfil
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                  onClick={() => { router.push('/profile?edit=true'); document.getElementById('close-sheet')?.click(); }}
+                >
+                  <Pencil size={20} />
+                  Editar Perfil
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={20} />
+                  Cerrar Sesión
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -349,49 +383,65 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {filteredNavItems.map((item) => renderNavItem(item))}
         </nav>
 
-        {/* Bottom section - User profile */}
-        <div className="p-3 bg-neutral-900/50 backdrop-blur-sm border-t border-white/5 space-y-2">
-          {/* User info */}
-          {isSidebarOpen ? (
-            <div className="flex items-center gap-3 px-2 py-1.5">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10 flex-shrink-0" />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10 flex-shrink-0">
-                  <span className="text-xs font-semibold text-white">
-                    {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                <p className="text-xs text-neutral-500 truncate">{user.email}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center py-1">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10" />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
-                  <span className="text-xs font-semibold text-white">
-                    {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            className={cn(
-              'w-full flex items-center gap-3 justify-start text-neutral-400 hover:text-white hover:bg-white/10',
-              !isSidebarOpen && 'justify-center px-0'
-            )}
-            onClick={handleLogout}
-          >
-            <LogOut size={20} />
-            {isSidebarOpen && 'Cerrar Sesión'}
-          </Button>
+        {/* Bottom section - User profile dropdown */}
+        <div className="p-3 bg-neutral-900/50 backdrop-blur-sm border-t border-white/5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 focus:outline-none transition-colors">
+                {/* Avatar */}
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10 flex-shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10 flex-shrink-0">
+                    <span className="text-xs font-semibold text-white">
+                      {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                {isSidebarOpen && (
+                  <>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                      <p className="text-xs text-neutral-500">{ROLE_LABELS[user.role] ?? user.role}</p>
+                    </div>
+                    <ChevronUp size={14} className="text-neutral-500 flex-shrink-0" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              className="w-56 bg-neutral-900 border-white/10 text-white"
+            >
+              <DropdownMenuLabel className="pb-1">
+                <p className="font-medium text-sm truncate">{user.name}</p>
+                <p className="text-xs text-neutral-400 truncate font-normal">{user.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem
+                onClick={() => router.push('/profile')}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <User size={15} className="mr-2" /> Mi Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push('/profile?edit=true')}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <Pencil size={15} className="mr-2" />
+                Editar Perfil
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer text-red-400 focus:text-red-300 focus:bg-white/5"
+              >
+                <LogOut size={15} className="mr-2" /> Cerrar Sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </motion.aside>
 

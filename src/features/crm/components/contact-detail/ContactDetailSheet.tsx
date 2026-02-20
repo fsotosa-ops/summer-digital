@@ -51,7 +51,7 @@ import {
   Activity,
 } from 'lucide-react';
 
-import { STATUS_OPTIONS, STATUS_COLORS, NONE, getInitials } from './constants';
+import { STATUS_OPTIONS, STATUS_COLORS, getInitials } from './constants';
 import { ProfileTab } from './ProfileTab';
 import { OrganizationsTab } from './OrganizationsTab';
 import { NotesTasksTab } from './NotesTasksTab';
@@ -81,10 +81,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
   const [editStatus, setEditStatus] = useState<ApiAccountStatus>('active');
   const [saving, setSaving] = useState(false);
 
-  // Edit CRM fields - inline editing
-  const [editingCrm, setEditingCrm] = useState(false);
-  const [crmDraft, setCrmDraft] = useState<Partial<ApiCrmContact>>({});
-  const [savingCrm, setSavingCrm] = useState(false);
+  // CRM contact is updated inline by ProfileTab via onContactUpdated
 
   // Toggle admin
   const [togglingAdmin, setTogglingAdmin] = useState(false);
@@ -255,44 +252,6 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
     }
   };
 
-  // CRM edit handlers
-  const startCrmEdit = () => {
-    setCrmDraft({
-      phone: crmContact?.phone || '',
-      country: crmContact?.country || '',
-      state: crmContact?.state || '',
-      city: crmContact?.city || '',
-      birth_date: crmContact?.birth_date || '',
-      gender: crmContact?.gender || '',
-      education_level: crmContact?.education_level || '',
-      occupation: crmContact?.occupation || '',
-      company: crmContact?.company || '',
-    });
-    setEditingCrm(true);
-  };
-
-  const handleSaveCrm = async () => {
-    setSavingCrm(true);
-    try {
-      const cleanDraft: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(crmDraft)) {
-        cleanDraft[key] = value === '' ? null : value;
-      }
-      const updated = await crmService.updateContact(user.id, cleanDraft as Partial<ApiCrmContact>);
-      setCrmContact(updated);
-      setEditingCrm(false);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar perfil CRM');
-    } finally {
-      setSavingCrm(false);
-    }
-  };
-
-  const selectOption = (field: string, value: string) => {
-    setCrmDraft((prev) => ({ ...prev, [field]: value === NONE ? '' : value }));
-  };
-
   // Notes handlers
   const handleCreateNote = async () => {
     if (!newNoteContent.trim()) return;
@@ -402,35 +361,37 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
             Perfil de {user.full_name || user.email}
           </DialogTitle>
           {/* Header */}
-          <div className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-slate-100 shrink-0">
-            <Avatar className="h-14 w-14 shrink-0">
-              <AvatarImage src={user.avatar_url || undefined} />
-              <AvatarFallback className="bg-slate-100 text-slate-600 text-lg">
-                {getInitials(user)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold text-slate-800 truncate">
-                {user.full_name || 'Sin nombre'}
-              </h2>
-              <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
-                <Mail className="h-3 w-3 shrink-0" />
-                <span className="truncate">{user.email}</span>
-              </p>
-            </div>
-            <div className="flex gap-2 flex-wrap shrink-0">
-              <Badge
-                variant="outline"
-                className={STATUS_COLORS[user.status || 'active']}
-              >
-                {STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo'}
-              </Badge>
-              {user.is_platform_admin && (
-                <Badge className="bg-purple-100 text-purple-800">
-                  <Shield className="h-3 w-3 mr-1" />
-                  Platform Admin
+          <div className="shrink-0 bg-gradient-to-r from-sky-50 via-purple-50 to-amber-50 border-b border-purple-100/50">
+            <div className="flex items-center gap-4 px-6 pt-5 pb-4">
+              <Avatar className="h-14 w-14 shrink-0 ring-2 ring-white shadow-sm">
+                <AvatarImage src={user.avatar_url || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white text-lg font-semibold">
+                  {getInitials(user)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-semibold text-slate-800 truncate">
+                  {user.full_name || 'Sin nombre'}
+                </h2>
+                <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{user.email}</span>
+                </p>
+              </div>
+              <div className="flex gap-2 flex-wrap shrink-0">
+                <Badge
+                  variant="outline"
+                  className={STATUS_COLORS[user.status || 'active']}
+                >
+                  {STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo'}
                 </Badge>
-              )}
+                {user.is_platform_admin && (
+                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Platform Admin
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
@@ -442,27 +403,48 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
           {/* Content with Tabs */}
           <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 shrink-0">
-              <TabsTrigger value="profile">
-                <User className="h-4 w-4 mr-1.5" />
+            <TabsList className="mx-6 mt-3 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
+              <TabsTrigger
+                value="profile"
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
+              >
+                <User className="h-3.5 w-3.5" />
                 Perfil
               </TabsTrigger>
-              <TabsTrigger value="orgs" onClick={() => loadAvailableOrgs()}>
-                <Building2 className="h-4 w-4 mr-1.5" />
-                Organizaciones ({user.organizations.length})
+              <TabsTrigger
+                value="orgs"
+                onClick={() => loadAvailableOrgs()}
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                Orgs ({user.organizations.length})
               </TabsTrigger>
               <TabsTrigger
                 value="notes"
                 onClick={() => loadNotesAndTasks(user.id)}
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
               >
-                <StickyNote className="h-4 w-4 mr-1.5" />
+                <StickyNote className="h-3.5 w-3.5" />
                 Notas & Tareas
               </TabsTrigger>
               <TabsTrigger
                 value="activity"
                 onClick={() => loadActivity(user.id)}
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
               >
-                <Activity className="h-4 w-4 mr-1.5" />
+                <Activity className="h-3.5 w-3.5" />
                 Actividad
               </TabsTrigger>
             </TabsList>
@@ -479,15 +461,8 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                       crmContact={crmContact}
                       crmLoading={crmLoading}
                       fieldOptions={fieldOptions}
-                      editingCrm={editingCrm}
-                      crmDraft={crmDraft}
-                      savingCrm={savingCrm}
+                      onContactUpdated={setCrmContact}
                       togglingAdmin={togglingAdmin}
-                      onStartCrmEdit={startCrmEdit}
-                      onCrmDraftChange={setCrmDraft}
-                      onSelectOption={selectOption}
-                      onSaveCrm={handleSaveCrm}
-                      onCancelCrmEdit={() => setEditingCrm(false)}
                       onOpenEdit={handleOpenEdit}
                       onToggleAdmin={handleToggleAdmin}
                       onOpenDelete={() => setDeleteOpen(true)}
@@ -596,7 +571,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
             <Button
               onClick={handleSaveEdit}
               disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
             >
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Guardar

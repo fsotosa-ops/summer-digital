@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ApiUser,
   ApiCrmContact,
   ApiFieldOption,
 } from '@/types/api.types';
+import { crmService } from '@/services/crm.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,40 +26,264 @@ import {
   Trash2,
   Loader2,
   Building2,
-  Mail,
   Phone,
   MapPin,
   Calendar,
   GraduationCap,
   Briefcase,
   User,
-  Save,
+  Check,
   X,
-  Clock,
 } from 'lucide-react';
 import { NONE, resolveLabel } from './constants';
+import { toast } from 'sonner';
 
-function ProfileField({
-  icon,
-  label,
-  value,
-}: {
+const NONE_VAL = '__none__';
+
+// ── Editable field component ─────────────────────────────────────────────────
+
+interface EditableTextProps {
   icon: React.ReactNode;
   label: string;
   value: string | null | undefined;
-}) {
+  fieldKey: keyof ApiCrmContact;
+  contactId: string;
+  onSaved: (updated: ApiCrmContact) => void;
+  type?: 'text' | 'date' | 'tel';
+}
+
+function EditableText({ icon, label, value, fieldKey, contactId, onSaved, type = 'text' }: EditableTextProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setDraft(value ?? '');
+    setEditing(true);
+  };
+
+  const cancel = () => setEditing(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const updated = await crmService.updateContact(contactId, {
+        [fieldKey]: draft === '' ? null : draft,
+      });
+      onSaved(updated);
+      setEditing(false);
+    } catch {
+      toast.error('Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="group flex items-start gap-2.5">
       <span className="text-slate-400 mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">{label}</p>
-        <p className={`text-sm ${value ? 'text-slate-700' : 'text-slate-300 italic'}`}>
-          {value || 'No especificado'}
-        </p>
+        {editing ? (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Input
+              type={type}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="h-7 text-sm py-0"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); }}
+            />
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:bg-slate-100" onClick={cancel}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className={`text-sm ${value ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+              {value || 'No especificado'}
+            </p>
+            <button
+              onClick={start}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+interface EditableSelectProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null | undefined;
+  fieldKey: keyof ApiCrmContact;
+  options: ApiFieldOption[];
+  contactId: string;
+  onSaved: (updated: ApiCrmContact) => void;
+}
+
+function EditableSelect({ icon, label, value, fieldKey, options, contactId, onSaved }: EditableSelectProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setDraft(value ?? NONE_VAL);
+    setEditing(true);
+  };
+
+  const save = async (val: string) => {
+    setSaving(true);
+    try {
+      const updated = await crmService.updateContact(contactId, {
+        [fieldKey]: val === NONE_VAL ? null : val,
+      });
+      onSaved(updated);
+      setEditing(false);
+    } catch {
+      toast.error('Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const displayLabel = resolveLabel(value, options);
+
+  return (
+    <div className="group flex items-start gap-2.5">
+      <span className="text-slate-400 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">{label}</p>
+        {editing ? (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Select
+              value={draft}
+              onValueChange={(v) => { setDraft(v); save(v); }}
+              disabled={saving}
+            >
+              <SelectTrigger className="h-7 text-sm w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VAL}><span className="text-slate-400">Sin especificar</span></SelectItem>
+                {options.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {saving && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:bg-slate-100" onClick={() => setEditing(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className={`text-sm ${displayLabel ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+              {displayLabel || 'No especificado'}
+            </p>
+            <button
+              onClick={start}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface EditableLocationProps {
+  contact: ApiCrmContact | null;
+  contactId: string;
+  onSaved: (updated: ApiCrmContact) => void;
+}
+
+function EditableLocation({ contact, contactId, onSaved }: EditableLocationProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ country: '', state: '', city: '' });
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setDraft({
+      country: contact?.country ?? '',
+      state: contact?.state ?? '',
+      city: contact?.city ?? '',
+    });
+    setEditing(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const updated = await crmService.updateContact(contactId, {
+        country: draft.country || null,
+        state: draft.state || null,
+        city: draft.city || null,
+      });
+      onSaved(updated);
+      setEditing(false);
+    } catch {
+      toast.error('Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const locationDisplay = [
+    contact?.city,
+    contact?.state ? getStateName(contact.country || '', contact.state) : null,
+    contact?.country ? getCountryName(contact.country) : null,
+  ].filter(Boolean).join(', ');
+
+  return (
+    <div className="group flex items-start gap-2.5">
+      <span className="text-slate-400 mt-0.5 shrink-0"><MapPin className="h-3.5 w-3.5" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium">Ubicación</p>
+        {editing ? (
+          <div className="mt-1 space-y-2">
+            <LocationSelector
+              value={draft}
+              onChange={setDraft}
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={save} disabled={saving} className="h-7 text-xs bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white">
+                {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                Guardar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="h-7 text-xs">
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className={`text-sm ${locationDisplay ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+              {locationDisplay || 'No especificado'}
+            </p>
+            <button
+              onClick={start}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── ProfileTab ────────────────────────────────────────────────────────────────
 
 interface ProfileTabProps {
   user: ApiUser;
@@ -67,15 +292,8 @@ interface ProfileTabProps {
   crmContact: ApiCrmContact | null;
   crmLoading: boolean;
   fieldOptions: Record<string, ApiFieldOption[]>;
-  editingCrm: boolean;
-  crmDraft: Partial<ApiCrmContact>;
-  savingCrm: boolean;
+  onContactUpdated: (c: ApiCrmContact) => void;
   togglingAdmin: boolean;
-  onStartCrmEdit: () => void;
-  onCrmDraftChange: (draft: Partial<ApiCrmContact>) => void;
-  onSelectOption: (field: string, value: string) => void;
-  onSaveCrm: () => void;
-  onCancelCrmEdit: () => void;
   onOpenEdit: () => void;
   onToggleAdmin: () => void;
   onOpenDelete: () => void;
@@ -88,15 +306,8 @@ export function ProfileTab({
   crmContact,
   crmLoading,
   fieldOptions,
-  editingCrm,
-  crmDraft,
-  savingCrm,
+  onContactUpdated,
   togglingAdmin,
-  onStartCrmEdit,
-  onCrmDraftChange,
-  onSelectOption,
-  onSaveCrm,
-  onCancelCrmEdit,
   onOpenEdit,
   onToggleAdmin,
   onOpenDelete,
@@ -109,332 +320,179 @@ export function ProfileTab({
     );
   }
 
-  if (editingCrm) {
+  // If no CRM contact record yet, show a placeholder
+  if (!crmContact) {
     return (
       <div className="max-w-2xl space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Company */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500 flex items-center gap-1">
-              <Building2 className="h-3 w-3" /> Empresa
-            </Label>
-            <Input
-              value={crmDraft.company || ''}
-              onChange={(e) =>
-                onCrmDraftChange({ ...crmDraft, company: e.target.value })
-              }
-              placeholder="Nombre de la empresa"
-              className="h-9"
-            />
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500 flex items-center gap-1">
-              <Phone className="h-3 w-3" /> Teléfono
-            </Label>
-            <Input
-              value={crmDraft.phone || ''}
-              onChange={(e) =>
-                onCrmDraftChange({ ...crmDraft, phone: e.target.value })
-              }
-              placeholder="+56 9 1234 5678"
-              className="h-9"
-            />
-          </div>
-
-          {/* Birth date */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500 flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> Fecha de nacimiento
-            </Label>
-            <Input
-              type="date"
-              value={crmDraft.birth_date || ''}
-              onChange={(e) =>
-                onCrmDraftChange({ ...crmDraft, birth_date: e.target.value })
-              }
-              className="h-9"
-            />
-          </div>
-
-          {/* Gender */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500">Género</Label>
-            <Select
-              value={crmDraft.gender || NONE}
-              onValueChange={(v) => onSelectOption('gender', v)}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Selecciona" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>
-                  <span className="text-slate-400">Sin especificar</span>
-                </SelectItem>
-                {(fieldOptions.gender || []).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Education */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500 flex items-center gap-1">
-              <GraduationCap className="h-3 w-3" /> Nivel Educativo
-            </Label>
-            <Select
-              value={crmDraft.education_level || NONE}
-              onValueChange={(v) => onSelectOption('education_level', v)}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Selecciona" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>
-                  <span className="text-slate-400">Sin especificar</span>
-                </SelectItem>
-                {(fieldOptions.education_level || []).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Occupation */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-slate-500 flex items-center gap-1">
-              <Briefcase className="h-3 w-3" /> Ocupación
-            </Label>
-            <Select
-              value={crmDraft.occupation || NONE}
-              onValueChange={(v) => onSelectOption('occupation', v)}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Selecciona" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>
-                  <span className="text-slate-400">Sin especificar</span>
-                </SelectItem>
-                {(fieldOptions.occupation || []).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-slate-500 flex items-center gap-1">
-            <MapPin className="h-3 w-3" /> Ubicación
-          </Label>
-          <LocationSelector
-            value={{
-              country: crmDraft.country || '',
-              state: crmDraft.state || '',
-              city: crmDraft.city || '',
-            }}
-            onChange={({ country, state, city }) =>
-              onCrmDraftChange({ ...crmDraft, country, state, city })
-            }
-          />
-        </div>
-
-        {/* Save / cancel */}
-        <div className="flex gap-2 pt-1">
-          <Button
-            onClick={onSaveCrm}
-            disabled={savingCrm}
-            className="bg-teal-600 hover:bg-teal-700 h-9"
-          >
-            {savingCrm ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Guardar
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onCancelCrmEdit}
-            className="h-9"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Cancelar
-          </Button>
-        </div>
+        <p className="text-sm text-slate-400 italic py-4">
+          Este contacto no tiene datos de perfil CRM aún.
+        </p>
+        <AccountActions
+          user={user}
+          currentUser={currentUser}
+          isSuperAdmin={isSuperAdmin}
+          togglingAdmin={togglingAdmin}
+          onOpenEdit={onOpenEdit}
+          onToggleAdmin={onToggleAdmin}
+          onOpenDelete={onOpenDelete}
+        />
       </div>
     );
   }
 
-  // VIEW MODE
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl space-y-5">
+      {/* CRM fields — all inline-editable */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-        <ProfileField
+        <EditableText
           icon={<Building2 className="h-3.5 w-3.5" />}
           label="Empresa"
-          value={crmContact?.company}
+          value={crmContact.company}
+          fieldKey="company"
+          contactId={user.id}
+          onSaved={onContactUpdated}
         />
-        <ProfileField
+        <EditableText
           icon={<Phone className="h-3.5 w-3.5" />}
           label="Teléfono"
-          value={crmContact?.phone}
+          value={crmContact.phone}
+          fieldKey="phone"
+          contactId={user.id}
+          onSaved={onContactUpdated}
+          type="tel"
         />
-        <ProfileField
-          icon={<MapPin className="h-3.5 w-3.5" />}
-          label="Ubicación"
-          value={
-            [
-              crmContact?.city,
-              crmContact?.state
-                ? getStateName(crmContact?.country || '', crmContact.state)
-                : null,
-              crmContact?.country ? getCountryName(crmContact.country) : null,
-            ]
-              .filter(Boolean)
-              .join(', ') || null
-          }
-        />
-        <ProfileField
+        <EditableText
           icon={<Calendar className="h-3.5 w-3.5" />}
           label="Fecha de nacimiento"
           value={
-            crmContact?.birth_date
-              ? new Date(crmContact.birth_date + 'T00:00:00').toLocaleDateString(
-                  'es-CL',
-                  { year: 'numeric', month: 'long', day: 'numeric' },
-                )
+            crmContact.birth_date
+              ? new Date(crmContact.birth_date + 'T00:00:00').toLocaleDateString('es-CL', {
+                  year: 'numeric', month: 'long', day: 'numeric',
+                })
               : null
           }
+          fieldKey="birth_date"
+          contactId={user.id}
+          onSaved={onContactUpdated}
+          type="date"
         />
-        <ProfileField
+        <EditableSelect
           icon={<User className="h-3.5 w-3.5" />}
           label="Género"
-          value={resolveLabel(crmContact?.gender, fieldOptions.gender)}
+          value={crmContact.gender}
+          fieldKey="gender"
+          options={fieldOptions.gender || []}
+          contactId={user.id}
+          onSaved={onContactUpdated}
         />
-        <ProfileField
+        <EditableSelect
           icon={<GraduationCap className="h-3.5 w-3.5" />}
           label="Nivel Educativo"
-          value={resolveLabel(crmContact?.education_level, fieldOptions.education_level)}
+          value={crmContact.education_level}
+          fieldKey="education_level"
+          options={fieldOptions.education_level || []}
+          contactId={user.id}
+          onSaved={onContactUpdated}
         />
-        <ProfileField
+        <EditableSelect
           icon={<Briefcase className="h-3.5 w-3.5" />}
           label="Ocupación"
-          value={resolveLabel(crmContact?.occupation, fieldOptions.occupation)}
+          value={crmContact.occupation}
+          fieldKey="occupation"
+          options={fieldOptions.occupation || []}
+          contactId={user.id}
+          onSaved={onContactUpdated}
         />
-
-        {/* Last seen */}
-        {crmContact?.last_seen_at && (
-          <ProfileField
-            icon={<Clock className="h-3.5 w-3.5" />}
-            label="Última conexión"
-            value={new Date(crmContact.last_seen_at).toLocaleDateString('es-CL', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          />
-        )}
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onStartCrmEdit}
-        className="mt-5"
-      >
-        <Pencil className="h-4 w-4 mr-2" />
-        Editar Perfil CRM
-      </Button>
+      <EditableLocation
+        contact={crmContact}
+        contactId={user.id}
+        onSaved={onContactUpdated}
+      />
 
-      <Separator className="my-5" />
+      <Separator />
 
-      {/* Account Actions */}
-      <div className="space-y-3">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-          Acciones de cuenta
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={onOpenEdit}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Editar cuenta
-          </Button>
-          {isSuperAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onToggleAdmin}
-              disabled={togglingAdmin || user.id === currentUser?.id}
-              className={user.is_platform_admin ? 'border-purple-200 text-purple-700' : ''}
-            >
-              {togglingAdmin ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : user.is_platform_admin ? (
-                <ShieldOff className="h-4 w-4 mr-2" />
-              ) : (
-                <Shield className="h-4 w-4 mr-2" />
-              )}
-              {user.is_platform_admin ? 'Quitar Admin' : 'Hacer Admin'}
-            </Button>
-          )}
-          {isSuperAdmin && user.id !== currentUser?.id && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              onClick={onOpenDelete}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar
-            </Button>
-          )}
-        </div>
-      </div>
+      <AccountActions
+        user={user}
+        currentUser={currentUser}
+        isSuperAdmin={isSuperAdmin}
+        togglingAdmin={togglingAdmin}
+        onOpenEdit={onOpenEdit}
+        onToggleAdmin={onToggleAdmin}
+        onOpenDelete={onOpenDelete}
+      />
 
-      <Separator className="my-5" />
+      <Separator />
 
-      {/* Metadata */}
       <div className="grid grid-cols-2 gap-4 text-xs text-slate-500">
         <div>
-          <p className="font-medium text-slate-400 uppercase tracking-wider mb-0.5">
-            Creado
-          </p>
-          <p>
-            {user.created_at
-              ? new Date(user.created_at).toLocaleDateString('es-CL', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })
-              : '—'}
-          </p>
+          <p className="font-medium text-slate-400 uppercase tracking-wider mb-0.5">Creado</p>
+          <p>{user.created_at ? new Date(user.created_at).toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</p>
         </div>
         <div>
-          <p className="font-medium text-slate-400 uppercase tracking-wider mb-0.5">
-            Actualizado
-          </p>
-          <p>
-            {user.updated_at
-              ? new Date(user.updated_at).toLocaleDateString('es-CL', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })
-              : '—'}
-          </p>
+          <p className="font-medium text-slate-400 uppercase tracking-wider mb-0.5">Actualizado</p>
+          <p>{user.updated_at ? new Date(user.updated_at).toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AccountActions({
+  user,
+  currentUser,
+  isSuperAdmin,
+  togglingAdmin,
+  onOpenEdit,
+  onToggleAdmin,
+  onOpenDelete,
+}: {
+  user: ApiUser;
+  currentUser: { id: string; role: string } | null;
+  isSuperAdmin: boolean;
+  togglingAdmin: boolean;
+  onOpenEdit: () => void;
+  onToggleAdmin: () => void;
+  onOpenDelete: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Acciones de cuenta</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={onOpenEdit}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Editar cuenta
+        </Button>
+        {isSuperAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleAdmin}
+            disabled={togglingAdmin || user.id === currentUser?.id}
+            className={user.is_platform_admin ? 'border-purple-200 text-purple-700' : ''}
+          >
+            {togglingAdmin ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : user.is_platform_admin ? (
+              <ShieldOff className="h-4 w-4 mr-2" />
+            ) : (
+              <Shield className="h-4 w-4 mr-2" />
+            )}
+            {user.is_platform_admin ? 'Quitar Admin' : 'Hacer Admin'}
+          </Button>
+        )}
+        {isSuperAdmin && user.id !== currentUser?.id && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-200 hover:bg-red-50"
+            onClick={onOpenDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar
+          </Button>
+        )}
       </div>
     </div>
   );
