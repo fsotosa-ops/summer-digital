@@ -21,7 +21,6 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
-  Pencil,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -329,14 +328,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
-                  onClick={() => { router.push('/profile?edit=true'); document.getElementById('close-sheet')?.click(); }}
-                >
-                  <Pencil size={20} />
-                  Editar Perfil
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
                   onClick={handleLogout}
                 >
                   <LogOut size={20} />
@@ -425,13 +416,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
               >
                 <User size={15} className="mr-2" /> Mi Perfil
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push('/profile?edit=true')}
-                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
-              >
-                <Pencil size={15} className="mr-2" />
-                Editar Perfil
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
