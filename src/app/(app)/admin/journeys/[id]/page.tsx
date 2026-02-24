@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
-import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization } from '@/types/api.types';
+import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiRewardRead, ApiUnlockCondition } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,7 @@ import {
   Building2,
   ChevronDown,
   ChevronUp,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
@@ -335,6 +336,12 @@ export default function JourneyEditorPage() {
   // In-session cache: preserves config per type when switching types in the dialog
   const [configsByType, setConfigsByType] = useState<Partial<Record<ApiStepType, Record<string, unknown>>>>({});
 
+  // Rewards assignment
+  const [rewards, setRewards] = useState<ApiRewardRead[]>([]);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  const [rewardsExpanded, setRewardsExpanded] = useState(false);
+  const [savingReward, setSavingReward] = useState(false);
+
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
   const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
@@ -449,6 +456,107 @@ export default function JourneyEditorPage() {
       setError(err instanceof Error ? err.message : 'Error al guardar organizaciones');
     } finally {
       setSavingOrgs(false);
+    }
+  };
+
+  // Load rewards catalog whenever the journey (and orgId) becomes available
+  useEffect(() => {
+    if (!journey || !orgId) return;
+    const load = async () => {
+      setRewardsLoading(true);
+      try {
+        const data = await adminService.listRewards(orgId);
+        setRewards(data);
+      } catch { /* silencioso — rewards son opcionales */ }
+      finally { setRewardsLoading(false); }
+    };
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journey?.id, orgId]);
+
+  // --- Reward helpers ---
+
+  const getStepReward = (stepId: string): ApiRewardRead | undefined =>
+    rewards.find((r) => {
+      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
+      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
+        return (uc as ApiUnlockCondition).conditions.some(
+          (c) => c.type === 'step_completed' && c.step_id === stepId
+        );
+      }
+      return false;
+    });
+
+  const getJourneyCompletionReward = (): ApiRewardRead | undefined =>
+    rewards.find((r) => {
+      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
+      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
+        return (uc as ApiUnlockCondition).conditions.some(
+          (c) =>
+            c.type === 'journey_completed' &&
+            (!c.journey_id || c.journey_id === journey?.id)
+        );
+      }
+      return false;
+    });
+
+  const linkedRewardsCount = rewards.filter((r) => {
+    const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
+    if (!('conditions' in uc)) return false;
+    const conditions = (uc as ApiUnlockCondition).conditions;
+    return conditions.some(
+      (c) =>
+        (c.type === 'step_completed' && steps.some((s) => s.id === c.step_id)) ||
+        (c.type === 'journey_completed' && (!c.journey_id || c.journey_id === journey?.id))
+    );
+  }).length;
+
+  const handleLinkRewardToStep = async (stepId: string, rewardId: string | null) => {
+    if (!orgId || savingReward) return;
+    setSavingReward(true);
+    try {
+      const prev = getStepReward(stepId);
+      if (prev) {
+        await adminService.updateReward(orgId, prev.id, {
+          unlock_condition: { operator: 'AND', conditions: [] },
+        });
+      }
+      if (rewardId) {
+        await adminService.updateReward(orgId, rewardId, {
+          unlock_condition: { operator: 'AND', conditions: [{ type: 'step_completed', step_id: stepId }] },
+        });
+      }
+      setRewards(await adminService.listRewards(orgId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al asignar recompensa');
+    } finally {
+      setSavingReward(false);
+    }
+  };
+
+  const handleLinkRewardToJourney = async (rewardId: string | null) => {
+    if (!orgId || !journey || savingReward) return;
+    setSavingReward(true);
+    try {
+      const prev = getJourneyCompletionReward();
+      if (prev) {
+        await adminService.updateReward(orgId, prev.id, {
+          unlock_condition: { operator: 'AND', conditions: [] },
+        });
+      }
+      if (rewardId) {
+        await adminService.updateReward(orgId, rewardId, {
+          unlock_condition: {
+            operator: 'AND',
+            conditions: [{ type: 'journey_completed', journey_id: journey.id }],
+          },
+        });
+      }
+      setRewards(await adminService.listRewards(orgId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al asignar recompensa');
+    } finally {
+      setSavingReward(false);
     }
   };
 
@@ -816,6 +924,132 @@ export default function JourneyEditorPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Recompensas del Journey */}
+      {canEdit && (
+        <Card>
+          <CardHeader
+            className="cursor-pointer select-none"
+            onClick={() => setRewardsExpanded((v) => !v)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-base">Recompensas del Journey</CardTitle>
+                {linkedRewardsCount > 0 && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                    {linkedRewardsCount} asignada{linkedRewardsCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              {rewardsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              )}
+            </div>
+            <CardDescription>
+              Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
+            </CardDescription>
+          </CardHeader>
+
+          {rewardsExpanded && (
+            <CardContent className="space-y-5">
+              {rewardsLoading ? (
+                <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando recompensas...
+                </div>
+              ) : rewards.length === 0 ? (
+                <p className="text-sm text-slate-400 py-2">
+                  No hay recompensas en el catálogo de esta organización.{' '}
+                  <span className="text-slate-500">Créalas primero en <strong>Gamificación → Recompensas</strong>.</span>
+                </p>
+              ) : (
+                <>
+                  {/* Journey completion reward */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      Al completar el Journey
+                    </p>
+                    <Select
+                      value={getJourneyCompletionReward()?.id ?? '__none__'}
+                      onValueChange={(val) =>
+                        handleLinkRewardToJourney(val === '__none__' ? null : val)
+                      }
+                      disabled={savingReward}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sin recompensa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Sin recompensa</SelectItem>
+                        {rewards.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}
+                            {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="h-px bg-slate-100" />
+
+                  {/* Per-step rewards */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                      <Star className="h-4 w-4 text-slate-400" />
+                      Por step completado
+                    </p>
+                    {steps.length === 0 ? (
+                      <p className="text-xs text-slate-400">
+                        Agrega steps al journey para asignarles recompensas.
+                      </p>
+                    ) : (
+                      steps.map((step) => {
+                        const Icon = getStepIcon(step.type, step.config);
+                        return (
+                          <div key={step.id} className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                              <Icon className="h-3.5 w-3.5 text-slate-500" />
+                            </div>
+                            <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">
+                              {step.title}
+                            </span>
+                            <div className="w-56 flex-shrink-0">
+                              <Select
+                                value={getStepReward(step.id)?.id ?? '__none__'}
+                                onValueChange={(val) =>
+                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
+                                }
+                                disabled={savingReward}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Sin recompensa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
+                                  {rewards.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.name}
+                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Organizaciones habilitadas — solo SuperAdmin */}
       {isSuperAdmin && (

@@ -10,6 +10,8 @@ import {
   ApiStepCreate,
   ApiStepUpdate,
   ApiStepReorderRequest,
+  ApiRewardRead,
+  ApiRewardUpdate,
 } from '@/types/api.types';
 
 class AdminService {
@@ -94,6 +96,16 @@ class AdminService {
 
   async reorderSteps(orgId: string, journeyId: string, data: ApiStepReorderRequest): Promise<ApiStepAdminRead[]> {
     return apiClient.post<ApiStepAdminRead[]>(`/journeys/${orgId}/admin/journeys/${journeyId}/steps/reorder`, data);
+  }
+
+  // --- Gamification Rewards ---
+
+  async listRewards(orgId: string): Promise<ApiRewardRead[]> {
+    return apiClient.get<ApiRewardRead[]>(`/gamification/${orgId}/admin/rewards`);
+  }
+
+  async updateReward(orgId: string, rewardId: string, data: ApiRewardUpdate): Promise<ApiRewardRead> {
+    return apiClient.patch<ApiRewardRead>(`/gamification/${orgId}/admin/rewards/${rewardId}`, data);
   }
 }
 
