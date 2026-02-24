@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2, ChevronDown, ChevronUp, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AdminJourneysPage() {
@@ -51,6 +52,7 @@ export default function AdminJourneysPage() {
     description: '',
     category: '',
     is_active: false,
+    is_onboarding: false,
   });
 
   // Orgs disponibles + orgs asignadas al journey en creación (patrón de recompensas)
@@ -168,7 +170,7 @@ export default function AdminJourneysPage() {
       }
 
       setCreateDialogOpen(false);
-      setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
+      setFormData({ title: '', slug: '', description: '', category: '', is_active: false, is_onboarding: false });
       setAssignedOrgIds(new Set());
       setOrgsExpanded(false);
       await fetchJourneys();
@@ -282,6 +284,26 @@ export default function AdminJourneysPage() {
                   value={formData.category || ''}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   placeholder="Ej: Talleres, Onboarding, Habilidades"
+                />
+              </div>
+
+              {/* Onboarding toggle */}
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-fuchsia-500" />
+                  <div>
+                    <Label htmlFor="is_onboarding" className="text-sm font-medium cursor-pointer">
+                      Journey de Onboarding
+                    </Label>
+                    <p className="text-xs text-slate-500">
+                      Habilita preguntas de perfil y se muestra al ingresar por primera vez
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="is_onboarding"
+                  checked={formData.is_onboarding || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_onboarding: checked })}
                 />
               </div>
 
@@ -467,9 +489,17 @@ export default function AdminJourneysPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={journey.is_active ? 'default' : 'outline'}>
-                      {journey.is_active ? 'Activo' : 'Borrador'}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant={journey.is_active ? 'default' : 'outline'}>
+                        {journey.is_active ? 'Activo' : 'Borrador'}
+                      </Badge>
+                      {journey.is_onboarding && (
+                        <Badge className="bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200" variant="outline">
+                          <Rocket className="h-3 w-3 mr-1" />
+                          Onboarding
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">{journey.total_steps}</TableCell>
                   <TableCell className="text-center">{journey.total_enrollments}</TableCell>

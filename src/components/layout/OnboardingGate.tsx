@@ -126,19 +126,13 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'journey' && (
           <motion.div
             key="journey"
-            className="flex-1 flex flex-col overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col overflow-hidden bg-white rounded-t-3xl mt-2"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-              <h2 className="text-white font-bold text-lg">Tu Journey de Bienvenida</h2>
-              <span className="text-slate-400 text-sm">Complétalo para acceder a la plataforma</span>
-            </div>
-
-            {/* Journey Map */}
-            <div className="flex-1 p-4 overflow-hidden">
+            {/* Journey Map (immersive Duolingo-style) */}
+            <div className="flex-1 overflow-hidden">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-slate-400">Cargando tu journey...</div>

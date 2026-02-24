@@ -9,9 +9,10 @@ const STEP_TYPE_TO_NODE_TYPE: Record<ApiStepType, NodeType> = {
   milestone: 'challenge',
   social_interaction: 'feedback',
   resource_consumption: 'article',
+  profile_question: 'profile_question',
 };
 
-const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback', 'pdf', 'presentation', 'kahoot'];
+const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback', 'pdf', 'presentation', 'kahoot', 'profile_question'];
 
 const RESOURCE_TYPE_TO_NODE_TYPE: Record<string, NodeType> = {
   youtube: 'video',
@@ -111,6 +112,11 @@ export function mapApiToJourney(
       embedUrl,
       videoWatched: isVideoType && isCompleted ? true : undefined,
       points: basePoints || undefined,
+      // Profile question fields
+      profileField: nodeType === 'profile_question' ? (config.field_name as string) : undefined,
+      profileFieldLabel: nodeType === 'profile_question' ? (config.field_label as string) : undefined,
+      profileFieldType: nodeType === 'profile_question' ? ((config.field_type as string) || 'text') : undefined,
+      profileFieldOptions: nodeType === 'profile_question' ? (config.options as string[]) : undefined,
     };
   });
 
@@ -157,6 +163,10 @@ export function mapAdminDataToPreviewJourney(
       externalUrl,
       videoUrl,
       embedUrl,
+      profileField: nodeType === 'profile_question' ? (config.field_name as string) : undefined,
+      profileFieldLabel: nodeType === 'profile_question' ? (config.field_label as string) : undefined,
+      profileFieldType: nodeType === 'profile_question' ? ((config.field_type as string) || 'text') : undefined,
+      profileFieldOptions: nodeType === 'profile_question' ? (config.options as string[]) : undefined,
     };
   });
 
@@ -201,6 +211,10 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
       externalUrl,
       videoUrl,
       embedUrl,
+      profileField: nodeType === 'profile_question' ? (config.field_name as string) : undefined,
+      profileFieldLabel: nodeType === 'profile_question' ? (config.field_label as string) : undefined,
+      profileFieldType: nodeType === 'profile_question' ? ((config.field_type as string) || 'text') : undefined,
+      profileFieldOptions: nodeType === 'profile_question' ? (config.options as string[]) : undefined,
     };
   });
 

@@ -48,10 +48,13 @@ class JourneyService {
     return Promise.all(journeyPromises);
   }
 
-  async completeNode(enrollmentId: string, stepId: string, externalReference?: string): Promise<void> {
+  async completeNode(enrollmentId: string, stepId: string, externalReference?: string, metadata?: Record<string, unknown>): Promise<void> {
     const body: Record<string, unknown> = {};
     if (externalReference) {
       body.external_reference = externalReference;
+    }
+    if (metadata) {
+      body.metadata = metadata;
     }
     await apiClient.post(`/journeys/enrollments/${enrollmentId}/steps/${stepId}/complete`, body);
   }

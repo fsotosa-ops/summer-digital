@@ -117,7 +117,8 @@ export type ApiStepType =
   | 'content_view'
   | 'milestone'
   | 'social_interaction'
-  | 'resource_consumption';
+  | 'resource_consumption'
+  | 'profile_question';
 
 export interface ApiJourneyStep {
   id: string;
@@ -135,6 +136,7 @@ export interface ApiJourney {
   description?: string | null;
   organization_id: string;
   is_active: boolean;
+  is_onboarding?: boolean;
   category?: string | null;
   steps?: ApiJourneyStep[];
 }
@@ -177,6 +179,7 @@ export interface ApiJourneyAdminRead {
   description?: string | null;
   category?: string | null;
   is_active: boolean;
+  is_onboarding?: boolean;
   created_at: string;
   updated_at: string;
   total_steps: number;
@@ -192,6 +195,7 @@ export interface ApiJourneyCreate {
   description?: string | null;
   category?: string | null;
   is_active?: boolean;
+  is_onboarding?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -201,6 +205,7 @@ export interface ApiJourneyUpdate {
   description?: string | null;
   category?: string | null;
   is_active?: boolean;
+  is_onboarding?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -385,6 +390,7 @@ export interface ApiJourneyRead {
   description?: string | null;
   category?: string | null;
   is_active: boolean;
+  is_onboarding?: boolean;
   total_steps: number;
 }
 

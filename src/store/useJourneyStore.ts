@@ -14,7 +14,7 @@ interface JourneyState {
   fetchJourneys: (orgIdOverride?: string) => Promise<void>;
   fetchJourneysForAdmin: (orgId: string) => Promise<void>;
   selectJourney: (id: string | null) => void;
-  completeActivity: (nodeId: string, externalReference?: string) => Promise<void>;
+  completeActivity: (nodeId: string, externalReference?: string, metadata?: Record<string, unknown>) => Promise<void>;
   setViewingOrgId: (orgId: string | null) => void;
 }
 
@@ -65,7 +65,7 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
     set({ selectedJourneyId: id });
   },
 
-  completeActivity: async (nodeId: string, externalReference?: string) => {
+  completeActivity: async (nodeId: string, externalReference?: string, metadata?: Record<string, unknown>) => {
     const { journeys, selectedJourneyId, enrollmentMap, isPreviewMode } = get();
     if (!selectedJourneyId) return;
 
@@ -78,7 +78,7 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
     const enrollmentId = enrollmentMap.get(selectedJourneyId);
     if (!enrollmentId) return;
 
-    await journeyService.completeNode(enrollmentId, nodeId, externalReference);
+    await journeyService.completeNode(enrollmentId, nodeId, externalReference, metadata);
 
     // Points are now handled by the backend trigger (handle_step_completion)
     // No need to manually add points in frontend

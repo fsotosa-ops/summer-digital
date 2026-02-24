@@ -42,7 +42,8 @@ export type NodeType =
   | "feedback"
   | "pdf"
   | "presentation"
-  | "kahoot";
+  | "kahoot"
+  | "profile_question";
 export type NodeStatus = "locked" | "available" | "completed" | "in-progress";
 
 export interface Activity {
@@ -70,6 +71,11 @@ export interface JourneyNode {
   embedUrl?: string; // Universal embed URL from config.resource
   videoWatched?: boolean;
   points?: number; // Base points for completing this node
+  // Profile question fields
+  profileField?: string; // CRM field name (phone, birth_date, gender, etc.)
+  profileFieldLabel?: string; // Display label
+  profileFieldType?: string; // text, date, select
+  profileFieldOptions?: string[]; // Options for select type
 }
 
 export interface Journey {

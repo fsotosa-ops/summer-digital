@@ -49,7 +49,9 @@ import {
   ChevronUp,
   Trophy,
   Rocket,
+  UserCircle,
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
@@ -70,13 +72,26 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.ElementType }[] = [
+const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.ElementType; onboardingOnly?: boolean }[] = [
   { value: 'survey', label: 'Encuesta / Typeform', icon: FileText },
   { value: 'event_attendance', label: 'Taller / Evento', icon: Users },
   { value: 'content_view', label: 'Video / Contenido', icon: Video },
   { value: 'milestone', label: 'Desafío', icon: Gamepad2 },
   { value: 'social_interaction', label: 'Interacción / Feedback', icon: MessageSquare },
   { value: 'resource_consumption', label: 'Artículo / Recurso', icon: BookOpen },
+  { value: 'profile_question', label: 'Pregunta de Perfil', icon: UserCircle, onboardingOnly: true },
+];
+
+const PROFILE_FIELD_OPTIONS = [
+  { value: 'phone', label: 'Teléfono', type: 'text' },
+  { value: 'birth_date', label: 'Fecha de nacimiento', type: 'date' },
+  { value: 'gender', label: 'Género', type: 'select', options: ['Masculino', 'Femenino', 'No binario', 'Prefiero no decir'] },
+  { value: 'education_level', label: 'Nivel educativo', type: 'select', options: ['Básica', 'Media', 'Técnico', 'Universitario', 'Postgrado'] },
+  { value: 'occupation', label: 'Ocupación', type: 'text' },
+  { value: 'company', label: 'Empresa / Institución', type: 'text' },
+  { value: 'city', label: 'Ciudad', type: 'text' },
+  { value: 'country', label: 'País', type: 'text' },
+  { value: 'state', label: 'Región / Estado', type: 'text' },
 ];
 
 function generateSlug(title: string) {
@@ -89,6 +104,7 @@ function generateSlug(title: string) {
 }
 
 function getStepIcon(type: ApiStepType, config?: Record<string, unknown>) {
+  if (type === 'profile_question') return UserCircle;
   // Check config.resource.type for specific icons
   const resource = config?.resource as Record<string, unknown> | undefined;
   if (resource?.type) {
@@ -692,14 +708,18 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleSetAsOnboarding = async () => {
+  const handleToggleOnboarding = async () => {
     if (!orgId || !journey || isSettingOnboarding) return;
     setIsSettingOnboarding(true);
+    const newValue = !journey.is_onboarding;
     try {
-      await adminService.updateGamificationConfig(orgId, {
-        profile_completion_journey_id: journey.id,
-      });
-      toast.success(`"${journey.title}" marcado como Journey de Onboarding`);
+      await adminService.updateJourney(orgId, journeyId, { is_onboarding: newValue } as ApiJourneyUpdate);
+      setJourney({ ...journey, is_onboarding: newValue });
+      toast.success(
+        newValue
+          ? `"${journey.title}" marcado como Journey de Onboarding`
+          : `"${journey.title}" ya no es Journey de Onboarding`
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar configuración');
     } finally {
@@ -781,17 +801,18 @@ export default function JourneyEditorPage() {
         {canEdit && (
         <>
           <Button
-            variant="outline"
-            onClick={handleSetAsOnboarding}
+            variant={journey?.is_onboarding ? 'default' : 'outline'}
+            onClick={handleToggleOnboarding}
             disabled={isSettingOnboarding || !orgId}
-            title="Marcar este journey como el onboarding de nuevos participantes"
+            title={journey?.is_onboarding ? 'Este journey es el onboarding — click para desactivar' : 'Marcar como journey de onboarding'}
+            className={journey?.is_onboarding ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white' : ''}
           >
             {isSettingOnboarding ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Rocket className="h-4 w-4 mr-2" />
             )}
-            Onboarding
+            {journey?.is_onboarding ? 'Onboarding ✓' : 'Onboarding'}
           </Button>
           <Button
             variant={journey?.is_active ? 'outline' : 'default'}
@@ -1224,7 +1245,9 @@ export default function JourneyEditorPage() {
                   <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {STEP_TYPE_OPTIONS.map((option) => (
+                  {STEP_TYPE_OPTIONS
+                    .filter((option) => !option.onboardingOnly || journey?.is_onboarding)
+                    .map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
                         <option.icon className="h-4 w-4" />
@@ -1254,6 +1277,49 @@ export default function JourneyEditorPage() {
                 }
               />
             </div>
+
+            {/* Profile question field selector */}
+            {stepForm.type === 'profile_question' && (
+              <div className="space-y-2">
+                <Label>Campo del perfil</Label>
+                <Select
+                  value={(stepForm.config?.field_name as string) || ''}
+                  onValueChange={(value) => {
+                    const fieldDef = PROFILE_FIELD_OPTIONS.find(f => f.value === value);
+                    if (fieldDef) {
+                      setStepForm({
+                        ...stepForm,
+                        title: stepForm.title || fieldDef.label,
+                        config: {
+                          ...stepForm.config,
+                          field_name: fieldDef.value,
+                          field_label: fieldDef.label,
+                          field_type: fieldDef.type,
+                          options: fieldDef.options || null,
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un campo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROFILE_FIELD_OPTIONS.map((field) => (
+                      <SelectItem key={field.value} value={field.value}>
+                        <div className="flex items-center gap-2">
+                          <UserCircle className="h-4 w-4" />
+                          <span>{field.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  La respuesta se guardará automáticamente en el perfil del participante (Mi Perfil).
+                </p>
+              </div>
+            )}
 
             {/* URL field for content_view (videos only) */}
             {stepForm.type === 'content_view' && (
