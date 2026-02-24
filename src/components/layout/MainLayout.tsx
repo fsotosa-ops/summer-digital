@@ -36,6 +36,8 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/types';
 import { Toaster } from 'sonner';
+import { journeyService } from '@/services/journey.service';
+import { OnboardingGate } from './OnboardingGate';
 
 const ROLE_LABELS: Record<string, string> = {
   SuperAdmin: 'Super Administrador',
@@ -82,6 +84,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
 
   // Esperar a que Zustand persist termine de hidratar desde localStorage
   useEffect(() => {
@@ -104,6 +107,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
+  // Onboarding gate: check once per session for Participants
+  useEffect(() => {
+    if (!hydrated || !user || user.role !== 'Participant') return;
+    const checked = sessionStorage.getItem('onboarding_checked');
+    if (checked) return;
+    journeyService.checkOnboarding().then(res => {
+      if (res.should_show && res.journey_id) {
+        setOnboardingJourneyId(res.journey_id);
+      } else {
+        sessionStorage.setItem('onboarding_checked', 'true');
+      }
+    }).catch(() => {
+      // If check fails, don't block the user
+      sessionStorage.setItem('onboarding_checked', 'true');
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, user?.id]);
+
   // Open admin menu if on admin route
   useEffect(() => {
     if (pathname.startsWith('/admin') || pathname.startsWith('/crm') || pathname.startsWith('/analytics')) {
@@ -125,6 +146,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <p className="text-slate-500">Cargando...</p>
         </div>
       </div>
+    );
+  }
+
+  // Onboarding gate: full-screen immersive experience for Participants on first login
+  if (onboardingJourneyId) {
+    return (
+      <OnboardingGate
+        journeyId={onboardingJourneyId}
+        onComplete={() => setOnboardingJourneyId(null)}
+      />
     );
   }
 

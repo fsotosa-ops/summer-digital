@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Play, CheckCircle, Clock, Compass, Loader2, Plus, Building2, AlertCircle } from 'lucide-react';
+import { Play, CheckCircle, Clock, Compass, Loader2, Plus, Building2, AlertCircle, Star } from 'lucide-react';
 import ReactConfetti from 'react-confetti';
 
 function useWindowDimensions() {
@@ -139,6 +139,11 @@ export default function JourneyPage() {
   // If a journey is selected, show the map.
   if (selectedJourneyId) {
     const activeJourney = journeys.find(j => j.id === selectedJourneyId);
+    const completedSteps = activeJourney?.nodes.filter(n => n.status === 'completed').length ?? 0;
+    const totalSteps = activeJourney?.nodes.length ?? 0;
+    const xpEarned = activeJourney?.nodes
+      .filter(n => n.status === 'completed')
+      .reduce((sum, n) => sum + (n.points || 0), 0) ?? 0;
 
     return (
       <div className="space-y-4">
@@ -148,11 +153,30 @@ export default function JourneyPage() {
              </div>
         )}
 
-        <div className="flex justify-between items-center mb-2">
-             <h2 className="text-xl font-bold text-slate-800">{activeJourney?.title}</h2>
-             <Badge variant={activeJourney?.status === 'completed' ? "default" : "secondary"}>
-                {activeJourney?.status === 'completed' ? "Completado" : "En Progreso"}
-             </Badge>
+        {/* Journey Header Bar */}
+        <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-slate-800 truncate">{activeJourney?.title}</h2>
+              <span className="text-sm font-semibold text-teal-600 ml-3 flex-shrink-0">
+                Paso {completedSteps} / {totalSteps}
+              </span>
+            </div>
+            <Progress
+              value={activeJourney?.progress ?? 0}
+              className="h-2 bg-slate-100"
+              indicatorClassName="bg-teal-500"
+            />
+          </div>
+          {xpEarned > 0 && (
+            <div className="flex-shrink-0 flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-full px-3 py-1">
+              <Star className="h-4 w-4 text-teal-600" />
+              <span className="text-sm font-bold text-teal-700">{xpEarned} XP</span>
+            </div>
+          )}
+          {activeJourney?.status === 'completed' && (
+            <Badge className="bg-teal-500 text-white flex-shrink-0">Completado</Badge>
+          )}
         </div>
 
         <JourneyMap />

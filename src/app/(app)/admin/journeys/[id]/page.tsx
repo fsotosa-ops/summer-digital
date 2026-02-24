@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
+import { toast } from 'sonner';
 import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiRewardRead, ApiUnlockCondition } from '@/types/api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
+  Rocket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
@@ -341,6 +343,9 @@ export default function JourneyEditorPage() {
   const [rewardsLoading, setRewardsLoading] = useState(false);
   const [rewardsExpanded, setRewardsExpanded] = useState(false);
   const [savingReward, setSavingReward] = useState(false);
+
+  // Onboarding journey config
+  const [isSettingOnboarding, setIsSettingOnboarding] = useState(false);
 
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
@@ -687,6 +692,21 @@ export default function JourneyEditorPage() {
     }
   };
 
+  const handleSetAsOnboarding = async () => {
+    if (!orgId || !journey || isSettingOnboarding) return;
+    setIsSettingOnboarding(true);
+    try {
+      await adminService.updateGamificationConfig(orgId, {
+        profile_completion_journey_id: journey.id,
+      });
+      toast.success(`"${journey.title}" marcado como Journey de Onboarding`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar configuración');
+    } finally {
+      setIsSettingOnboarding(false);
+    }
+  };
+
   if (!user || (user.role !== 'SuperAdmin' && user.role !== 'Admin')) {
     return (
       <div className="p-8 text-center">
@@ -760,6 +780,19 @@ export default function JourneyEditorPage() {
           </Button>
         {canEdit && (
         <>
+          <Button
+            variant="outline"
+            onClick={handleSetAsOnboarding}
+            disabled={isSettingOnboarding || !orgId}
+            title="Marcar este journey como el onboarding de nuevos participantes"
+          >
+            {isSettingOnboarding ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Rocket className="h-4 w-4 mr-2" />
+            )}
+            Onboarding
+          </Button>
           <Button
             variant={journey?.is_active ? 'outline' : 'default'}
             onClick={handleToggleActive}

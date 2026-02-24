@@ -97,6 +97,11 @@ class JourneyService {
   async listAdminSteps(orgId: string, journeyId: string): Promise<ApiStepAdminRead[]> {
     return apiClient.get<ApiStepAdminRead[]>(`/journeys/${orgId}/admin/journeys/${journeyId}/steps`);
   }
+
+  // Check whether the participant should see the onboarding journey gate
+  async checkOnboarding(): Promise<{ should_show: boolean; journey_id: string | null }> {
+    return apiClient.get<{ should_show: boolean; journey_id: string | null }>('/journeys/me/onboarding-check');
+  }
 }
 
 export const journeyService = new JourneyService();

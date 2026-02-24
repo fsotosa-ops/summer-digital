@@ -95,6 +95,8 @@ export function mapApiToJourney(
     const isCompleted = stepProgress.status === 'completed';
     const isVideoType = nodeType === 'video';
 
+    const basePoints = (stepFromJourney?.gamification_rules?.base_points as number) || 0;
+
     return {
       id: stepProgress.step_id,
       title: stepProgress.title,
@@ -108,6 +110,7 @@ export function mapApiToJourney(
       videoUrl,
       embedUrl,
       videoWatched: isVideoType && isCompleted ? true : undefined,
+      points: basePoints || undefined,
     };
   });
 

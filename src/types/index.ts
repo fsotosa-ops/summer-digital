@@ -69,6 +69,7 @@ export interface JourneyNode {
   videoUrl?: string; // For video
   embedUrl?: string; // Universal embed URL from config.resource
   videoWatched?: boolean;
+  points?: number; // Base points for completing this node
 }
 
 export interface Journey {

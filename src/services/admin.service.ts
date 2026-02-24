@@ -107,6 +107,12 @@ class AdminService {
   async updateReward(orgId: string, rewardId: string, data: ApiRewardUpdate): Promise<ApiRewardRead> {
     return apiClient.patch<ApiRewardRead>(`/gamification/${orgId}/admin/rewards/${rewardId}`, data);
   }
+
+  // --- Gamification Config ---
+
+  async updateGamificationConfig(orgId: string, data: Record<string, unknown>): Promise<void> {
+    await apiClient.patch(`/gamification/${orgId}/admin/config`, data);
+  }
 }
 
 export const adminService = new AdminService();
