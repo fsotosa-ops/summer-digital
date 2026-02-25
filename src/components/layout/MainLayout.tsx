@@ -11,7 +11,6 @@ import {
   User,
   LogOut,
   Menu,
-  X,
   Users,
   Layout,
   BarChart2,
@@ -19,7 +18,6 @@ import {
   Building2,
   Settings,
   ChevronDown,
-  ChevronUp,
   Trophy,
 } from 'lucide-react';
 import {
@@ -81,7 +79,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, initializeSession } = useAuthStore();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
@@ -169,6 +166,77 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const filteredNavItems = filterItems(NAV_ITEMS);
 
+  // Desktop topbar nav item renderer
+  const renderTopbarItem = (item: NavItem) => {
+    const isActive =
+      pathname === item.href ||
+      (item.children && item.children.some((child) => pathname === child.href));
+    const hasChildren = item.children && item.children.length > 0;
+    const filteredChildren = hasChildren ? filterItems(item.children!) : [];
+
+    if (hasChildren && filteredChildren.length === 0) return null;
+
+    if (hasChildren) {
+      return (
+        <DropdownMenu key={item.label} open={adminOpen} onOpenChange={setAdminOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none',
+                isActive
+                  ? 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+              )}
+            >
+              <item.icon size={16} />
+              {item.label}
+              <ChevronDown size={14} className={cn('transition-transform duration-200', adminOpen ? 'rotate-180' : '')} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="bottom"
+            align="start"
+            className="bg-neutral-900 border-white/10 text-white"
+          >
+            {filteredChildren.map((child) => {
+              const childActive = pathname === child.href;
+              return (
+                <DropdownMenuItem
+                  key={child.href}
+                  onClick={() => router.push(child.href)}
+                  className={cn(
+                    'cursor-pointer hover:bg-white/10 focus:bg-white/10',
+                    childActive && 'bg-white/5 text-white'
+                  )}
+                >
+                  <child.icon size={15} className="mr-2" />
+                  {child.label}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return (
+      <Link key={item.href} href={item.href}>
+        <span
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+            isActive
+              ? 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+          )}
+        >
+          <item.icon size={16} />
+          {item.label}
+        </span>
+      </Link>
+    );
+  };
+
+  // Mobile drawer nav item renderer (unchanged behavior)
   const renderNavItem = (item: NavItem, isMobile = false) => {
     const isActive =
       pathname === item.href ||
@@ -180,35 +248,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     // --- Dropdown (Administración) ---
     if (hasChildren) {
-      // Collapsed desktop: show icon only with tooltip
-      if (!isSidebarOpen && !isMobile) {
-        return (
-          <Link key={item.href} href={item.href}>
-            <motion.div
-              whileHover={{ x: 2 }}
-              whileTap={{ scale: 0.98 }}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 group relative',
-                isActive ? 'text-white' : 'text-neutral-400 hover:text-neutral-200'
-              )}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="activeNav"
-                  className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 rounded-lg"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-              <item.icon size={22} className="relative z-10" />
-              {/* Tooltip collapsed */}
-              <div className="absolute left-full ml-4 px-2 py-1 bg-neutral-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                {item.label}
-              </div>
-            </motion.div>
-          </Link>
-        );
-      }
-
       return (
         <div key={item.label} className="space-y-1">
           <div
@@ -254,7 +293,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       >
                         {childActive && (
                           <motion.div
-                            layoutId="activeNav"
+                            layoutId="activeNavMobile"
                             className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 rounded-lg"
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
@@ -279,163 +318,73 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           whileHover={{ x: 2 }}
           whileTap={{ scale: 0.98 }}
           className={cn(
-            'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 group relative',
+            'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 relative',
             isActive ? 'text-white font-medium' : 'text-neutral-400 hover:text-neutral-200'
           )}
         >
           {isActive && (
             <motion.div
-              layoutId="activeNav"
+              layoutId="activeNavMobile"
               className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 rounded-lg"
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
           )}
           <item.icon size={22} className="relative z-10 transition-colors" />
-          {(isSidebarOpen || isMobile) && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-sm relative z-10"
-            >
-              {item.label}
-            </motion.span>
-          )}
-          {!isSidebarOpen && !isMobile && (
-            <div className="absolute left-full ml-4 px-2 py-1 bg-neutral-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-              {item.label}
-            </div>
-          )}
+          <motion.span
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-sm relative z-10"
+          >
+            {item.label}
+          </motion.span>
         </motion.div>
       </Link>
     );
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Toaster position="top-right" />
 
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-neutral-950 border-b border-white/5 sticky top-0 z-50">
-        <span className="font-bold text-xl text-white tracking-tight">Oasis Digital</span>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-white hover:bg-white/10">
-              <Menu size={24} />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[340px] bg-neutral-950 border-r border-white/5 p-0">
-            <SheetHeader className="p-4 border-b border-white/5">
-              <SheetTitle className="text-left font-bold text-xl text-white">Menú</SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
-              {filteredNavItems.map((item) => renderNavItem(item, true))}
-            </nav>
-            {/* Mobile: User profile + actions */}
-            <div className="p-4 border-t border-white/5">
-              <div className="flex items-center gap-3 mb-3">
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover border border-white/10" />
-                ) : (
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
-                    <span className="text-sm font-semibold text-white">
-                      {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                  <p className="text-xs text-neutral-500 truncate">{user.email}</p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
-                  onClick={() => { router.push('/profile'); document.getElementById('close-sheet')?.click(); }}
-                >
-                  <User size={20} />
-                  Mi Perfil
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={20} />
-                  Cerrar Sesión
-                </Button>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+      {/* Unified Topbar — all breakpoints */}
+      <header className="sticky top-0 z-50 bg-neutral-950 border-b border-white/5 h-14 flex items-center gap-4 px-4 md:px-6">
 
-      {/* Desktop Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ width: isSidebarOpen ? 260 : 80 }}
-        className="hidden md:flex flex-col bg-neutral-950 border-r border-white/5 h-screen sticky top-0 z-40"
-      >
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between h-16 border-b border-white/5">
-          <AnimatePresence mode="wait">
-            {isSidebarOpen ? (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="font-bold text-xl text-white tracking-tight"
-              >
-                Oasis Digital
-              </motion.span>
-            ) : null}
-          </AnimatePresence>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="text-neutral-400 hover:text-white hover:bg-white/10"
-          >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </Button>
-        </div>
+        {/* Logo */}
+        <Link
+          href="/dashboard"
+          className="font-bold text-lg text-white tracking-tight shrink-0 mr-2"
+        >
+          Oasis Digital
+        </Link>
 
-        {/* Nav */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-800">
-          {filteredNavItems.map((item) => renderNavItem(item))}
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1 flex-1">
+          {filteredNavItems.map((item) => renderTopbarItem(item))}
         </nav>
 
-        {/* Bottom section - User profile dropdown */}
-        <div className="p-3 bg-neutral-900/50 backdrop-blur-sm border-t border-white/5">
+        {/* Spacer on mobile */}
+        <div className="flex-1 md:hidden" />
+
+        {/* Avatar dropdown (desktop) */}
+        <div className="hidden md:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 focus:outline-none transition-colors">
-                {/* Avatar */}
+              <button className="h-9 w-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-colors focus:outline-none">
                 {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-white/10 flex-shrink-0" />
+                  <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10 flex-shrink-0">
+                  <div className="h-full w-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center">
                     <span className="text-xs font-semibold text-white">
                       {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
                     </span>
                   </div>
                 )}
-                {isSidebarOpen && (
-                  <>
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                      <p className="text-xs text-neutral-500">{ROLE_LABELS[user.role] ?? user.role}</p>
-                    </div>
-                    <ChevronUp size={14} className="text-neutral-500 flex-shrink-0" />
-                  </>
-                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              side="top"
-              align="start"
-              sideOffset={8}
-              className="w-56 bg-neutral-900 border-white/10 text-white"
+              side="bottom"
+              align="end"
+              className="w-52 bg-neutral-900 border-white/10 text-white"
             >
               <DropdownMenuLabel className="pb-1">
                 <p className="font-medium text-sm truncate">{user.name}</p>
@@ -458,10 +407,66 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </motion.aside>
+
+        {/* Hamburger → Sheet (mobile) */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-white hover:bg-white/10">
+                <Menu size={24} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] sm:w-[340px] bg-neutral-950 border-r border-white/5 p-0">
+              <SheetHeader className="p-4 border-b border-white/5">
+                <SheetTitle className="text-left font-bold text-xl text-white">Menú</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
+                {filteredNavItems.map((item) => renderNavItem(item, true))}
+              </nav>
+              {/* Mobile: User profile + actions */}
+              <div className="p-4 border-t border-white/5">
+                <div className="flex items-center gap-3 mb-3">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
+                      <span className="text-sm font-semibold text-white">
+                        {user.name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                    <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                    onClick={() => { router.push('/profile'); document.getElementById('close-sheet')?.click(); }}
+                  >
+                    <User size={20} />
+                    Mi Perfil
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={20} />
+                    Cerrar Sesión
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+      </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 relative overflow-hidden bg-slate-50">
+      <main className="flex-1 min-w-0 bg-slate-50">
         <div className="h-full overflow-auto p-4 md:p-8 max-w-7xl mx-auto">{children}</div>
       </main>
     </div>

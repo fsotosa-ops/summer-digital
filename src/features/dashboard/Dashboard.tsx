@@ -1,164 +1,225 @@
 'use client';
 
-import React from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useContentStore } from '@/store/useContentStore';
-import { UserProfileCard } from './components/UserProfileCard';
-import { GamificationWidget } from './components/GamificationWidget';
-import { NewsWidget } from './components/NewsWidget';
-import { JourneyProgressWidget } from './components/JourneyProgressWidget';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/useAuthStore';
+import { gamificationService } from '@/services/gamification.service';
+import { ApiUserPointsSummary } from '@/types/api.types';
+import { Pencil } from 'lucide-react';
+import { useJourneyStore } from '@/store/useJourneyStore';
+import { ParticipantJourneysSection } from './components/ParticipantJourneysSection';
+import { ResourcesFeedWidget } from './components/ResourcesFeedWidget';
+import { AdminDashboardPanel } from './components/AdminDashboardPanel';
 
-export function Dashboard() {
-  const { user } = useAuthStore();
-
-  if (!user) return (
-    <div className="flex flex-col items-center justify-center p-10 h-full">
-      <p className="text-slate-500 mb-4">No hay sesión activa.</p>
-      <Link href="/login">
-        <Button>Ir al Login</Button>
-      </Link>
-    </div>
-  );
-
-  const firstName = user.name.split(' ')[0];
-
-  return (
-    <div className="space-y-6">
-      {/* Welcome Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-sky-400 via-purple-400 to-amber-300 p-6 md:p-8 text-white shadow-xl">
-        {/* SVG circle decoration */}
-        <svg
-          className="absolute -top-12 -right-12 w-64 h-64 text-white/10 pointer-events-none"
-          viewBox="0 0 100 100"
-          fill="currentColor"
-        >
-          <circle cx="50" cy="50" r="50" />
-        </svg>
-        <svg
-          className="absolute -bottom-16 -left-8 w-48 h-48 text-white/5 pointer-events-none"
-          viewBox="0 0 100 100"
-          fill="currentColor"
-        >
-          <circle cx="50" cy="50" r="50" />
-        </svg>
-
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={18} className="text-yellow-200" />
-              <span className="text-white/80 text-sm font-medium">Bienvenida de nuevo</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight drop-shadow">
-              Hola, {firstName} 👋
-            </h1>
-            <p className="text-white/80 mt-1">Tu espacio de transformación te espera.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 12-column grid layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left column: 4 cols */}
-        <div className="lg:col-span-4 space-y-6">
-          <UserProfileCard user={user} />
-          <GamificationWidget score={user.oasisScore} rank={user.rank} />
-        </div>
-
-        {/* Right column: 8 cols */}
-        <div className="lg:col-span-8 space-y-6">
-          <NewsWidget />
-
-          <JourneyProgressWidget />
-
-          {/* Admin Panel */}
-          {(user.role === 'SuperAdmin' || user.role === 'Admin') && (
-            <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-col items-center justify-center text-center">
-              <h3 className="text-slate-700 font-semibold mb-2">Panel de Gestión de Contenido</h3>
-              <p className="text-sm text-slate-500 mb-4 max-w-md">
-                Como administrador, puedes publicar anuncios, crear nuevos viajes y gestionar recursos.
-              </p>
-              <div className="flex gap-4 flex-wrap justify-center">
-                <CreateAnnouncementDialog />
-                <Button variant="outline">Crear Nuevo Viaje</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+/* ─── Level progress from real API data ──────────────── */
+function getLevelProgress(s: ApiUserPointsSummary) {
+  const curMin  = s.current_level?.min_points ?? 0;
+  const nextMin = s.next_level?.min_points;
+  if (!nextMin) return { pct: 100, needed: 0, next: null };
+  const range = nextMin - curMin;
+  const pct   = range > 0 ? Math.round(((s.total_points - curMin) / range) * 100) : 100;
+  return {
+    pct:    Math.max(0, Math.min(100, pct)),
+    needed: s.points_to_next_level ?? nextMin - s.total_points,
+    next:   s.next_level?.name ?? null,
+  };
 }
 
-function CreateAnnouncementDialog() {
-  const { addAnnouncement } = useContentStore();
-  const { user } = useAuthStore();
-  const [open, setOpen] = React.useState(false);
-  const [title, setTitle] = React.useState('');
-  const [content, setContent] = React.useState('');
-  const [type, setType] = React.useState<'info' | 'alert' | 'event'>('info');
+const ROLE_LABELS: Record<string, string> = {
+  Participant: 'Participante',
+  Admin:       'Administrador',
+  SuperAdmin:  'Super Admin',
+  Subscriber:  'Suscriptor',
+};
 
-  const handleSubmit = () => {
-    if (!title || !content) return;
-    addAnnouncement({
-      title,
-      content,
-      type,
-      authorId: user?.id || 'unknown',
-    });
-    setOpen(false);
-    setTitle('');
-    setContent('');
-  };
+/* ─── Dashboard ──────────────────────────────────────── */
+export function Dashboard() {
+  const { user } = useAuthStore();
+  const { journeys } = useJourneyStore();
+  const [gamSummary, setGamSummary] = useState<ApiUserPointsSummary | null>(null);
+
+  useEffect(() => {
+    gamificationService.getUserSummary()
+      .then(setGamSummary)
+      .catch(() => setGamSummary(null));
+  }, []);
+
+  if (!user) return (
+    <div className="flex flex-col items-center justify-center p-10">
+      <p className="text-slate-500 mb-4">No hay sesión activa.</p>
+      <Link href="/login" className="text-fuchsia-600 font-semibold underline">Ir al Login</Link>
+    </div>
+  );
+
+  const initials      = user.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+  const isParticipant = user.role === 'Participant';
+  const isAdmin       = user.role === 'Admin' || user.role === 'SuperAdmin';
+  const isSubscriber  = user.role === 'Subscriber';
+
+  const displayPts    = gamSummary?.total_points   ?? user.oasisScore;
+  const levelName     = gamSummary?.current_level?.name ?? user.rank ?? '—';
+  const levelProgress = gamSummary ? getLevelProgress(gamSummary) : null;
+
+  const activeJourneys = journeys.filter(j => j.status !== 'completed');
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Publicar Anuncio</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Crear Nuevo Anuncio</DialogTitle>
-          <DialogDescription>Este mensaje será visible para todos los usuarios en el Dashboard.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Nueva funcionalidad..." />
-          </div>
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v: 'info' | 'alert' | 'event') => setType(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="info">Información</SelectItem>
-                <SelectItem value="alert">Alerta</SelectItem>
-                <SelectItem value="event">Evento</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Contenido</Label>
-            <Textarea
-              value={content}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-              placeholder="Detalles del anuncio..."
-            />
+    <div className="flex flex-col gap-6">
+
+      {/* ══════════════════════════════════════════════════
+          PROFILE HERO CARD — full-width, prominent
+      ══════════════════════════════════════════════════ */}
+      <Link href="/profile">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden
+                        cursor-pointer hover:shadow-lg hover:border-fuchsia-200 transition-all group">
+          <div className="flex flex-col sm:flex-row">
+
+            {/* Left gradient panel — avatar + score */}
+            <div className="bg-gradient-to-br from-fuchsia-500 to-purple-700
+                            sm:w-52 p-6 flex flex-col items-center justify-center gap-4">
+              {/* Avatar */}
+              <div className="w-20 h-20 rounded-2xl bg-white/20 border-2 border-white/30
+                              flex items-center justify-center text-white font-bold text-3xl
+                              overflow-hidden">
+                {user.avatarUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  : initials}
+              </div>
+              {/* Score */}
+              <div className="text-center">
+                <span className="text-4xl font-bold text-white tabular-nums block leading-none">
+                  {displayPts}
+                </span>
+                <span className="text-white/60 text-xs mt-1 block">Oasis Score</span>
+              </div>
+            </div>
+
+            {/* Right info panel */}
+            <div className="p-6 flex flex-col justify-between flex-1 gap-4 min-w-0">
+              {/* Name + role + level badge */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-xl font-bold text-slate-800 leading-tight truncate">
+                    {user.name}
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-0.5">{ROLE_LABELS[user.role]}</p>
+                </div>
+                <span className="px-3 py-1 bg-fuchsia-50 text-fuchsia-700 text-xs font-semibold
+                                 rounded-full whitespace-nowrap shrink-0 border border-fuchsia-100">
+                  {levelName}
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                {levelProgress ? (
+                  <>
+                    <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                      <span>Progreso al siguiente nivel</span>
+                      <span className="font-medium tabular-nums">{levelProgress.pct}%</span>
+                    </div>
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600
+                                   rounded-full transition-all duration-700"
+                        style={{ width: `${levelProgress.pct}%` }}
+                      />
+                    </div>
+                    {levelProgress.next ? (
+                      <p className="text-xs text-slate-400 mt-1.5">
+                        <span className="tabular-nums">{levelProgress.needed}</span> pts para{' '}
+                        <strong className="text-slate-600">{levelProgress.next}</strong>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-fuchsia-600 font-semibold mt-1.5">
+                        Nivel máximo alcanzado
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full w-1/4 bg-slate-200 animate-pulse rounded-full" />
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1.5">Cargando progreso...</p>
+                  </>
+                )}
+              </div>
+
+              {/* Hint */}
+              <p className="text-[11px] text-slate-300 group-hover:text-fuchsia-400 transition-colors
+                            flex items-center gap-1">
+                <Pencil size={10} /> Ver y editar perfil
+              </p>
+            </div>
+
           </div>
         </div>
-        <DialogFooter>
-          <Button onClick={handleSubmit}>Publicar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Link>
+
+      {/* ══════════════════════════════════════════════════
+          CTA BANNER
+      ══════════════════════════════════════════════════ */}
+      <div className="bg-gradient-to-r from-sky-400 via-purple-400 to-amber-300
+                      rounded-2xl p-6 text-white shadow-sm">
+        {isParticipant && (
+          <>
+            <h2 className="font-bold text-lg">
+              {activeJourneys.length > 0
+                ? 'Continúa tu journey de transformación'
+                : '¡Explora nuevas experiencias de aprendizaje!'}
+            </h2>
+            <p className="text-white/80 text-sm mt-1">
+              {activeJourneys.length > 0
+                ? `Tienes ${activeJourneys.length} journey(s) en progreso.`
+                : 'Comienza tu camino hacia el siguiente nivel.'}
+            </p>
+            <Link href="/journey">
+              <button className="mt-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white
+                                 text-sm font-semibold px-4 py-2 rounded-xl border border-white/30
+                                 transition-colors">
+                Ver mis journeys
+              </button>
+            </Link>
+          </>
+        )}
+        {isAdmin && (
+          <>
+            <h2 className="font-bold text-lg">Panel de Administración</h2>
+            <p className="text-white/80 text-sm mt-1">
+              Gestiona journeys, recursos, usuarios y gamificación desde aquí.
+            </p>
+          </>
+        )}
+        {isSubscriber && (
+          <>
+            <h2 className="font-bold text-lg">Explora el contenido disponible</h2>
+            <p className="text-white/80 text-sm mt-1">Accede a recursos y actividades abiertas.</p>
+            <Link href="/resources">
+              <button className="mt-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white
+                                 text-sm font-semibold px-4 py-2 rounded-xl border border-white/30
+                                 transition-colors">
+                Ver recursos
+              </button>
+            </Link>
+          </>
+        )}
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          ROLE-SPECIFIC CONTENT
+      ══════════════════════════════════════════════════ */}
+      {isParticipant && (
+        <>
+          <ParticipantJourneysSection />
+          <ResourcesFeedWidget />
+        </>
+      )}
+
+      {isAdmin && <AdminDashboardPanel user={user} />}
+
+      {isSubscriber && <ResourcesFeedWidget />}
+
+    </div>
   );
 }
