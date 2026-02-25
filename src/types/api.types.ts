@@ -175,6 +175,7 @@ export interface ApiJourneyAdminRead {
   title: string;
   slug: string;
   description?: string | null;
+  thumbnail_url?: string | null;
   category?: string | null;
   is_active: boolean;
   created_at: string;
@@ -191,6 +192,7 @@ export interface ApiJourneyCreate {
   slug: string;
   description?: string | null;
   category?: string | null;
+  thumbnail_url?: string | null;
   is_active?: boolean;
   metadata?: Record<string, unknown>;
 }
@@ -200,6 +202,7 @@ export interface ApiJourneyUpdate {
   slug?: string;
   description?: string | null;
   category?: string | null;
+  thumbnail_url?: string | null;
   is_active?: boolean;
   metadata?: Record<string, unknown>;
 }

@@ -78,6 +78,7 @@ export interface Journey {
   description: string;
   status: 'active' | 'completed';
   category?: string;
+  thumbnail_url?: string;
   progress: number; // 0-100
   nodes: JourneyNode[];
 }

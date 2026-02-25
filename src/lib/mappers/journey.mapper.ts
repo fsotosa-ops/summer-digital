@@ -120,6 +120,7 @@ export function mapApiToJourney(
     description: journey.description || '',
     status: enrollment.status === 'completed' ? 'completed' : 'active',
     category: journey.category || undefined,
+    thumbnail_url: (journey as unknown as { thumbnail_url?: string }).thumbnail_url || undefined,
     progress: enrollment.progress_percentage,
     nodes,
   };
@@ -166,6 +167,7 @@ export function mapAdminDataToPreviewJourney(
     description: journey.description || '',
     status: 'active',
     category: journey.category || undefined,
+    thumbnail_url: journey.thumbnail_url || undefined,
     progress: 0,
     nodes,
   };
@@ -210,6 +212,7 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     description: journey.description || '',
     status: journey.is_active ? 'active' : 'active', // Preview always shows as active
     category: journey.category || undefined,
+    thumbnail_url: (journey as unknown as { thumbnail_url?: string }).thumbnail_url || undefined,
     progress: 0, // No progress in preview mode
     nodes,
   };

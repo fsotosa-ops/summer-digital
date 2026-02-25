@@ -304,6 +304,111 @@ function StepUrlField({
   );
 }
 
+/* ─── Thumbnail URL card ─────────────────────────────── */
+function ThumbnailCard({
+  journey,
+  orgId,
+  onSaved,
+}: {
+  journey: ApiJourneyAdminRead | null;
+  orgId: string | undefined;
+  onSaved: (url: string | null) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [url, setUrl] = useState(journey?.thumbnail_url || '');
+  const [saving, setSaving] = useState(false);
+
+  // Keep in sync if journey changes from outside
+  useEffect(() => { setUrl(journey?.thumbnail_url || ''); }, [journey?.thumbnail_url]);
+
+  const handleSave = async () => {
+    if (!orgId || !journey) return;
+    setSaving(true);
+    try {
+      await adminService.updateJourney(orgId, journey.id, { thumbnail_url: url || null } as ApiJourneyUpdate);
+      onSaved(url || null);
+    } catch {
+      // silencioso
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
+                   hover:bg-slate-50 transition-colors cursor-pointer select-none"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded bg-gradient-to-br from-fuchsia-400 to-purple-500
+                          flex items-center justify-center shrink-0">
+            <span className="text-white text-[9px] font-bold">IMG</span>
+          </div>
+          <span className="text-sm font-semibold text-slate-700">Imagen de portada</span>
+          {journey?.thumbnail_url && (
+            <span className="text-xs bg-teal-50 text-teal-700 border border-teal-100 px-1.5 py-0.5 rounded-full">
+              Configurada
+            </span>
+          )}
+        </div>
+        {expanded
+          ? <ChevronUp className="h-4 w-4 text-slate-400" />
+          : <ChevronDown className="h-4 w-4 text-slate-400" />
+        }
+      </button>
+      <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
+        URL de imagen que reemplaza el gradiente de color en las tarjetas del journey.
+      </p>
+
+      {expanded && (
+        <div className="px-6 pb-6 space-y-4">
+          {/* Preview */}
+          {url && (
+            <div className="rounded-xl overflow-hidden h-32 border border-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="Preview" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://..."
+              className="flex-1 text-sm"
+            />
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold
+                         bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                         hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              Guardar
+            </button>
+            {url && (
+              <button
+                onClick={() => { setUrl(''); }}
+                className="px-3 py-2 rounded-lg text-sm text-slate-400 border border-slate-200
+                           hover:bg-slate-50 transition-colors"
+                title="Quitar imagen"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400">
+            Usa una imagen de 16:9 (ej: 1280×720) para mejor resultado.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function JourneyEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -725,123 +830,188 @@ export default function JourneyEditorPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/journeys')}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            {isEditingTitle ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveTitle();
-                    if (e.key === 'Escape') setIsEditingTitle(false);
-                  }}
-                  className="text-2xl font-bold h-10 w-80"
-                  autoFocus
-                />
-                <Button variant="ghost" size="icon" onClick={handleSaveTitle} disabled={isSaving} className="h-8 w-8">
-                  <Check className="h-4 w-4 text-green-600" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setIsEditingTitle(false)} className="h-8 w-8">
-                  <X className="h-4 w-4 text-slate-400" />
-                </Button>
-              </div>
-            ) : (
-              <h1
-                className={cn(
-                  'text-2xl font-bold text-slate-900',
-                  canEdit && 'cursor-pointer hover:text-slate-600 transition-colors'
-                )}
-                onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
-                title={canEdit ? 'Click para editar' : undefined}
-              >
-                {journey?.title}
-              </h1>
-            )}
-            <Badge variant={journey?.is_active ? 'default' : 'outline'}>
-              {journey?.is_active ? 'Activo' : 'Borrador'}
-            </Badge>
+      {/* ── Header card ────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        {/* Gradient hero / thumbnail */}
+        {journey?.thumbnail_url ? (
+          <div className="relative h-36 sm:h-44 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={journey.thumbnail_url} alt={journey.title}
+              className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            {/* Back button */}
+            <button onClick={() => router.push('/admin/journeys')}
+              className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-black/30 backdrop-blur-sm
+                         text-white flex items-center justify-center hover:bg-black/50 transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            {/* Status badge */}
+            <div className="absolute top-3 right-3">
+              <span className={cn(
+                'text-xs font-bold px-2.5 py-1 rounded-full',
+                journey.is_active
+                  ? 'bg-fuchsia-500 text-white'
+                  : 'bg-white/20 backdrop-blur-sm text-white border border-white/30'
+              )}>
+                {journey.is_active ? 'Activo' : 'Borrador'}
+              </span>
+            </div>
           </div>
-          <p className="text-slate-500">{journey?.description || 'Sin descripción'}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
-            disabled={steps.length === 0}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Vista Previa
-          </Button>
-        {canEdit && (
-        <>
-          <Button
-            variant="outline"
-            onClick={handleSetAsOnboarding}
-            disabled={isSettingOnboarding || !orgId}
-            title="Marcar este journey como el onboarding de nuevos participantes"
-          >
-            {isSettingOnboarding ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Rocket className="h-4 w-4 mr-2" />
-            )}
-            Onboarding
-          </Button>
-          <Button
-            variant={journey?.is_active ? 'outline' : 'default'}
-            onClick={handleToggleActive}
-            disabled={isSaving}
-            className={journey?.is_active ? '' : 'bg-green-600 hover:bg-green-700'}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : journey?.is_active ? (
-              <Archive className="h-4 w-4 mr-2" />
-            ) : (
-              <Globe className="h-4 w-4 mr-2" />
-            )}
-            {journey?.is_active ? 'Archivar' : 'Publicar'}
-          </Button>
-          <Button onClick={openCreateDialog} className="bg-slate-900 hover:bg-slate-800">
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Step
-          </Button>
-        </>
+        ) : (
+          <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
         )}
+
+        <div className="p-4 sm:p-6">
+          {/* Back + title row */}
+          <div className="flex items-start gap-3">
+            {!journey?.thumbnail_url && (
+              <button onClick={() => router.push('/admin/journeys')}
+                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
+                           flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
+                <ChevronLeft size={16} />
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              {/* Title (inline editable) */}
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
+                    }}
+                    className="text-xl font-bold h-9 min-w-0 flex-1"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveTitle} disabled={isSaving}
+                    className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => setIsEditingTitle(false)}
+                    className="h-8 w-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1
+                    className={cn(
+                      'text-xl font-bold text-slate-900 truncate',
+                      canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
+                    )}
+                    onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
+                    title={canEdit ? 'Click para editar' : undefined}
+                  >
+                    {journey?.title}
+                  </h1>
+                  {!journey?.thumbnail_url && (
+                    <Badge variant="outline" className={cn(
+                      'text-xs font-semibold shrink-0',
+                      journey?.is_active
+                        ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    )}>
+                      {journey?.is_active ? 'Activo' : 'Borrador'}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              <p className="text-sm text-slate-400 mt-1 truncate">
+                {journey?.description || 'Sin descripción'} · /{journey?.slug}
+              </p>
+            </div>
+          </div>
+
+          {/* Actions row */}
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+            <button
+              onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
+              disabled={steps.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                         text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Eye size={14} /> Vista Previa
+            </button>
+
+            {canEdit && (
+              <>
+                <button
+                  onClick={handleSetAsOnboarding}
+                  disabled={isSettingOnboarding || !orgId}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                             text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
+                             disabled:opacity-40"
+                >
+                  {isSettingOnboarding
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <Rocket size={14} />}
+                  Onboarding
+                </button>
+
+                <button
+                  onClick={handleToggleActive}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40',
+                    journey?.is_active
+                      ? 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      : 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:opacity-90'
+                  )}
+                >
+                  {isSaving
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : journey?.is_active
+                    ? <Archive size={14} />
+                    : <Globe size={14} />
+                  }
+                  {journey?.is_active ? 'Archivar' : 'Publicar'}
+                </button>
+
+                <button
+                  onClick={openCreateDialog}
+                  className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold
+                             bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+                >
+                  <Plus size={14} /> Agregar Step
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-4">
-            <p className="text-red-600">{error}</p>
-          </CardContent>
-        </Card>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">
+          {error}
+        </div>
       )}
 
       {/* Roadmap Visual */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Roadmap del Journey</CardTitle>
-          <CardDescription>
-            {canEdit ? 'Visualiza y edita los steps. Arrastra para reordenar.' : 'Visualiza los steps del journey.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Roadmap del Journey</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {canEdit ? 'Arrastra para reordenar. Click en un nodo para editar.' : 'Vista de los steps del journey.'}
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+            {steps.length} step{steps.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="p-4 sm:p-6">
           {steps.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <p>No hay steps en este journey.</p>
               {canEdit && (
-                <Button onClick={openCreateDialog} variant="outline" className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear primer step
-                </Button>
+                <button onClick={openCreateDialog}
+                  className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200
+                             text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors mx-auto">
+                  <Plus size={14} /> Crear primer step
+                </button>
               )}
             </div>
           ) : (
@@ -955,39 +1125,39 @@ export default function JourneyEditorPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Recompensas del Journey */}
       {canEdit && (
-        <Card>
-          <CardHeader
-            className="cursor-pointer select-none"
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
+                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
             onClick={() => setRewardsExpanded((v) => !v)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-500" />
-                <CardTitle className="text-base">Recompensas del Journey</CardTitle>
-                {linkedRewardsCount > 0 && (
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                    {linkedRewardsCount} asignada{linkedRewardsCount !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-              {rewardsExpanded ? (
-                <ChevronUp className="h-4 w-4 text-slate-400" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              <span className="text-sm font-semibold text-slate-700">Recompensas del Journey</span>
+              {linkedRewardsCount > 0 && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                  {linkedRewardsCount} asignada{linkedRewardsCount !== 1 ? 's' : ''}
+                </span>
               )}
             </div>
-            <CardDescription>
-              Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
-            </CardDescription>
-          </CardHeader>
+            {rewardsExpanded ? (
+              <ChevronUp className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
+          <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
+            Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
+          </p>
 
           {rewardsExpanded && (
-            <CardContent className="space-y-5">
+            <div className="px-6 pb-6 space-y-5">
               {rewardsLoading ? (
                 <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" /> Cargando recompensas...
@@ -1079,41 +1249,41 @@ export default function JourneyEditorPage() {
                   </div>
                 </>
               )}
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Organizaciones habilitadas — solo SuperAdmin */}
       {isSuperAdmin && (
-        <Card>
-          <CardHeader
-            className="cursor-pointer select-none"
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
+                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
             onClick={() => setOrgsExpanded((v) => !v)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-slate-500" />
-                <CardTitle className="text-base">Organizaciones habilitadas</CardTitle>
-                {assignedOrgIds.size > 0 && (
-                  <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
-                    {assignedOrgIds.size}
-                  </span>
-                )}
-              </div>
-              {orgsExpanded ? (
-                <ChevronUp className="h-4 w-4 text-slate-400" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-fuchsia-500" />
+              <span className="text-sm font-semibold text-slate-700">Organizaciones habilitadas</span>
+              {assignedOrgIds.size > 0 && (
+                <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
+                  {assignedOrgIds.size}
+                </span>
               )}
             </div>
-            <CardDescription>
-              Selecciona las organizaciones que tienen acceso a este journey.
-            </CardDescription>
-          </CardHeader>
+            {orgsExpanded ? (
+              <ChevronUp className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
+          <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
+            Selecciona las organizaciones que tienen acceso a este journey.
+          </p>
 
           {orgsExpanded && (
-            <CardContent className="space-y-3">
+            <div className="px-6 pb-6 space-y-3">
               {loadingOrgAssign ? (
                 <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
@@ -1171,9 +1341,18 @@ export default function JourneyEditorPage() {
                   </div>
                 </>
               )}
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
+      )}
+
+      {/* ── Thumbnail URL ── (collapsible card, canEdit only) */}
+      {canEdit && (
+        <ThumbnailCard
+          journey={journey}
+          orgId={orgId}
+          onSaved={(url) => setJourney(j => j ? { ...j, thumbnail_url: url } : j)}
+        />
       )}
 
       {/* Step Dialog */}

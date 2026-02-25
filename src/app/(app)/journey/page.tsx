@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useJourneyStore } from '@/store/useJourneyStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { journeyService } from '@/services/journey.service';
 import { organizationService } from '@/services/organization.service';
 import { ApiJourneyRead, ApiOrganization } from '@/types/api.types';
 import { JourneyMap } from '@/features/journey/components/JourneyMap';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { JourneyCard, categoryGradient } from '@/features/journey/components/JourneyCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -18,8 +19,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Play, CheckCircle, Clock, Compass, Loader2, Plus, Building2, AlertCircle, Star } from 'lucide-react';
+import {
+  Map,
+  Play,
+  CheckCircle,
+  Compass,
+  Loader2,
+  Plus,
+  Building2,
+  AlertCircle,
+  Star,
+  History,
+} from 'lucide-react';
 import ReactConfetti from 'react-confetti';
+import { cn } from '@/lib/utils';
+
+/* ─── Empty state helper ──────────────────────────────── */
+function EmptySection({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-6 rounded-2xl
+                    border border-dashed border-slate-200 bg-slate-50/60 text-center">
+      <div className="mb-3 text-slate-300">{icon}</div>
+      <p className="text-sm font-semibold text-slate-600 mb-1">{title}</p>
+      <p className="text-xs text-slate-400 max-w-xs">{description}</p>
+    </div>
+  );
+}
 
 function useWindowDimensions() {
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
@@ -32,11 +65,14 @@ function useWindowDimensions() {
   return windowDimensions;
 }
 
+type Tab = 'progress' | 'available' | 'history';
+
 export default function JourneyPage() {
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading, isPreviewMode } = useJourneyStore();
+  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading } = useJourneyStore();
   const { width, height } = useWindowDimensions();
 
+  const [activeTab, setActiveTab] = useState<Tab>('progress');
   const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
@@ -50,7 +86,7 @@ export default function JourneyPage() {
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const orgId = selectedOrgId || user?.organizationId;
 
-  // Load organizations for all users (needed for multi-org participants)
+  // Load organizations
   useEffect(() => {
     const loadOrgs = async () => {
       if (!user) return;
@@ -77,12 +113,11 @@ export default function JourneyPage() {
       if (!orgId) return;
       fetchJourneysForAdmin(orgId);
     } else {
-      // Participants: fetch based on enrollments (multi-org aware via enrollment.organization_id)
       fetchJourneys(orgId);
     }
   }, [fetchJourneys, fetchJourneysForAdmin, orgId, isSuperAdmin]);
 
-  // Load available journeys for enrollment (from ALL user orgs, after enrolled journeys are loaded)
+  // Load available journeys for enrollment
   useEffect(() => {
     const loadAvailable = async () => {
       if (isSuperAdmin || organizations.length === 0 || isLoading) return;
@@ -90,7 +125,6 @@ export default function JourneyPage() {
       try {
         const orgIds = organizations.map(o => o.id);
         const all = await journeyService.listAvailableJourneysMultiOrg(orgIds);
-        // Filter out journeys user is already enrolled in
         const enrolledIds = new Set(journeys.map(j => j.id));
         const notEnrolled = all.filter(j => !enrolledIds.has(j.id) && j.is_active);
         setAvailableJourneys(notEnrolled);
@@ -110,6 +144,7 @@ export default function JourneyPage() {
       await journeyService.enrollInJourney(journeyId);
       await fetchJourneys(orgId);
       setAvailableJourneys(prev => prev.filter(j => j.id !== journeyId));
+      setActiveTab('progress');
     } catch (err) {
       console.error('Error enrolling:', err);
       setEnrollError('No se pudo inscribir. Verifica que seas miembro de la organizacion.');
@@ -118,7 +153,11 @@ export default function JourneyPage() {
     }
   };
 
-  // Show message if no organization (after orgs loaded)
+  // Hoist before loading guard (needed for hero stat-pills)
+  const activeJourneys    = journeys.filter(j => j.status === 'active');
+  const completedJourneys = journeys.filter(j => j.status === 'completed');
+
+  // ── Guard: no org ─────────────────────────────────────
   if (!orgId && !isSuperAdmin && !loadingOrgs && organizations.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -132,28 +171,61 @@ export default function JourneyPage() {
     );
   }
 
+  // ── Guard: loading ────────────────────────────────────
   if (isLoading || loadingOrgs) {
-    return <div className="p-8 text-center text-slate-400">Cargando tus viajes...</div>;
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        {/* Hero skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+          <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-7 w-28 rounded-full" />
+              <Skeleton className="h-7 w-28 rounded-full" />
+            </div>
+          </div>
+        </div>
+        {/* Journey cards skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="rounded-2xl border border-slate-100 overflow-hidden">
+              <Skeleton className="h-24 w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-8 w-full rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  // If a journey is selected, show the map.
+  // ── Selected journey: show map ─────────────────────────
   if (selectedJourneyId) {
-    const activeJourney = journeys.find(j => j.id === selectedJourneyId);
+    const activeJourney  = journeys.find(j => j.id === selectedJourneyId);
     const completedSteps = activeJourney?.nodes.filter(n => n.status === 'completed').length ?? 0;
-    const totalSteps = activeJourney?.nodes.length ?? 0;
-    const xpEarned = activeJourney?.nodes
+    const totalSteps     = activeJourney?.nodes.length ?? 0;
+    const xpEarned       = activeJourney?.nodes
       .filter(n => n.status === 'completed')
       .reduce((sum, n) => sum + (n.points || 0), 0) ?? 0;
 
     return (
       <div className="space-y-4">
         {activeJourney?.status === 'completed' && activeJourney.progress === 100 && (
-             <div className="fixed inset-0 pointer-events-none z-50">
-                 <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={500} />
-             </div>
+          <div className="fixed inset-0 pointer-events-none z-50">
+            <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={500} />
+          </div>
         )}
-
-        {/* Journey Header Bar */}
         <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
@@ -162,11 +234,7 @@ export default function JourneyPage() {
                 Paso {completedSteps} / {totalSteps}
               </span>
             </div>
-            <Progress
-              value={activeJourney?.progress ?? 0}
-              className="h-2 bg-slate-100"
-              indicatorClassName="bg-teal-500"
-            />
+            <Progress value={activeJourney?.progress ?? 0} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
           </div>
           {xpEarned > 0 && (
             <div className="flex-shrink-0 flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-full px-3 py-1">
@@ -178,202 +246,333 @@ export default function JourneyPage() {
             <Badge className="bg-teal-500 text-white flex-shrink-0">Completado</Badge>
           )}
         </div>
-
         <JourneyMap />
       </div>
     );
   }
 
-  const activeJourneys = journeys.filter(j => j.status === 'active');
-  const completedJourneys = journeys.filter(j => j.status === 'completed');
+  // ── Main page ─────────────────────────────────────────
+  const tabs: { key: Tab; label: string; icon: React.ReactNode; count: number; visible: boolean }[] = [
+    {
+      key: 'progress' as Tab,
+      label: 'En progreso',
+      icon: <Play size={12} />,
+      count: isSuperAdmin ? journeys.length : activeJourneys.length,
+      visible: true,
+    },
+    {
+      key: 'available' as Tab,
+      label: 'Disponibles',
+      icon: <Compass size={12} />,
+      count: availableJourneys.length,
+      visible: !isSuperAdmin,
+    },
+    {
+      key: 'history' as Tab,
+      label: 'Historial',
+      icon: <History size={12} />,
+      count: completedJourneys.length,
+      visible: !isSuperAdmin,
+    },
+  ].filter(t => t.visible);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
 
-      {/* SuperAdmin Org Selector */}
-      {isSuperAdmin && organizations.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+      {/* ── Page hero ──────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="h-[2px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Building2 className="h-5 w-5 text-slate-400" />
-            <span className="text-sm text-slate-600">Ver journeys de:</span>
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+                            flex items-center justify-center shadow-sm shrink-0">
+              <Map size={20} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-800 leading-tight">
+                {isSuperAdmin ? 'Journeys de la Organización' : 'Mi Viaje'}
+              </h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isSuperAdmin
+                  ? 'Vista de journeys asignados a la org seleccionada'
+                  : 'Tu progreso de aprendizaje'}
+              </p>
+            </div>
+          </div>
+          {/* Stat pills — only for non-SuperAdmin */}
+          {!isSuperAdmin && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setActiveTab('progress')}
+                className={cn(
+                  'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
+                  activeTab === 'progress'
+                    ? 'bg-teal-500 border-teal-500 text-white'
+                    : 'bg-teal-50 border-teal-100 text-teal-700 hover:bg-teal-100'
+                )}
+              >
+                <Play size={11} /> {activeJourneys.length} En progreso
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={cn(
+                  'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
+                  activeTab === 'history'
+                    ? 'bg-fuchsia-500 border-fuchsia-500 text-white'
+                    : 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100'
+                )}
+              >
+                <CheckCircle size={11} /> {completedJourneys.length} Completados
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── SuperAdmin org selector ─────────────────────── */}
+      {isSuperAdmin && organizations.length > 0 && (
+        <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4
+                        flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-purple-50 border border-purple-200
+                            flex items-center justify-center shrink-0">
+              <Building2 size={15} className="text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Vista de organización</span>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
             <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Selecciona organizacion" />
+              <SelectTrigger className="w-full sm:w-[220px] border-purple-200 focus:ring-purple-400 text-sm">
+                <SelectValue placeholder="Selecciona organización" />
               </SelectTrigger>
               <SelectContent>
                 {organizations.map(org => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
+                  <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs shrink-0">
+              Vista Previa
+            </Badge>
           </div>
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-            Modo Vista Previa
-          </Badge>
         </div>
       )}
 
-      {/* Error message */}
+      {/* ── Error de inscripción ─────────────────────────── */}
       {enrollError && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 flex items-center gap-2 text-sm">
+          <AlertCircle className="h-5 w-5 shrink-0" />
           {enrollError}
         </div>
       )}
 
-      {/* Active Journeys Section */}
-      <section>
-        <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-                <Play className="text-teal-500" />
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {isSuperAdmin ? 'Journeys de la Organizacion' : 'Mis Viajes Activos'}
-                </h1>
-            </div>
-        </div>
-
-        {(isSuperAdmin ? journeys : activeJourneys).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(isSuperAdmin ? journeys : activeJourneys).map(journey => (
-                    <Card
-                      key={journey.id}
-                      className={`shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
-                        isSuperAdmin ? 'border-purple-100' : 'border-teal-100'
-                      }`}
-                      onClick={() => selectJourney(journey.id)}
-                    >
-                        <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                                <Badge variant="outline" className={`mb-2 ${
-                                  isSuperAdmin
-                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                    : 'bg-teal-50 text-teal-700 border-teal-200'
-                                }`}>
-                                    {journey.category || "General"}
-                                </Badge>
-                                {isSuperAdmin ? (
-                                  <Badge variant="outline" className="text-xs">
-                                    {journey.nodes.length} pasos
-                                  </Badge>
-                                ) : (
-                                  <span className="text-xs font-semibold text-teal-600">{journey.progress}%</span>
-                                )}
-                            </div>
-                            <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
-                            <CardDescription className="line-clamp-2">{journey.description}</CardDescription>
-                        </CardHeader>
-                        {!isSuperAdmin && (
-                          <CardContent className="pb-2">
-                              <Progress value={journey.progress} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
-                          </CardContent>
-                        )}
-                        <CardFooter>
-                            <Button className={`w-full group ${
-                              isSuperAdmin
-                                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                : 'bg-slate-900 hover:bg-slate-800 text-white'
-                            }`}>
-                                {isSuperAdmin ? 'Ver Preview' : 'Continuar'}
-                                <Play size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
-            </div>
-        ) : (
-            <div className="p-10 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-center text-slate-500">
-                {isSuperAdmin
-                  ? 'No hay journeys en esta organizacion. Crea uno desde el menu Journeys.'
-                  : 'No tienes viajes activos. Explora los disponibles abajo para comenzar.'}
-            </div>
-        )}
-      </section>
-
-      {/* Available Journeys Section - Only show for non-SuperAdmin or if SuperAdmin is member of org */}
+      {/* ── Tab bar ─────────────────────────────────────── */}
       {!isSuperAdmin && (
-        <section className="pt-8 border-t border-slate-100">
-          <div className="flex items-center gap-2 mb-4">
-              <Compass className="text-amber-500" />
-              <h2 className="text-xl font-bold text-slate-700">Journeys Disponibles</h2>
-          </div>
+        <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-xl w-fit">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                activeTab === tab.key
+                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              )}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              <span className={cn(
+                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+              )}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-          {loadingAvailable ? (
-            <div className="p-8 text-center">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-            </div>
-          ) : availableJourneys.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {availableJourneys.map(journey => (
-                      <Card key={journey.id} className="border-amber-100 shadow-sm hover:shadow-md transition-shadow">
-                          <CardHeader className="pb-2">
-                              <div className="flex justify-between items-start">
-                                  <Badge variant="outline" className="mb-2 bg-amber-50 text-amber-700 border-amber-200">
-                                      {journey.category || "General"}
-                                  </Badge>
-                                  <span className="text-xs text-slate-500">{journey.total_steps} pasos</span>
-                              </div>
-                              <CardTitle className="text-lg text-slate-800">{journey.title}</CardTitle>
-                              <CardDescription className="line-clamp-2">{journey.description || 'Sin descripcion'}</CardDescription>
-                          </CardHeader>
-                          <CardFooter>
-                              <Button
-                                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-                                onClick={() => handleEnroll(journey.id)}
-                                disabled={enrollingId === journey.id}
-                              >
-                                  {enrollingId === journey.id ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Inscribiendo...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus size={14} className="mr-2" />
-                                      Inscribirme
-                                    </>
-                                  )}
-                              </Button>
-                          </CardFooter>
-                      </Card>
-                  ))}
-              </div>
+      {/* ── Tab content ─────────────────────────────────── */}
+
+      {/* En progreso / SuperAdmin overview */}
+      {(activeTab === 'progress' || isSuperAdmin) && (
+        <section>
+          {(isSuperAdmin ? journeys : activeJourneys).length > 0 ? (
+            <motion.div
+              key="progress"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+            >
+              {(isSuperAdmin ? journeys : activeJourneys).map(journey => (
+                <JourneyCard
+                  key={journey.id}
+                  journey={journey}
+                  onContinue={() => selectJourney(journey.id)}
+                />
+              ))}
+            </motion.div>
           ) : (
-              <div className="p-10 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-center text-slate-500">
-                  No hay mas journeys disponibles en este momento.
-              </div>
+            <EmptySection
+              icon={<Play size={36} />}
+              title="Sin journeys en progreso"
+              description={isSuperAdmin
+                ? 'No hay journeys en esta organización. Crea uno desde el menú Journeys.'
+                : 'No tienes viajes activos. Explora los disponibles para comenzar.'}
+            />
           )}
         </section>
       )}
 
-      {/* History Section */}
-      {completedJourneys.length > 0 && (
-          <section className="pt-8 border-t border-slate-100">
-            <div className="flex items-center gap-2 mb-4">
-                <Clock className="text-slate-400" />
-                <h2 className="text-xl font-bold text-slate-700">Historial de Aprendizaje</h2>
-            </div>
+      {/* Disponibles para inscripción */}
+      {activeTab === 'available' && !isSuperAdmin && (
+        <section>
+          <motion.div
+            key="available"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            {loadingAvailable ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="rounded-2xl border border-slate-100 overflow-hidden">
+                    <Skeleton className="h-24 w-full rounded-none" />
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-8 w-full rounded-xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : availableJourneys.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {availableJourneys.map(journey => {
+                  const gradient = categoryGradient(journey.category ?? undefined);
+                  return (
+                    <div
+                      key={journey.id}
+                      className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className={`bg-gradient-to-r ${gradient} h-20 relative flex items-end p-4`}>
+                        {journey.category && (
+                          <span className="bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold
+                                           uppercase tracking-widest px-2.5 py-1 rounded-full">
+                            {journey.category}
+                          </span>
+                        )}
+                        <span className="absolute top-3 right-3 text-white/80 text-[10px]">
+                          {journey.total_steps} pasos
+                        </span>
+                      </div>
+                      <div className="p-4 flex flex-col flex-1 gap-3">
+                        <h3 className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">
+                          {journey.title}
+                        </h3>
+                        {journey.description && (
+                          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
+                            {journey.description}
+                          </p>
+                        )}
+                        <button
+                          onClick={() => handleEnroll(journey.id)}
+                          disabled={enrollingId === journey.id}
+                          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                                     bg-gradient-to-r from-amber-400 to-orange-500 text-white
+                                     text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                        >
+                          {enrollingId === journey.id
+                            ? <><Loader2 size={12} className="animate-spin" /> Inscribiendo...</>
+                            : <><Plus size={12} /> Inscribirme</>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptySection
+                icon={<Compass size={36} />}
+                title="Sin journeys disponibles"
+                description="No hay más journeys disponibles en este momento."
+              />
+            )}
+          </motion.div>
+        </section>
+      )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-80 hover:opacity-100 transition-opacity">
-                 {completedJourneys.map(journey => (
-                    <Card key={journey.id} className="bg-slate-50 border-slate-200">
-                        <CardHeader className="pb-2">
-                             <div className="flex justify-between">
-                                <Badge variant="secondary" className="bg-slate-200 text-slate-600">Finalizado</Badge>
-                                <CheckCircle className="text-green-500 h-5 w-5" />
-                             </div>
-                             <CardTitle className="text-base text-slate-600 font-medium">{journey.title}</CardTitle>
-                        </CardHeader>
-                        <CardFooter>
-                             <Button variant="ghost" className="w-full text-slate-500 hover:text-teal-600 text-sm" onClick={() => selectJourney(journey.id)}>
-                                 Ver Certificado / Repasar
-                             </Button>
-                        </CardFooter>
-                    </Card>
-                 ))}
-            </div>
-          </section>
+      {/* Historial */}
+      {activeTab === 'history' && !isSuperAdmin && (
+        <section>
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            {completedJourneys.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {completedJourneys.map(journey => (
+                  <motion.div
+                    key={journey.id}
+                    whileHover={{ y: -2 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                    className="bg-white border border-slate-100 rounded-2xl overflow-hidden
+                               flex flex-col shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => selectJourney(journey.id)}
+                  >
+                    {journey.thumbnail_url ? (
+                      <div className="h-24 relative overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={journey.thumbnail_url} alt={journey.title}
+                          className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        <div className="absolute bottom-2 right-2">
+                          <CheckCircle size={16} className="text-white drop-shadow" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-[1.5px] bg-teal-400" />
+                    )}
+                    <div className="p-4 flex flex-col gap-3 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-medium text-slate-700 text-sm leading-snug line-clamp-2 flex-1">
+                          {journey.title}
+                        </h3>
+                        {!journey.thumbnail_url && (
+                          <CheckCircle size={16} className="text-teal-500 shrink-0 mt-0.5" />
+                        )}
+                      </div>
+                      {journey.category && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-teal-600
+                                         bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full w-fit">
+                          {journey.category}
+                        </span>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); selectJourney(journey.id); }}
+                        className="mt-auto text-xs font-semibold text-slate-500 hover:text-teal-600
+                                   border border-slate-200 hover:border-teal-200 rounded-xl py-2 transition-colors"
+                      >
+                        Ver certificado / Repasar
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <EmptySection
+                icon={<History size={36} />}
+                title="Sin journeys completados"
+                description="Aún no has completado ningún journey. ¡Sigue adelante!"
+              />
+            )}
+          </motion.div>
+        </section>
       )}
     </div>
   );
