@@ -37,9 +37,10 @@ import {
 } from '@/components/ui/select';
 import {
   Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2,
-  ChevronDown, ChevronUp, Map, Users, Play, Sparkles,
+  Map, Users, Play, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 /* ─── Category badge helper ──────────────────────────── */
 function categoryBadgeClasses(cat: string): string {
@@ -88,21 +89,12 @@ export default function AdminJourneysPage() {
     is_active: false,
   });
 
-  const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
-  const [orgsExpanded, setOrgsExpanded] = useState(false);
+  const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
   const [createOwnerOrgId, setCreateOwnerOrgId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit      = isSuperAdmin || user?.role === 'Admin';
   const orgId        = isSuperAdmin ? selectedOrgId : user?.organizationId;
-
-  const toggleOrgAssignment = (id: string) => {
-    setAssignedOrgIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
-      return next;
-    });
-  };
 
   // Load organizations for SuperAdmin
   useEffect(() => {
@@ -142,9 +134,16 @@ export default function AdminJourneysPage() {
           const results = await Promise.allSettled(
             organizations.map(org => adminService.listJourneys(org.id, isActive))
           );
-          data = results
+          const merged = results
             .filter((r): r is PromiseFulfilledResult<ApiJourneyAdminRead[]> => r.status === 'fulfilled')
             .flatMap(r => r.value);
+          // Deduplicate: a journey shared across orgs appears once per org
+          const seen = new Set<string>();
+          data = merged.filter(j => {
+            if (seen.has(j.id)) return false;
+            seen.add(j.id);
+            return true;
+          });
         }
       } else if (orgId) {
         data = await adminService.listJourneys(orgId, isActive);
@@ -186,13 +185,13 @@ export default function AdminJourneysPage() {
       const newJourney = await adminService.createJourney(ownerOrgId, formData);
 
       if (isSuperAdmin && organizations.length > 0) {
-        if (assignedOrgIds.size === 0) {
+        if (assignedOrgIds.length === 0) {
           const allOrgIds = organizations.map(o => o.id).filter(id => id !== ownerOrgId);
           if (allOrgIds.length > 0) {
             await adminService.assignJourneyOrganizations(newJourney.id, allOrgIds);
           }
         } else {
-          const extraOrgIds = [...assignedOrgIds].filter(id => id !== ownerOrgId);
+          const extraOrgIds = assignedOrgIds.filter(id => id !== ownerOrgId);
           if (extraOrgIds.length > 0) {
             await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
           }
@@ -201,8 +200,7 @@ export default function AdminJourneysPage() {
 
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
-      setAssignedOrgIds(new Set());
-      setOrgsExpanded(false);
+      setAssignedOrgIds([]);
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear journey');
@@ -360,66 +358,21 @@ export default function AdminJourneysPage() {
                   </div>
 
                   {/* Organizaciones habilitadas — solo SuperAdmin */}
-                  {isSuperAdmin && (
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setOrgsExpanded(v => !v)}
-                        className="flex items-center justify-between w-full px-3 py-2.5 hover:bg-slate-50 transition-colors"
-                      >
-                        <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                          <Building2 className="h-4 w-4 text-slate-500" />
-                          Organizaciones habilitadas
-                          {assignedOrgIds.size > 0 && (
-                            <span className="ml-1.5 text-xs bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full">
-                              {assignedOrgIds.size}
-                            </span>
-                          )}
-                        </span>
-                        {orgsExpanded
-                          ? <ChevronUp className="h-4 w-4 text-slate-400" />
-                          : <ChevronDown className="h-4 w-4 text-slate-400" />
-                        }
-                      </button>
-
-                      {orgsExpanded && (
-                        <div className="border-t border-slate-200 px-3 py-2 space-y-1">
-                          {organizations.length === 0 ? (
-                            <p className="text-xs text-slate-400 py-1">No hay organizaciones disponibles.</p>
-                          ) : (
-                            <div className="max-h-44 overflow-y-auto space-y-1">
-                              {organizations.map(org => {
-                                const checked = assignedOrgIds.has(org.id);
-                                return (
-                                  <label
-                                    key={org.id}
-                                    className={cn(
-                                      'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
-                                      checked
-                                        ? 'bg-fuchsia-50 border border-fuchsia-200'
-                                        : 'hover:bg-slate-50 border border-transparent'
-                                    )}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() => toggleOrgAssignment(org.id)}
-                                      className="h-4 w-4 rounded accent-fuchsia-600"
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
-                                      {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
-                                    </div>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          )}
-                          <p className="text-xs text-slate-400 pt-1">
-                            Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
-                          </p>
-                        </div>
-                      )}
+                  {isSuperAdmin && organizations.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4 text-slate-500" />
+                        Organizaciones habilitadas
+                      </Label>
+                      <p className="text-xs text-slate-400">
+                        Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
+                      </p>
+                      <MultiSelect
+                        options={organizations.map(o => ({ value: o.id, label: o.name }))}
+                        selected={assignedOrgIds}
+                        onChange={setAssignedOrgIds}
+                        placeholder="Buscar y seleccionar organizaciones..."
+                      />
                     </div>
                   )}
 
