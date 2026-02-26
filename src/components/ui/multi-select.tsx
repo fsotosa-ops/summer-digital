@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronDown, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -27,19 +28,51 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
-  // Close on click outside
+  // Calculate dropdown position relative to viewport
+  const updatePosition = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropdownHeight = 240; // approximate max height
+    const placeAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+    setPos({
+      top: placeAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
+
+  const openDropdown = () => {
+    updatePosition();
+    setOpen(true);
+  };
+
+  // Close on click outside (check both trigger and portal dropdown)
   React.useEffect(() => {
+    if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch('');
-      }
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setSearch('');
+    };
+    // Close on scroll of any ancestor (dropdown position would be stale)
+    const handleScroll = () => {
+      updatePosition();
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [open, updatePosition]);
 
   const filteredOptions = options.filter(
     (opt) => opt.label.toLowerCase().includes(search.toLowerCase())
@@ -64,7 +97,7 @@ export function MultiSelect({
   });
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={triggerRef} className={cn('relative', className)}>
       {/* Trigger area */}
       <div
         className={cn(
@@ -72,19 +105,19 @@ export function MultiSelect({
           'ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
           open && 'ring-2 ring-ring ring-offset-2'
         )}
-        onClick={() => setOpen(!open)}
+        onClick={() => (open ? setOpen(false) : openDropdown())}
       >
         {selectedLabels.length > 0 ? (
           selectedLabels.map(({ value, label }) => (
             <Badge
               key={value}
               variant="secondary"
-              className="gap-1 pr-1"
+              className="gap-1 pr-1 max-w-[180px]"
             >
-              {label}
+              <span className="truncate">{label}</span>
               <button
                 type="button"
-                className="ml-0.5 rounded-full p-0.5 hover:bg-slate-300 transition-colors"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-slate-300 transition-colors shrink-0"
                 onClick={(e) => handleRemove(value, e)}
               >
                 <X className="h-3 w-3" />
@@ -97,9 +130,19 @@ export function MultiSelect({
         <ChevronDown className={cn('ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+      {/* Dropdown via portal — avoids clipping from overflow:auto parents */}
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+          }}
+          className="rounded-md border bg-popover shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+        >
           {/* Search input */}
           <div className="flex items-center border-b px-3 py-2">
             <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
@@ -110,6 +153,7 @@ export function MultiSelect({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClick={(e) => e.stopPropagation()}
+              autoFocus
             />
           </div>
 
@@ -146,13 +190,14 @@ export function MultiSelect({
                         </svg>
                       )}
                     </div>
-                    <span>{opt.label}</span>
+                    <span className="truncate">{opt.label}</span>
                   </div>
                 );
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -27,7 +27,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -89,8 +89,11 @@ export default function AdminJourneysPage() {
     is_active: false,
   });
 
-  const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
-  const [createOwnerOrgId, setCreateOwnerOrgId] = useState<string | null>(null);
+  // Unified org selection: first org = owner, rest = assigned (same as resources)
+  const [accessOrgIds, setAccessOrgIds] = useState<string[]>([]);
+
+  // Map: journeyId -> list of org names it's assigned to (for tag display)
+  const [journeyOrgsMap, setJourneyOrgsMap] = useState<Record<string, string[]>>({});
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit      = isSuperAdmin || user?.role === 'Admin';
@@ -134,19 +137,31 @@ export default function AdminJourneysPage() {
           const results = await Promise.allSettled(
             organizations.map(org => adminService.listJourneys(org.id, isActive))
           );
-          const merged = results
-            .filter((r): r is PromiseFulfilledResult<ApiJourneyAdminRead[]> => r.status === 'fulfilled')
-            .flatMap(r => r.value);
-          // Deduplicate: a journey shared across orgs appears once per org
+
+          // Build journey → org names map while deduplicating
+          const orgsMap: Record<string, string[]> = {};
           const seen = new Set<string>();
-          data = merged.filter(j => {
-            if (seen.has(j.id)) return false;
-            seen.add(j.id);
-            return true;
+          const deduped: ApiJourneyAdminRead[] = [];
+
+          results.forEach((r, idx) => {
+            if (r.status !== 'fulfilled') return;
+            const orgName = organizations[idx].name;
+            for (const j of r.value) {
+              if (!orgsMap[j.id]) orgsMap[j.id] = [];
+              orgsMap[j.id].push(orgName);
+              if (!seen.has(j.id)) {
+                seen.add(j.id);
+                deduped.push(j);
+              }
+            }
           });
+
+          data = deduped;
+          setJourneyOrgsMap(orgsMap);
         }
       } else if (orgId) {
         data = await adminService.listJourneys(orgId, isActive);
+        setJourneyOrgsMap({});
       } else { return; }
       setJourneys(data);
       setError(null);
@@ -177,30 +192,27 @@ export default function AdminJourneysPage() {
 
   const handleCreateJourney = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ownerOrgId = isSuperAdmin ? (selectedOrgId || createOwnerOrgId) : user?.organizationId;
-    if (!ownerOrgId) { setError('Selecciona una organización para el journey'); return; }
+
+    // Unified pattern: first selected org = owner, rest = assigned
+    const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
+    if (effectiveOrgIds.length === 0) {
+      setError('Selecciona al menos una organización');
+      return;
+    }
+
+    const [ownerOrgId, ...extraOrgIds] = effectiveOrgIds;
 
     setIsCreating(true);
     try {
       const newJourney = await adminService.createJourney(ownerOrgId, formData);
 
-      if (isSuperAdmin && organizations.length > 0) {
-        if (assignedOrgIds.length === 0) {
-          const allOrgIds = organizations.map(o => o.id).filter(id => id !== ownerOrgId);
-          if (allOrgIds.length > 0) {
-            await adminService.assignJourneyOrganizations(newJourney.id, allOrgIds);
-          }
-        } else {
-          const extraOrgIds = assignedOrgIds.filter(id => id !== ownerOrgId);
-          if (extraOrgIds.length > 0) {
-            await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
-          }
-        }
+      if (extraOrgIds.length > 0) {
+        await adminService.assignJourneyOrganizations(newJourney.id, extraOrgIds);
       }
 
       setCreateDialogOpen(false);
       setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
-      setAssignedOrgIds([]);
+      setAccessOrgIds([]);
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear journey');
@@ -288,7 +300,7 @@ export default function AdminJourneysPage() {
                   <Sparkles size={12} className="opacity-70" />
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Crear nuevo Journey</DialogTitle>
                   <DialogDescription>
@@ -296,22 +308,6 @@ export default function AdminJourneysPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateJourney} className="space-y-4">
-                  {/* Owner org — required when SuperAdmin in all-orgs view */}
-                  {isSuperAdmin && !selectedOrgId && (
-                    <div className="space-y-2">
-                      <Label>Organización dueña *</Label>
-                      <Select value={createOwnerOrgId || ''} onValueChange={v => setCreateOwnerOrgId(v || null)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona organización" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {organizations.map(org => (
-                            <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
                   <div className="space-y-2">
                     <Label htmlFor="title">Título</Label>
                     <Input
@@ -357,20 +353,20 @@ export default function AdminJourneysPage() {
                     />
                   </div>
 
-                  {/* Organizaciones habilitadas — solo SuperAdmin */}
+                  {/* Organizaciones con acceso — mismo patrón que recursos */}
                   {isSuperAdmin && organizations.length > 0 && (
                     <div className="space-y-1.5">
                       <Label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                         <Building2 className="h-4 w-4 text-slate-500" />
-                        Organizaciones habilitadas
+                        Organizaciones con acceso <span className="text-red-500">*</span>
                       </Label>
                       <p className="text-xs text-slate-400">
-                        Si no seleccionas ninguna, el journey estará disponible para todas las organizaciones.
+                        La primera organización seleccionada será la propietaria.
                       </p>
                       <MultiSelect
                         options={organizations.map(o => ({ value: o.id, label: o.name }))}
-                        selected={assignedOrgIds}
-                        onChange={setAssignedOrgIds}
+                        selected={accessOrgIds}
+                        onChange={setAccessOrgIds}
                         placeholder="Buscar y seleccionar organizaciones..."
                       />
                     </div>
@@ -380,8 +376,12 @@ export default function AdminJourneysPage() {
                     <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={isCreating}
-                      className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0">
+                    <Button
+                      type="submit"
+                      disabled={isCreating || !formData.title || (isSuperAdmin && accessOrgIds.length === 0)}
+                      className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       {isCreating ? (
                         <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creando...</>
                       ) : 'Crear Journey'}
@@ -546,7 +546,7 @@ export default function AdminJourneysPage() {
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
                 <TableHead className="pl-6">Título</TableHead>
-                {isSuperAdmin && !orgId && <TableHead>Organización</TableHead>}
+                {isSuperAdmin && !orgId && <TableHead>Organizaciones</TableHead>}
                 <TableHead>Categoría</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-center">Steps</TableHead>
@@ -560,6 +560,7 @@ export default function AdminJourneysPage() {
                 const completionPct = journey.total_enrollments > 0
                   ? Math.round(journey.completion_rate * 100)
                   : 0;
+                const assignedOrgs = journeyOrgsMap[journey.id] || [];
                 return (
                   <TableRow
                     key={journey.id}
@@ -580,10 +581,26 @@ export default function AdminJourneysPage() {
                       </div>
                     </TableCell>
 
-                    {/* Org — only in all-orgs mode */}
+                    {/* Org tags — only in all-orgs mode */}
                     {isSuperAdmin && !orgId && (
-                      <TableCell className="text-xs text-slate-500">
-                        {organizations.find(o => o.id === journey.organization_id)?.name ?? '—'}
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {assignedOrgs.length > 0 ? (
+                            assignedOrgs.map(name => (
+                              <Badge
+                                key={name}
+                                variant="outline"
+                                className="text-[10px] font-medium bg-purple-50 text-purple-700 border-purple-200 whitespace-nowrap"
+                              >
+                                {name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400">
+                              {organizations.find(o => o.id === journey.organization_id)?.name ?? '—'}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     )}
 

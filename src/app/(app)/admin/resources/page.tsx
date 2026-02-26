@@ -125,6 +125,8 @@ export default function AdminResourcesPage() {
   const [contentSource, setContentSource] = useState<'url' | 'upload'>('url');
   const [fileToUpload, setFileToUpload]   = useState<File | null>(null);
   const [accessOrgIds, setAccessOrgIds]   = useState<string[]>([]);
+  const [originalOrgIds, setOriginalOrgIds] = useState<string[]>([]);  // track initial orgs for edit diff
+  const [isLoadingResourceOrgs, setIsLoadingResourceOrgs] = useState(false);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit      = isSuperAdmin || user?.role === 'Admin';
@@ -222,7 +224,7 @@ export default function AdminResourcesPage() {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (resource: ApiResourceAdminRead) => {
+  const openEditDialog = async (resource: ApiResourceAdminRead) => {
     setEditingResource(resource);
     setFormData({
       title: resource.title,
@@ -240,7 +242,24 @@ export default function AdminResourcesPage() {
     });
     setContentSource(resource.storage_path ? 'upload' : 'url');
     setFileToUpload(null);
+    setAccessOrgIds([]);
+    setOriginalOrgIds([]);
     setDialogOpen(true);
+
+    // Load current org assignments for this resource
+    if (isSuperAdmin) {
+      setIsLoadingResourceOrgs(true);
+      try {
+        const resp = await resourceService.getResourceOrganizations(resource.id);
+        const ids = resp.organizations.map(o => o.organization_id);
+        setAccessOrgIds(ids);
+        setOriginalOrgIds(ids);
+      } catch (err) {
+        console.error('Error loading resource orgs:', err);
+      } finally {
+        setIsLoadingResourceOrgs(false);
+      }
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -264,6 +283,14 @@ export default function AdminResourcesPage() {
         };
         await resourceService.updateResource(editOrgId, editingResource.id, updateData);
         if (fileToUpload) await resourceService.uploadFile(editOrgId, editingResource.id, fileToUpload);
+
+        // Sync org assignments: add new, remove old
+        if (isSuperAdmin) {
+          const toAdd = accessOrgIds.filter(id => !originalOrgIds.includes(id));
+          const toRemove = originalOrgIds.filter(id => !accessOrgIds.includes(id));
+          if (toAdd.length > 0) await resourceService.assignResourceOrganizations(editingResource.id, toAdd);
+          if (toRemove.length > 0) await resourceService.unassignResourceOrganizations(editingResource.id, toRemove);
+        }
       } else {
         const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
         if (effectiveOrgIds.length === 0) return;
@@ -909,19 +936,29 @@ export default function AdminResourcesPage() {
               ))}
             </div>
 
-            {/* Organization access (SuperAdmin only, create mode) */}
-            {isSuperAdmin && !editingResource && organizations.length > 0 && (
+            {/* Organization access (SuperAdmin only) */}
+            {isSuperAdmin && organizations.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-slate-700">
                   Organizaciones con acceso <span className="text-red-500">*</span>
                 </Label>
-                <p className="text-xs text-slate-400">La primera organización seleccionada será la propietaria.</p>
-                <MultiSelect
-                  options={organizations.map((o) => ({ value: o.id, label: o.name }))}
-                  selected={accessOrgIds}
-                  onChange={setAccessOrgIds}
-                  placeholder="Seleccionar organizaciones..."
-                />
+                <p className="text-xs text-slate-400">
+                  {editingResource
+                    ? 'Gestiona qué organizaciones tienen acceso a este recurso.'
+                    : 'La primera organización seleccionada será la propietaria.'}
+                </p>
+                {isLoadingResourceOrgs ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-slate-400">
+                    <Loader2 size={14} className="animate-spin" /> Cargando organizaciones…
+                  </div>
+                ) : (
+                  <MultiSelect
+                    options={organizations.map((o) => ({ value: o.id, label: o.name }))}
+                    selected={accessOrgIds}
+                    onChange={setAccessOrgIds}
+                    placeholder="Seleccionar organizaciones..."
+                  />
+                )}
               </div>
             )}
 
@@ -943,7 +980,7 @@ export default function AdminResourcesPage() {
               </Button>
               <button
                 type="submit"
-                disabled={isSaving || !formData.title || (isSuperAdmin && !editingResource && accessOrgIds.length === 0)}
+                disabled={isSaving || !formData.title || (isSuperAdmin && accessOrgIds.length === 0)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg
                            bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity
