@@ -55,6 +55,13 @@ export function Dashboard() {
   const isSubscriber  = user.role === 'Subscriber';
   const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
 
+  // Hero card color tokens — participant vs admin
+  const heroGradient   = isParticipantView ? 'from-sky-500 to-teal-600'                      : 'from-fuchsia-500 to-purple-700';
+  const levelBadge     = isParticipantView ? 'bg-sky-50 text-sky-700 border-sky-100'          : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100';
+  const progressBar    = isParticipantView ? 'from-sky-500 to-teal-500'                       : 'from-fuchsia-500 to-purple-600';
+  const maxLevelText   = isParticipantView ? 'text-teal-600'                                  : 'text-fuchsia-600';
+  const cardHoverBorder = isParticipantView ? 'hover:border-sky-200'                          : 'hover:border-fuchsia-200';
+
   const displayPts    = gamSummary?.total_points   ?? user.oasisScore;
   const levelName     = gamSummary?.current_level?.name ?? user.rank ?? '—';
   const levelProgress = gamSummary ? getLevelProgress(gamSummary) : null;
@@ -66,13 +73,13 @@ export function Dashboard() {
           PROFILE HERO CARD — full-width, prominent
       ══════════════════════════════════════════════════ */}
       <Link href="/profile">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden
-                        cursor-pointer hover:shadow-lg hover:border-fuchsia-200 transition-all group">
+        <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden
+                        cursor-pointer hover:shadow-lg ${cardHoverBorder} transition-all group`}>
           <div className="flex flex-col sm:flex-row">
 
             {/* Left gradient panel — avatar + score */}
-            <div className="bg-gradient-to-br from-fuchsia-500 to-purple-700
-                            sm:w-52 p-6 flex flex-col items-center justify-center gap-4">
+            <div className={`bg-gradient-to-br ${heroGradient}
+                            sm:w-52 p-6 flex flex-col items-center justify-center gap-4`}>
               {/* Avatar */}
               <div className="w-20 h-20 rounded-2xl bg-white/20 border-2 border-white/30
                               flex items-center justify-center text-white font-bold text-3xl
@@ -101,8 +108,8 @@ export function Dashboard() {
                   </h2>
                   <p className="text-sm text-slate-400 mt-0.5">{ROLE_LABELS[user.role]}</p>
                 </div>
-                <span className="px-3 py-1 bg-fuchsia-50 text-fuchsia-700 text-xs font-semibold
-                                 rounded-full whitespace-nowrap shrink-0 border border-fuchsia-100">
+                <span className={`px-3 py-1 ${levelBadge} text-xs font-semibold
+                                 rounded-full whitespace-nowrap shrink-0 border`}>
                   {levelName}
                 </span>
               </div>
@@ -117,8 +124,8 @@ export function Dashboard() {
                     </div>
                     <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600
-                                   rounded-full transition-all duration-700"
+                        className={`h-full bg-gradient-to-r ${progressBar}
+                                   rounded-full transition-all duration-700`}
                         style={{ width: `${levelProgress.pct}%` }}
                       />
                     </div>
@@ -128,7 +135,7 @@ export function Dashboard() {
                         <strong className="text-slate-600">{levelProgress.next}</strong>
                       </p>
                     ) : (
-                      <p className="text-xs text-fuchsia-600 font-semibold mt-1.5">
+                      <p className={`text-xs ${maxLevelText} font-semibold mt-1.5`}>
                         Nivel máximo alcanzado
                       </p>
                     )}
@@ -144,8 +151,8 @@ export function Dashboard() {
               </div>
 
               {/* Hint */}
-              <p className="text-[11px] text-slate-300 group-hover:text-fuchsia-400 transition-colors
-                            flex items-center gap-1">
+              <p className={`text-[11px] text-slate-300 ${isParticipantView ? 'group-hover:text-sky-400' : 'group-hover:text-fuchsia-400'} transition-colors
+                            flex items-center gap-1`}>
                 <Pencil size={10} /> Ver y editar perfil
               </p>
             </div>
@@ -159,7 +166,7 @@ export function Dashboard() {
           (Participants see the banner inside ParticipantJourneysSection)
       ══════════════════════════════════════════════════ */}
       {((isAdmin && viewMode === 'admin') || isSubscriber) && (
-        <div className="bg-gradient-to-r from-sky-400 via-purple-400 to-amber-300
+        <div className="bg-gradient-to-r from-fuchsia-600 via-purple-500 to-fuchsia-400
                         rounded-2xl p-6 text-white shadow-sm">
           {isAdmin && (
             <>
@@ -189,10 +196,10 @@ export function Dashboard() {
           ROLE-SPECIFIC CONTENT
       ══════════════════════════════════════════════════ */}
       {isParticipantView && (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <ParticipantJourneysSection />
           <ResourcesFeedWidget />
-        </>
+        </div>
       )}
 
       {isAdmin && viewMode === 'admin' && <AdminDashboardPanel user={user} />}

@@ -15,6 +15,9 @@ import {
   Lock,
   Check,
   Loader2,
+  AlertCircle,
+  RotateCcw,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -29,25 +32,37 @@ const TYPE_CONFIG: Record<ApiResourceType, { label: string; icon: React.ElementT
 
 const ALL_TYPES: ApiResourceType[] = ['video', 'podcast', 'pdf', 'capsula', 'actividad'];
 
+function getErrorMessage(err: unknown): string {
+  const status = (err as { status?: number })?.status;
+  if (status === 401) return 'Tu sesión expiró. Recarga la página.';
+  if (status === 403) return 'No tienes permisos. Contacta a tu administrador.';
+  return 'No se pudieron cargar los recursos. Verifica tu conexión.';
+}
+
 export default function ResourcesPage() {
   const router = useRouter();
   const [resources, setResources] = useState<ApiResourceParticipantRead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<ApiResourceType | 'all'>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const load = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const data = await resourceService.getMyResources();
         setResources(data);
       } catch (err) {
         console.error('Error loading resources:', err);
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
     };
     load();
-  }, []);
+  }, [retryCount]);
 
   const filtered = typeFilter === 'all'
     ? resources
@@ -55,6 +70,9 @@ export default function ResourcesPage() {
 
   const consumed = resources.filter(r => r.is_consumed).length;
   const unlocked = resources.filter(r => r.is_unlocked).length;
+
+  // Banner: all loaded resources are locked
+  const allLocked = !isLoading && !error && resources.length > 0 && resources.every(r => !r.is_unlocked);
 
   return (
     <div className="space-y-6">
@@ -74,7 +92,7 @@ export default function ResourcesPage() {
             </div>
           </div>
           {/* Progress pills */}
-          {!isLoading && resources.length > 0 && (
+          {!isLoading && !error && resources.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
                                bg-sky-50 border border-sky-100 text-sky-700">
@@ -89,70 +107,128 @@ export default function ResourcesPage() {
         </div>
       </div>
 
+      {/* ── All-locked diagnostic banner ─────────────────── */}
+      {allLocked && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+          <Info size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Todos los recursos están bloqueados</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Completa las actividades requeridas para desbloquearlos, o contacta a tu administrador
+              para confirmar que los recursos están asignados y publicados para tu organización.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Type filter tabs ───────────────────────────────── */}
-      <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-xl flex-wrap">
-        <button
-          onClick={() => setTypeFilter('all')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-            typeFilter === 'all'
-              ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-          )}
-        >
-          Todos
-          <span className={cn(
-            'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-            typeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-          )}>
-            {resources.length}
-          </span>
-        </button>
-        {ALL_TYPES.map((t) => {
-          const cfg = TYPE_CONFIG[t];
-          const count = resources.filter(r => r.type === t).length;
-          return (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                typeFilter === t
-                  ? `bg-gradient-to-r ${cfg.activeBtn} text-white shadow-sm`
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              )}
-            >
-              <cfg.icon size={12} />
-              {cfg.label}
-              <span className={cn(
-                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                typeFilter === t ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-              )}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {!error && (
+        <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-xl flex-wrap">
+          <button
+            onClick={() => setTypeFilter('all')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+              typeFilter === 'all'
+                ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+            )}
+          >
+            Todos
+            <span className={cn(
+              'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+              typeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+            )}>
+              {resources.length}
+            </span>
+          </button>
+          {ALL_TYPES.map((t) => {
+            const cfg = TYPE_CONFIG[t];
+            const count = resources.filter(r => r.type === t).length;
+            return (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                  typeFilter === t
+                    ? `bg-gradient-to-r ${cfg.activeBtn} text-white shadow-sm`
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                )}
+              >
+                <cfg.icon size={12} />
+                {cfg.label}
+                <span className={cn(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                  typeFilter === t ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Content ────────────────────────────────────────── */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
         </div>
+      ) : error ? (
+        /* ── Error state ───────────────────────────────────── */
+        <div className="flex flex-col items-center justify-center py-16 px-6
+                        bg-red-50 border border-red-200 rounded-2xl text-center">
+          <div className="h-14 w-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+            <AlertCircle size={28} className="text-red-500" />
+          </div>
+          <p className="text-base font-semibold text-red-700 mb-1">Error al cargar recursos</p>
+          <p className="text-sm text-red-500 max-w-xs mb-5">{error}</p>
+          <button
+            onClick={() => setRetryCount(c => c + 1)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                       bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            <RotateCcw size={14} /> Reintentar
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
+        /* ── Empty state ───────────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-16 px-6
                         bg-white rounded-2xl border border-slate-100 shadow-sm text-center">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-teal-500
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-100 to-teal-100
                           flex items-center justify-center shadow-sm mb-4">
-            <BookOpen size={24} className="text-white" />
+            <BookOpen size={24} className="text-sky-500" />
           </div>
-          <p className="text-base font-semibold text-slate-700 mb-1">
-            {typeFilter === 'all' ? 'No hay recursos disponibles' : `Sin recursos de tipo "${TYPE_CONFIG[typeFilter].label}"`}
-          </p>
-          <p className="text-sm text-slate-400 max-w-xs">
-            Los recursos aparecerán aquí cuando sean publicados para tu organización.
-          </p>
+          {typeFilter !== 'all' ? (
+            <>
+              <p className="text-base font-semibold text-slate-700 mb-1">
+                Sin recursos de tipo &ldquo;{TYPE_CONFIG[typeFilter].label}&rdquo;
+              </p>
+              <p className="text-sm text-slate-400 max-w-xs mb-4">
+                No hay recursos de este tipo disponibles para ti en este momento.
+              </p>
+              <button
+                onClick={() => setTypeFilter('all')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           bg-gradient-to-r from-sky-500 to-teal-500 text-white hover:opacity-90 transition-opacity"
+              >
+                Ver todos los recursos
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-base font-semibold text-slate-700 mb-1">
+                No hay recursos disponibles
+              </p>
+              <p className="text-sm text-slate-400 max-w-sm mb-2">
+                Los recursos aparecerán aquí cuando sean publicados para tu organización.
+              </p>
+              <p className="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 max-w-sm">
+                <strong className="text-slate-600">Tip:</strong> Contacta a tu administrador y confirma que los recursos
+                estén publicados y asignados a tu organización.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

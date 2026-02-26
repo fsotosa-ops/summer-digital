@@ -334,10 +334,10 @@ export default function AdminResourcesPage() {
 
       {/* ── Header ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-teal-500 via-sky-500 to-blue-500" />
+        <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-fuchsia-600" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-sky-600
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
                             flex items-center justify-center shadow-sm shrink-0">
               <BookOpen size={20} className="text-white" />
             </div>
@@ -366,7 +366,7 @@ export default function AdminResourcesPage() {
               <button
                 onClick={openCreateDialog}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl
-                           bg-gradient-to-r from-teal-500 to-sky-500 text-white
+                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
               >
                 <Plus size={15} />
@@ -406,7 +406,7 @@ export default function AdminResourcesPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
               statusFilter === key
-                ? 'bg-gradient-to-r from-teal-500 to-sky-500 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
@@ -448,9 +448,9 @@ export default function AdminResourcesPage() {
         /* ── Empty state ── */
         <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl
                         border border-dashed border-slate-200 bg-slate-50/60 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-teal-100 to-sky-100
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-fuchsia-100 to-purple-100
                           flex items-center justify-center mb-4">
-            <BookOpen size={32} className="text-teal-500" />
+            <BookOpen size={32} className="text-fuchsia-500" />
           </div>
           <h3 className="text-base font-semibold text-slate-700 mb-1">Sin recursos todavía</h3>
           <p className="text-sm text-slate-400 mb-6 max-w-xs">
@@ -460,7 +460,7 @@ export default function AdminResourcesPage() {
             <button
               onClick={openCreateDialog}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl
-                         bg-gradient-to-r from-teal-500 to-sky-500 text-white
+                         bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
                          text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
             >
               <Plus size={15} />
@@ -631,7 +631,7 @@ export default function AdminResourcesPage() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-500 to-sky-500
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
                               flex items-center justify-center shrink-0">
                 <BookOpen size={16} className="text-white" />
               </div>
@@ -655,7 +655,7 @@ export default function AdminResourcesPage() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ej: Charla sobre Bienestar"
                 required
-                className="border-slate-200 focus:border-teal-400"
+                className="border-slate-200 focus:border-fuchsia-400"
               />
             </div>
 
@@ -667,7 +667,7 @@ export default function AdminResourcesPage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe el recurso..."
                 rows={2}
-                className="border-slate-200 focus:border-teal-400 resize-none"
+                className="border-slate-200 focus:border-fuchsia-400 resize-none"
               />
             </div>
 
@@ -710,7 +710,7 @@ export default function AdminResourcesPage() {
                     className={cn(
                       'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                       contentSource === src
-                        ? 'bg-teal-500 text-white border-teal-500'
+                        ? 'bg-fuchsia-500 text-white border-fuchsia-500'
                         : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                     )}
                   >
@@ -725,7 +725,7 @@ export default function AdminResourcesPage() {
                     value={formData.content_url || ''}
                     onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
                     placeholder="https://youtube.com/watch?v=... o URL directa"
-                    className="border-slate-200 focus:border-teal-400"
+                    className="border-slate-200 focus:border-fuchsia-400"
                   />
                   {formData.content_url && formData.content_url.length > 8 && (
                     <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
@@ -757,7 +757,7 @@ export default function AdminResourcesPage() {
                 value={formData.thumbnail_url || ''}
                 onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value || undefined })}
                 placeholder="https://..."
-                className="border-slate-200 focus:border-teal-400"
+                className="border-slate-200 focus:border-fuchsia-400"
               />
             </div>
 
@@ -770,7 +770,7 @@ export default function AdminResourcesPage() {
                   min="0"
                   value={formData.points_on_completion || 0}
                   onChange={(e) => setFormData({ ...formData, points_on_completion: parseInt(e.target.value) || 0 })}
-                  className="border-slate-200 focus:border-teal-400"
+                  className="border-slate-200 focus:border-fuchsia-400"
                 />
               </div>
               <div className="space-y-1.5">
@@ -915,7 +915,7 @@ export default function AdminResourcesPage() {
                 type="submit"
                 disabled={isSaving || !formData.title || (isSuperAdmin && !editingResource && accessOrgIds.length === 0)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg
-                           bg-gradient-to-r from-teal-500 to-sky-500 text-white
+                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity
                            disabled:opacity-50 disabled:cursor-not-allowed"
               >

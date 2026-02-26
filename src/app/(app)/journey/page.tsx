@@ -420,6 +420,7 @@ export default function JourneyPage() {
                 <JourneyCard
                   key={journey.id}
                   journey={journey}
+                  isParticipantContext={!isAdminMode}
                   onContinue={() => selectJourney(journey.id)}
                 />
               ))}

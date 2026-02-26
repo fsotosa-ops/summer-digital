@@ -146,10 +146,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       // Participant → Admin: redirect to admin equivalents
       if (pathname === '/resources') router.push('/admin/resources');
       else if (pathname === '/journey') router.push('/admin/journeys');
+      // else stay (dashboard, profile, etc. are accessible in both modes)
     } else {
-      // Admin → Participant: redirect to participant equivalents
+      // Admin → Participant: redirect to participant equivalents or dashboard
       if (pathname.startsWith('/admin/resources')) router.push('/resources');
       else if (pathname.startsWith('/admin/journeys')) router.push('/journey');
+      else if (
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/crm') ||
+        pathname.startsWith('/analytics')
+      ) router.push('/dashboard');
+      // else stay (dashboard, profile, etc. are accessible in both modes)
     }
   };
 
