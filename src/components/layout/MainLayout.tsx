@@ -126,11 +126,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, user?.id]);
 
-  // Open admin menu if on admin route
+  // Sync admin dropdown with current route
   useEffect(() => {
-    if (pathname.startsWith('/admin') || pathname.startsWith('/crm') || pathname.startsWith('/analytics')) {
-      setAdminOpen(true);
-    }
+    const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/crm') || pathname.startsWith('/analytics');
+    setAdminOpen(isAdminRoute);
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -218,7 +217,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const renderTopbarItem = (item: NavItem) => {
     const isActive =
       pathname === item.href ||
-      (item.children && item.children.some((child) => pathname === child.href));
+      pathname.startsWith(item.href + '/') ||
+      (item.children && item.children.some((child) =>
+        pathname === child.href || pathname.startsWith(child.href + '/')
+      ));
     const hasChildren = item.children && item.children.length > 0;
     const filteredChildren = hasChildren ? filterItems(item.children!) : [];
 
@@ -230,7 +232,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     if (hasChildren) {
       return (
-        <DropdownMenu key={item.label} open={adminOpen} onOpenChange={setAdminOpen}>
+        <DropdownMenu key={item.label}>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
@@ -240,12 +242,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             >
               <item.icon size={16} />
               {item.label}
-              <ChevronDown size={14} className={cn('transition-transform duration-200', adminOpen ? 'rotate-180' : '')} />
+              <ChevronDown size={14} className="transition-transform duration-200" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="bottom" align="start" className={dropdownContent}>
             {filteredChildren.map((child) => {
-              const childActive = pathname === child.href;
+              const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
               return (
                 <DropdownMenuItem
                   key={child.href}
@@ -284,7 +286,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const renderNavItem = (item: NavItem, isMobile = false) => {
     const isActive =
       pathname === item.href ||
-      (item.children && item.children.some((child) => pathname === child.href));
+      pathname.startsWith(item.href + '/') ||
+      (item.children && item.children.some((child) =>
+        pathname === child.href || pathname.startsWith(child.href + '/')
+      ));
     const hasChildren = item.children && item.children.length > 0;
     const filteredChildren = hasChildren ? filterItems(item.children!) : [];
 
@@ -325,7 +330,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 className="overflow-hidden pl-4 space-y-1"
               >
                 {filteredChildren.map((child) => {
-                  const childActive = pathname === child.href;
+                  const childActive = pathname === child.href || pathname.startsWith(child.href + '/');
                   return (
                     <Link
                       key={child.href}

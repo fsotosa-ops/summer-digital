@@ -165,30 +165,18 @@ export function Dashboard() {
           CTA BANNER — solo Admin / Subscriber
           (Participants see the banner inside ParticipantJourneysSection)
       ══════════════════════════════════════════════════ */}
-      {((isAdmin && viewMode === 'admin') || isSubscriber) && (
+      {isSubscriber && (
         <div className="bg-gradient-to-r from-fuchsia-600 via-purple-500 to-fuchsia-400
                         rounded-2xl p-6 text-white shadow-sm">
-          {isAdmin && (
-            <>
-              <h2 className="font-bold text-lg">Panel de Administración</h2>
-              <p className="text-white/80 text-sm mt-1">
-                Gestiona journeys, recursos, usuarios y gamificación desde aquí.
-              </p>
-            </>
-          )}
-          {isSubscriber && (
-            <>
-              <h2 className="font-bold text-lg">Explora el contenido disponible</h2>
-              <p className="text-white/80 text-sm mt-1">Accede a recursos y actividades abiertas.</p>
-              <Link href="/resources">
-                <button className="mt-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white
-                                   text-sm font-semibold px-4 py-2 rounded-xl border border-white/30
-                                   transition-colors">
-                  Ver recursos
-                </button>
-              </Link>
-            </>
-          )}
+          <h2 className="font-bold text-lg">Explora el contenido disponible</h2>
+          <p className="text-white/80 text-sm mt-1">Accede a recursos y actividades abiertas.</p>
+          <Link href="/resources">
+            <button className="mt-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white
+                               text-sm font-semibold px-4 py-2 rounded-xl border border-white/30
+                               transition-colors">
+              Ver recursos
+            </button>
+          </Link>
         </div>
       )}
 

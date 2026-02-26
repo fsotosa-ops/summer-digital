@@ -766,6 +766,7 @@ export interface ApiResourceAdminRead {
 
 export interface ApiResourceParticipantRead {
   id: string;
+  organization_id?: string;
   title: string;
   description?: string | null;
   type: ApiResourceType;

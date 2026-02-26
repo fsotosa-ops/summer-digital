@@ -85,6 +85,9 @@ export default function JourneyPage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
+  // Client-side org filter — only used in participant mode
+  const [orgFilter, setOrgFilter] = useState<string | null>(null);
+
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
   const isAdminMode = isAdminUser && viewMode === 'admin';
   const orgId = selectedOrgId || user?.organizationId;
@@ -164,8 +167,8 @@ export default function JourneyPage() {
   };
 
   // Hoist before loading guard (needed for hero stat-pills)
-  const activeJourneys    = journeys.filter(j => j.status === 'active');
-  const completedJourneys = journeys.filter(j => j.status === 'completed');
+  const activeJourneys    = journeys.filter(j => j.status === 'active'    && (!orgFilter || j.organization_id === orgFilter));
+  const completedJourneys = journeys.filter(j => j.status === 'completed' && (!orgFilter || j.organization_id === orgFilter));
 
   // ── Guard: no org ─────────────────────────────────────
   if (!orgId && !isAdminMode && !loadingOrgs && organizations.length === 0) {
@@ -373,6 +376,38 @@ export default function JourneyPage() {
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 flex items-center gap-2 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0" />
           {enrollError}
+        </div>
+      )}
+
+      {/* ── Org filter pills — participant mode, multi-org ── */}
+      {!isAdminMode && organizations.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Filtrar:</span>
+          <button
+            onClick={() => setOrgFilter(null)}
+            className={cn(
+              'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
+              !orgFilter
+                ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            Todas
+          </button>
+          {organizations.map(org => (
+            <button
+              key={org.id}
+              onClick={() => setOrgFilter(org.id)}
+              className={cn(
+                'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
+                orgFilter === org.id
+                  ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              )}
+            >
+              {org.name}
+            </button>
+          ))}
         </div>
       )}
 

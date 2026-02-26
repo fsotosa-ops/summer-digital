@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { resourceService } from '@/services/resource.service';
-import { ApiResourceParticipantRead, ApiResourceType } from '@/types/api.types';
+import { organizationService } from '@/services/organization.service';
+import { ApiOrganization, ApiResourceParticipantRead, ApiResourceType } from '@/types/api.types';
 import { Badge } from '@/components/ui/badge';
 import {
   BookOpen,
@@ -46,6 +47,17 @@ export default function ResourcesPage() {
   const [typeFilter, setTypeFilter] = useState<ApiResourceType | 'all'>('all');
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [organizations, setOrganizations] = useState<ApiOrganization[]>([]);
+  const [orgFilter, setOrgFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    organizationService.listMyOrganizations()
+      .then(orgs => {
+        const seen = new Set<string>();
+        setOrganizations(orgs.filter(o => seen.has(o.id) ? false : (seen.add(o.id), true)));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -53,7 +65,9 @@ export default function ResourcesPage() {
       setError(null);
       try {
         const data = await resourceService.getMyResources();
-        setResources(data);
+        // Deduplicate by id — same resource may appear from multiple org memberships
+        const seen = new Set<string>();
+        setResources(data.filter(r => seen.has(r.id) ? false : (seen.add(r.id), true)));
       } catch (err) {
         console.error('Error loading resources:', err);
         setError(getErrorMessage(err));
@@ -64,9 +78,9 @@ export default function ResourcesPage() {
     load();
   }, [retryCount]);
 
-  const filtered = typeFilter === 'all'
-    ? resources
-    : resources.filter(r => r.type === typeFilter);
+  const filtered = resources
+    .filter(r => typeFilter === 'all' || r.type === typeFilter)
+    .filter(r => !orgFilter || r.organization_id === orgFilter);
 
   const consumed = resources.filter(r => r.is_consumed).length;
   const unlocked = resources.filter(r => r.is_unlocked).length;
@@ -106,6 +120,38 @@ export default function ResourcesPage() {
           )}
         </div>
       </div>
+
+      {/* ── Org filter pills — multi-org users ─────────────── */}
+      {!error && organizations.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Filtrar:</span>
+          <button
+            onClick={() => setOrgFilter(null)}
+            className={cn(
+              'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
+              !orgFilter
+                ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            )}
+          >
+            Todas
+          </button>
+          {organizations.map(org => (
+            <button
+              key={org.id}
+              onClick={() => setOrgFilter(org.id)}
+              className={cn(
+                'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
+                orgFilter === org.id
+                  ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              )}
+            >
+              {org.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── All-locked diagnostic banner ─────────────────── */}
       {allLocked && (

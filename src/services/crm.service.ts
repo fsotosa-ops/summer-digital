@@ -87,8 +87,9 @@ class CrmService {
     );
   }
 
-  async getStats(): Promise<ApiCrmStats> {
-    return apiClient.get<ApiCrmStats>('/crm/stats/');
+  async getStats(orgId?: string): Promise<ApiCrmStats> {
+    const query = orgId ? `?organization_id=${encodeURIComponent(orgId)}` : '';
+    return apiClient.get<ApiCrmStats>(`/crm/stats/${query}`);
   }
 
   async listTasks(

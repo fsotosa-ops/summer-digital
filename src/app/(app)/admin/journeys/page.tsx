@@ -90,6 +90,7 @@ export default function AdminJourneysPage() {
 
   const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
   const [orgsExpanded, setOrgsExpanded] = useState(false);
+  const [createOwnerOrgId, setCreateOwnerOrgId] = useState<string | null>(null);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
   const canEdit      = isSuperAdmin || user?.role === 'Admin';
@@ -118,9 +119,7 @@ export default function AdminJourneysPage() {
           return 0;
         });
         setOrganizations(sorted);
-        if (sorted.length > 0 && !selectedOrgId) {
-          setSelectedOrgId(sorted[0].id);
-        }
+        // No auto-select: start with "Todas las organizaciones" (null)
       } catch (err) {
         console.error('Error loading organizations:', err);
       } finally {
@@ -131,11 +130,25 @@ export default function AdminJourneysPage() {
   }, [isSuperAdmin, selectedOrgId]);
 
   const fetchJourneys = async () => {
-    if (!orgId) return;
+    if (!isSuperAdmin && !orgId) return;
     setIsLoading(true);
     try {
       const isActive = statusFilter === 'all' ? null : statusFilter === 'active';
-      const data = await adminService.listJourneys(orgId, isActive);
+      let data: ApiJourneyAdminRead[];
+      if (isSuperAdmin && !selectedOrgId) {
+        // All orgs: fetch in parallel and merge
+        if (organizations.length === 0) { data = []; }
+        else {
+          const results = await Promise.allSettled(
+            organizations.map(org => adminService.listJourneys(org.id, isActive))
+          );
+          data = results
+            .filter((r): r is PromiseFulfilledResult<ApiJourneyAdminRead[]> => r.status === 'fulfilled')
+            .flatMap(r => r.value);
+        }
+      } else if (orgId) {
+        data = await adminService.listJourneys(orgId, isActive);
+      } else { return; }
       setJourneys(data);
       setError(null);
     } catch (err) {
@@ -146,11 +159,9 @@ export default function AdminJourneysPage() {
   };
 
   useEffect(() => {
-    if (!isLoadingOrgs) {
-      fetchJourneys();
-    }
+    if (!isLoadingOrgs) fetchJourneys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, isLoadingOrgs, statusFilter]);
+  }, [selectedOrgId, isLoadingOrgs, statusFilter]);
 
   const generateSlug = (title: string) => {
     return title
@@ -167,8 +178,8 @@ export default function AdminJourneysPage() {
 
   const handleCreateJourney = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ownerOrgId = isSuperAdmin ? selectedOrgId : user?.organizationId;
-    if (!ownerOrgId) return;
+    const ownerOrgId = isSuperAdmin ? (selectedOrgId || createOwnerOrgId) : user?.organizationId;
+    if (!ownerOrgId) { setError('Selecciona una organización para el journey'); return; }
 
     setIsCreating(true);
     try {
@@ -201,12 +212,13 @@ export default function AdminJourneysPage() {
   };
 
   const handleToggleActive = async (journey: ApiJourneyAdminRead) => {
-    if (!orgId) return;
+    const jOrgId = orgId || journey.organization_id;
+    if (!jOrgId) return;
     try {
       if (journey.is_active) {
-        await adminService.archiveJourney(orgId, journey.id);
+        await adminService.archiveJourney(jOrgId, journey.id);
       } else {
-        await adminService.publishJourney(orgId, journey.id);
+        await adminService.publishJourney(jOrgId, journey.id);
       }
       await fetchJourneys();
     } catch (err) {
@@ -215,10 +227,12 @@ export default function AdminJourneysPage() {
   };
 
   const handleDelete = async (journeyId: string) => {
-    if (!orgId) return;
+    const journey = journeys.find(j => j.id === journeyId);
+    const jOrgId = orgId || journey?.organization_id;
+    if (!jOrgId) return;
     if (!confirm('¿Estás seguro de eliminar este journey?')) return;
     try {
-      await adminService.deleteJourney(orgId, journeyId);
+      await adminService.deleteJourney(jOrgId, journeyId);
       await fetchJourneys();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar journey');
@@ -284,6 +298,22 @@ export default function AdminJourneysPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateJourney} className="space-y-4">
+                  {/* Owner org — required when SuperAdmin in all-orgs view */}
+                  {isSuperAdmin && !selectedOrgId && (
+                    <div className="space-y-2">
+                      <Label>Organización dueña *</Label>
+                      <Select value={createOwnerOrgId || ''} onValueChange={v => setCreateOwnerOrgId(v || null)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona organización" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizations.map(org => (
+                            <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="title">Título</Label>
                     <Input
@@ -422,11 +452,15 @@ export default function AdminJourneysPage() {
             </div>
             <span className="text-sm font-medium text-slate-700">Organización activa</span>
           </div>
-          <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
+          <Select
+            value={selectedOrgId || '__all__'}
+            onValueChange={(v) => setSelectedOrgId(v === '__all__' ? null : v)}
+          >
             <SelectTrigger className="w-full sm:w-[240px] border-purple-200 focus:ring-purple-400 text-sm">
-              <SelectValue placeholder="Selecciona organización" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__all__">Todas las organizaciones</SelectItem>
               {organizations.map(org => (
                 <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
               ))}
@@ -523,7 +557,7 @@ export default function AdminJourneysPage() {
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
         </div>
-      ) : !orgId ? null : journeys.length === 0 ? (
+      ) : (!orgId && !isSuperAdmin) ? null : journeys.length === 0 ? (
 
         /* ── Empty state ───────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-16 px-6
@@ -559,6 +593,7 @@ export default function AdminJourneysPage() {
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
                 <TableHead className="pl-6">Título</TableHead>
+                {isSuperAdmin && !orgId && <TableHead>Organización</TableHead>}
                 <TableHead>Categoría</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-center">Steps</TableHead>
@@ -591,6 +626,13 @@ export default function AdminJourneysPage() {
                         </div>
                       </div>
                     </TableCell>
+
+                    {/* Org — only in all-orgs mode */}
+                    {isSuperAdmin && !orgId && (
+                      <TableCell className="text-xs text-slate-500">
+                        {organizations.find(o => o.id === journey.organization_id)?.name ?? '—'}
+                      </TableCell>
+                    )}
 
                     {/* Category */}
                     <TableCell>

@@ -121,6 +121,7 @@ export function mapApiToJourney(
     status: enrollment.status === 'completed' ? 'completed' : 'active',
     category: journey.category || undefined,
     thumbnail_url: (journey as unknown as { thumbnail_url?: string }).thumbnail_url || undefined,
+    organization_id: enrollment.organization_id || undefined,
     progress: enrollment.progress_percentage,
     nodes,
   };

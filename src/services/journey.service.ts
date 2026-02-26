@@ -30,7 +30,12 @@ class JourneyService {
     });
 
     const results = await Promise.all(journeyPromises);
-    const journeys = results.filter((j): j is Journey => j !== null);
+    const allJourneys = results.filter((j): j is Journey => j !== null);
+
+    // Deduplicate by id — a user enrolled in the same journey from multiple orgs
+    // would get duplicate IDs without this guard
+    const seen = new Set<string>();
+    const journeys = allJourneys.filter(j => seen.has(j.id) ? false : (seen.add(j.id), true));
 
     return { journeys, enrollmentMap };
   }

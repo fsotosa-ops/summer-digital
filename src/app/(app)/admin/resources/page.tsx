@@ -142,7 +142,7 @@ export default function AdminResourcesPage() {
           return 0;
         });
         setOrganizations(sorted);
-        if (sorted.length > 0 && !selectedOrgId) setSelectedOrgId(sorted[0].id);
+        // No auto-select: start with "Todas las organizaciones" (null)
       } catch (err) {
         console.error('Error loading organizations:', err);
       } finally {
@@ -152,7 +152,7 @@ export default function AdminResourcesPage() {
     loadOrgs();
   }, [isSuperAdmin, selectedOrgId]);
 
-  // Load reference data
+  // Load reference data (only when a specific org is selected)
   useEffect(() => {
     if (!orgId) return;
     const loadRefs = async () => {
@@ -173,11 +173,25 @@ export default function AdminResourcesPage() {
   }, [orgId]);
 
   const fetchResources = async () => {
-    if (!orgId) return;
+    if (!isSuperAdmin && !orgId) return;
     setIsLoading(true);
     try {
       const isPublished = statusFilter === 'all' ? null : statusFilter === 'published';
-      const data = await resourceService.listResources(orgId, isPublished);
+      let data: ApiResourceAdminRead[];
+      if (isSuperAdmin && !selectedOrgId) {
+        // All orgs: fetch in parallel and merge
+        if (organizations.length === 0) { data = []; }
+        else {
+          const results = await Promise.allSettled(
+            organizations.map(org => resourceService.listResources(org.id, isPublished))
+          );
+          data = results
+            .filter((r): r is PromiseFulfilledResult<ApiResourceAdminRead[]> => r.status === 'fulfilled')
+            .flatMap(r => r.value);
+        }
+      } else if (orgId) {
+        data = await resourceService.listResources(orgId, isPublished);
+      } else { return; }
       setResources(data);
       setError(null);
     } catch (err) {
@@ -190,7 +204,7 @@ export default function AdminResourcesPage() {
   useEffect(() => {
     if (!isLoadingOrgs) fetchResources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, isLoadingOrgs, statusFilter]);
+  }, [selectedOrgId, isLoadingOrgs, statusFilter]);
 
   const openCreateDialog = () => {
     setEditingResource(null);
@@ -224,11 +238,13 @@ export default function AdminResourcesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgId) return;
+    const saveOrgId = orgId || editingResource?.organization_id;
+    if (!saveOrgId && editingResource) return;
     setIsSaving(true);
     setError(null);
     try {
       if (editingResource) {
+        const editOrgId = orgId || editingResource.organization_id;
         const updateData: ApiResourceUpdate = {
           title: formData.title,
           description: formData.description,
@@ -239,8 +255,8 @@ export default function AdminResourcesPage() {
           unlock_logic: formData.unlock_logic,
           unlock_conditions: formData.unlock_conditions,
         };
-        await resourceService.updateResource(orgId, editingResource.id, updateData);
-        if (fileToUpload) await resourceService.uploadFile(orgId, editingResource.id, fileToUpload);
+        await resourceService.updateResource(editOrgId, editingResource.id, updateData);
+        if (fileToUpload) await resourceService.uploadFile(editOrgId, editingResource.id, fileToUpload);
       } else {
         const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
         if (effectiveOrgIds.length === 0) return;
@@ -260,12 +276,13 @@ export default function AdminResourcesPage() {
   };
 
   const handleTogglePublish = async (resource: ApiResourceAdminRead) => {
-    if (!orgId) return;
+    const rOrgId = orgId || resource.organization_id;
+    if (!rOrgId) return;
     try {
       if (resource.is_published) {
-        await resourceService.unpublishResource(orgId, resource.id);
+        await resourceService.unpublishResource(rOrgId, resource.id);
       } else {
-        await resourceService.publishResource(orgId, resource.id);
+        await resourceService.publishResource(rOrgId, resource.id);
       }
       toast.success(resource.is_published ? 'Recurso despublicado' : 'Recurso publicado');
       await fetchResources();
@@ -275,10 +292,12 @@ export default function AdminResourcesPage() {
   };
 
   const handleDelete = async (resourceId: string) => {
-    if (!orgId) return;
+    const resource = resources.find(r => r.id === resourceId);
+    const rOrgId = orgId || resource?.organization_id;
+    if (!rOrgId) return;
     if (!confirm('¿Estás seguro de eliminar este recurso?')) return;
     try {
-      await resourceService.deleteResource(orgId, resourceId);
+      await resourceService.deleteResource(rOrgId, resourceId);
       toast.success('Recurso eliminado');
       await fetchResources();
     } catch (err) {
@@ -350,11 +369,15 @@ export default function AdminResourcesPage() {
             {isSuperAdmin && organizations.length > 0 && (
               <div className="flex items-center gap-2">
                 <Building2 size={14} className="text-slate-400 shrink-0" />
-                <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
+                <Select
+                  value={selectedOrgId || '__all__'}
+                  onValueChange={(v) => setSelectedOrgId(v === '__all__' ? null : v)}
+                >
                   <SelectTrigger className="w-[200px] border-slate-200 text-sm h-9">
-                    <SelectValue placeholder="Selecciona organización" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__all__">Todas las organizaciones</SelectItem>
                     {organizations.map(org => (
                       <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                     ))}
@@ -378,7 +401,7 @@ export default function AdminResourcesPage() {
       </div>
 
       {/* ── Stats ──────────────────────────────────────── */}
-      {!isLoading && !isLoadingOrgs && orgId && (
+      {!isLoading && !isLoadingOrgs && (isSuperAdmin || orgId) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map(s => {
             const Icon = s.icon;
@@ -444,7 +467,7 @@ export default function AdminResourcesPage() {
             </div>
           ))}
         </div>
-      ) : !orgId ? null : resources.length === 0 ? (
+      ) : (!orgId && !isSuperAdmin) ? null : resources.length === 0 ? (
         /* ── Empty state ── */
         <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl
                         border border-dashed border-slate-200 bg-slate-50/60 text-center">
