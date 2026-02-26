@@ -23,6 +23,8 @@ const KNOWN_LABELS: Record<string, string> = {
   gender: 'Género',
   education_level: 'Nivel Educativo',
   occupation: 'Ocupación',
+  org_industry: 'Industria (Organizaciones)',
+  org_company_size: 'Tamaño de Empresa (Organizaciones)',
 };
 
 interface EditState {

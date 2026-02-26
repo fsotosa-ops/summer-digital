@@ -7,12 +7,13 @@ import { crmService } from '@/services/crm.service';
 import {
   ApiOrganization,
   ApiCrmOrgProfile,
+  ApiFieldOption,
   ApiMemberResponse,
   ApiMemberRole,
   ApiMembershipStatus,
   ApiBulkMemberResultItem,
 } from '@/types/api.types';
-import { ORG_TYPES, INDUSTRIES, COMPANY_SIZES } from '@/lib/constants/crm-data';
+import { ORG_TYPES } from '@/lib/constants/crm-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -251,6 +252,15 @@ interface Props {
 export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SuperAdmin';
+
+  // Field options (global, loaded once)
+  const [industryOptions, setIndustryOptions] = useState<ApiFieldOption[]>([]);
+  const [companySizeOptions, setCompanySizeOptions] = useState<ApiFieldOption[]>([]);
+
+  useEffect(() => {
+    crmService.listFieldOptions('org_industry').then(setIndustryOptions).catch(() => {});
+    crmService.listFieldOptions('org_company_size').then(setCompanySizeOptions).catch(() => {});
+  }, []);
 
   // CRM profile
   const [crmProfile, setCrmProfile] = useState<ApiCrmOrgProfile | null>(null);
@@ -586,7 +596,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                               icon={<Briefcase size={14} />}
                               label="Industria"
                               value={crmProfile?.industry}
-                              options={INDUSTRIES}
+                              options={industryOptions.map((o) => ({ value: o.value, label: o.label }))}
                               placeholder="Selecciona industria..."
                               onSave={(v) => saveProfileField('industry', v)}
                             />
@@ -594,7 +604,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                               icon={<Users size={14} />}
                               label="Tamaño de empresa"
                               value={crmProfile?.company_size}
-                              options={COMPANY_SIZES}
+                              options={companySizeOptions.map((o) => ({ value: o.value, label: o.label }))}
                               placeholder="Selecciona tamaño..."
                               onSave={(v) => saveProfileField('company_size', v)}
                             />
