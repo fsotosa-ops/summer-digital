@@ -29,6 +29,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Plus, Loader2, Archive, Trash2, Eye, Edit2, Building2,
   ChevronDown, ChevronUp, Map, Users, Play, Sparkles,
 } from 'lucide-react';
@@ -404,13 +411,37 @@ export default function AdminJourneysPage() {
         </div>
       </div>
 
+      {/* ── SuperAdmin org selector ─────────────────────── */}
+      {isSuperAdmin && organizations.length > 1 && (
+        <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4
+                        flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-purple-50 border border-purple-200
+                            flex items-center justify-center shrink-0">
+              <Building2 size={15} className="text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Organización activa</span>
+          </div>
+          <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
+            <SelectTrigger className="w-full sm:w-[240px] border-purple-200 focus:ring-purple-400 text-sm">
+              <SelectValue placeholder="Selecciona organización" />
+            </SelectTrigger>
+            <SelectContent>
+              {organizations.map(org => (
+                <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* ── Stats cards ─────────────────────────────────── */}
       {!isLoading && !isLoadingOrgs && journeys.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Total journeys', value: totalJourneys,    icon: <Map size={16} />,    color: 'fuchsia' },
             { label: 'Activos',        value: activeJourneys,   icon: <Play size={16} />,   color: 'teal'    },
-            { label: 'Borradores',     value: draftJourneys,    icon: <Eye size={16} />,    color: 'slate'   },
+            { label: 'Inactivos',      value: draftJourneys,    icon: <Eye size={16} />,    color: 'slate'   },
             { label: 'Inscripciones',  value: totalEnrollments, icon: <Users size={16} />,  color: 'amber'   },
           ].map(({ label, value, icon, color }) => (
             <div key={label}
@@ -445,7 +476,7 @@ export default function AdminJourneysPage() {
         {([
           { key: 'all'    as const, label: 'Todos'      },
           { key: 'active' as const, label: 'Activos'    },
-          { key: 'draft'  as const, label: 'Borradores' },
+          { key: 'draft'  as const, label: 'Inactivos'  },
         ]).map(({ key, label }) => (
           <button
             key={key}
@@ -581,7 +612,7 @@ export default function AdminJourneysPage() {
                           ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
                           : 'bg-slate-100 text-slate-500 border-slate-200'
                       )}>
-                        {journey.is_active ? 'Activo' : 'Borrador'}
+                        {journey.is_active ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </TableCell>
 

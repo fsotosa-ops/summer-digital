@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useJourneyStore } from '@/store/useJourneyStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -68,7 +69,8 @@ function useWindowDimensions() {
 type Tab = 'progress' | 'available' | 'history';
 
 export default function JourneyPage() {
-  const { user } = useAuthStore();
+  const router = useRouter();
+  const { user, viewMode } = useAuthStore();
   const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading } = useJourneyStore();
   const { width, height } = useWindowDimensions();
 
@@ -83,8 +85,16 @@ export default function JourneyPage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
-  const isSuperAdmin = user?.role === 'SuperAdmin';
+  const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+  const isAdminMode = isAdminUser && viewMode === 'admin';
   const orgId = selectedOrgId || user?.organizationId;
+
+  // Admins in admin mode belong on /admin/journeys — redirect immediately
+  useEffect(() => {
+    if (isAdminMode) {
+      router.replace('/admin/journeys');
+    }
+  }, [isAdminMode, router]);
 
   // Load organizations
   useEffect(() => {
@@ -94,7 +104,7 @@ export default function JourneyPage() {
       try {
         const orgs = await organizationService.listMyOrganizations();
         setOrganizations(orgs);
-        if (isSuperAdmin && orgs.length > 0 && !selectedOrgId) {
+        if (isAdminMode && orgs.length > 0 && !selectedOrgId) {
           setSelectedOrgId(orgs[0].id);
         }
       } catch (err) {
@@ -105,22 +115,22 @@ export default function JourneyPage() {
     };
     loadOrgs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isSuperAdmin]);
+  }, [user?.id, isAdminMode]);
 
   // Fetch journeys based on role
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (isAdminMode) {
       if (!orgId) return;
       fetchJourneysForAdmin(orgId);
     } else {
       fetchJourneys(orgId);
     }
-  }, [fetchJourneys, fetchJourneysForAdmin, orgId, isSuperAdmin]);
+  }, [fetchJourneys, fetchJourneysForAdmin, orgId, isAdminMode]);
 
   // Load available journeys for enrollment
   useEffect(() => {
     const loadAvailable = async () => {
-      if (isSuperAdmin || organizations.length === 0 || isLoading) return;
+      if (isAdminMode || organizations.length === 0 || isLoading) return;
       setLoadingAvailable(true);
       try {
         const orgIds = organizations.map(o => o.id);
@@ -135,7 +145,7 @@ export default function JourneyPage() {
       }
     };
     loadAvailable();
-  }, [organizations, journeys, isSuperAdmin, isLoading]);
+  }, [organizations, journeys, isAdminMode, isLoading]);
 
   const handleEnroll = async (journeyId: string) => {
     setEnrollingId(journeyId);
@@ -158,7 +168,7 @@ export default function JourneyPage() {
   const completedJourneys = journeys.filter(j => j.status === 'completed');
 
   // ── Guard: no org ─────────────────────────────────────
-  if (!orgId && !isSuperAdmin && !loadingOrgs && organizations.length === 0) {
+  if (!orgId && !isAdminMode && !loadingOrgs && organizations.length === 0) {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
@@ -177,7 +187,7 @@ export default function JourneyPage() {
       <div className="space-y-6 animate-in fade-in duration-300">
         {/* Hero skeleton */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+          <div className="h-1 bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
           <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Skeleton className="h-10 w-10 rounded-xl" />
@@ -257,7 +267,7 @@ export default function JourneyPage() {
       key: 'progress' as Tab,
       label: 'En progreso',
       icon: <Play size={12} />,
-      count: isSuperAdmin ? journeys.length : activeJourneys.length,
+      count: isAdminMode ? journeys.length : activeJourneys.length,
       visible: true,
     },
     {
@@ -265,14 +275,14 @@ export default function JourneyPage() {
       label: 'Disponibles',
       icon: <Compass size={12} />,
       count: availableJourneys.length,
-      visible: !isSuperAdmin,
+      visible: !isAdminMode,
     },
     {
       key: 'history' as Tab,
       label: 'Historial',
       icon: <History size={12} />,
       count: completedJourneys.length,
-      visible: !isSuperAdmin,
+      visible: !isAdminMode,
     },
   ].filter(t => t.visible);
 
@@ -281,26 +291,26 @@ export default function JourneyPage() {
 
       {/* ── Page hero ──────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="h-[2px] bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-teal-500
                             flex items-center justify-center shadow-sm shrink-0">
               <Map size={20} className="text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-800 leading-tight">
-                {isSuperAdmin ? 'Journeys de la Organización' : 'Mi Viaje'}
+                {isAdminMode ? 'Journeys de la Organización' : 'Mi Viaje'}
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isSuperAdmin
+                {isAdminMode
                   ? 'Vista de journeys asignados a la org seleccionada'
                   : 'Tu progreso de aprendizaje'}
               </p>
             </div>
           </div>
-          {/* Stat pills — only for non-SuperAdmin */}
-          {!isSuperAdmin && (
+          {/* Stat pills — only for non-admin mode */}
+          {!isAdminMode && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setActiveTab('progress')}
@@ -318,8 +328,8 @@ export default function JourneyPage() {
                 className={cn(
                   'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
                   activeTab === 'history'
-                    ? 'bg-fuchsia-500 border-fuchsia-500 text-white'
-                    : 'bg-fuchsia-50 border-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100'
+                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                    : 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100'
                 )}
               >
                 <CheckCircle size={11} /> {completedJourneys.length} Completados
@@ -330,7 +340,7 @@ export default function JourneyPage() {
       </div>
 
       {/* ── SuperAdmin org selector ─────────────────────── */}
-      {isSuperAdmin && organizations.length > 0 && (
+      {isAdminMode && organizations.length > 1 && (
         <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4
                         flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -367,7 +377,7 @@ export default function JourneyPage() {
       )}
 
       {/* ── Tab bar ─────────────────────────────────────── */}
-      {!isSuperAdmin && (
+      {!isAdminMode && (
         <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-xl w-fit">
           {tabs.map(tab => (
             <button
@@ -376,7 +386,7 @@ export default function JourneyPage() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
                 activeTab === tab.key
-                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               )}
             >
@@ -396,9 +406,9 @@ export default function JourneyPage() {
       {/* ── Tab content ─────────────────────────────────── */}
 
       {/* En progreso / SuperAdmin overview */}
-      {(activeTab === 'progress' || isSuperAdmin) && (
+      {(activeTab === 'progress' || isAdminMode) && (
         <section>
-          {(isSuperAdmin ? journeys : activeJourneys).length > 0 ? (
+          {(isAdminMode ? journeys : activeJourneys).length > 0 ? (
             <motion.div
               key="progress"
               initial={{ opacity: 0, y: 8 }}
@@ -406,7 +416,7 @@ export default function JourneyPage() {
               transition={{ duration: 0.25 }}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
             >
-              {(isSuperAdmin ? journeys : activeJourneys).map(journey => (
+              {(isAdminMode ? journeys : activeJourneys).map(journey => (
                 <JourneyCard
                   key={journey.id}
                   journey={journey}
@@ -418,7 +428,7 @@ export default function JourneyPage() {
             <EmptySection
               icon={<Play size={36} />}
               title="Sin journeys en progreso"
-              description={isSuperAdmin
+              description={isAdminMode
                 ? 'No hay journeys en esta organización. Crea uno desde el menú Journeys.'
                 : 'No tienes viajes activos. Explora los disponibles para comenzar.'}
             />
@@ -427,7 +437,7 @@ export default function JourneyPage() {
       )}
 
       {/* Disponibles para inscripción */}
-      {activeTab === 'available' && !isSuperAdmin && (
+      {activeTab === 'available' && !isAdminMode && (
         <section>
           <motion.div
             key="available"
@@ -506,7 +516,7 @@ export default function JourneyPage() {
       )}
 
       {/* Historial */}
-      {activeTab === 'history' && !isSuperAdmin && (
+      {activeTab === 'history' && !isAdminMode && (
         <section>
           <motion.div
             key="history"

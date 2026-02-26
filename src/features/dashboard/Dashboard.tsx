@@ -33,7 +33,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 /* ─── Dashboard ──────────────────────────────────────── */
 export function Dashboard() {
-  const { user } = useAuthStore();
+  const { user, viewMode } = useAuthStore();
   const [gamSummary, setGamSummary] = useState<ApiUserPointsSummary | null>(null);
 
   useEffect(() => {
@@ -53,6 +53,7 @@ export function Dashboard() {
   const isParticipant = user.role === 'Participant';
   const isAdmin       = user.role === 'Admin' || user.role === 'SuperAdmin';
   const isSubscriber  = user.role === 'Subscriber';
+  const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
 
   const displayPts    = gamSummary?.total_points   ?? user.oasisScore;
   const levelName     = gamSummary?.current_level?.name ?? user.rank ?? '—';
@@ -157,7 +158,7 @@ export function Dashboard() {
           CTA BANNER — solo Admin / Subscriber
           (Participants see the banner inside ParticipantJourneysSection)
       ══════════════════════════════════════════════════ */}
-      {(isAdmin || isSubscriber) && (
+      {((isAdmin && viewMode === 'admin') || isSubscriber) && (
         <div className="bg-gradient-to-r from-sky-400 via-purple-400 to-amber-300
                         rounded-2xl p-6 text-white shadow-sm">
           {isAdmin && (
@@ -187,14 +188,14 @@ export function Dashboard() {
       {/* ══════════════════════════════════════════════════
           ROLE-SPECIFIC CONTENT
       ══════════════════════════════════════════════════ */}
-      {isParticipant && (
+      {isParticipantView && (
         <>
           <ParticipantJourneysSection />
           <ResourcesFeedWidget />
         </>
       )}
 
-      {isAdmin && <AdminDashboardPanel user={user} />}
+      {isAdmin && viewMode === 'admin' && <AdminDashboardPanel user={user} />}
 
       {isSubscriber && <ResourcesFeedWidget />}
 

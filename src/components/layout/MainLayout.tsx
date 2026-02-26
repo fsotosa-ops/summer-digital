@@ -85,6 +85,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
 
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+  const isParticipantMode = isAdminUser && viewMode === 'participant';
+  // Real participants + admins in participant mode both get the light theme
+  const isParticipantTheme = isParticipantMode || user?.role === 'Participant';
 
   // Esperar a que Zustand persist termine de hidratar desde localStorage
   useEffect(() => {
@@ -98,7 +101,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!hydrated) return;
-
     if (user) {
       initializeSession();
     } else {
@@ -119,7 +121,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         sessionStorage.setItem('onboarding_checked', 'true');
       }
     }).catch(() => {
-      // If check fails, don't block the user
       sessionStorage.setItem('onboarding_checked', 'true');
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,6 +136,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const handleLogout = async () => {
     await logout();
     router.push('/login');
+  };
+
+  // Smart mode switch: navigates between participant/admin equivalent pages
+  const handleModeSwitch = () => {
+    const newMode = viewMode === 'admin' ? 'participant' : 'admin';
+    setViewMode(newMode);
+    if (newMode === 'admin') {
+      // Participant → Admin: redirect to admin equivalents
+      if (pathname === '/resources') router.push('/admin/resources');
+      else if (pathname === '/journey') router.push('/admin/journeys');
+    } else {
+      // Admin → Participant: redirect to participant equivalents
+      if (pathname.startsWith('/admin/resources')) router.push('/resources');
+      else if (pathname.startsWith('/admin/journeys')) router.push('/journey');
+    }
   };
 
   // Mostrar loading mientras Zustand hidrata
@@ -174,7 +190,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const filteredNavItems = filterItems(NAV_ITEMS);
 
-  // Desktop topbar nav item renderer
+  // ── Theme tokens (light participant vs dark admin) ───────────────────────
+  const navInactive = isParticipantTheme
+    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+    : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5';
+
+  const dropdownContent = isParticipantTheme
+    ? 'bg-white border-slate-200 text-slate-800 shadow-lg'
+    : 'bg-neutral-900 border-white/10 text-white';
+
+  const dropdownItem = isParticipantTheme
+    ? 'cursor-pointer text-slate-700 hover:bg-slate-50 focus:bg-slate-50'
+    : 'cursor-pointer hover:bg-white/10 focus:bg-white/10';
+
+  const mobileNavInactive = isParticipantTheme
+    ? 'text-slate-600 hover:text-slate-900'
+    : 'text-neutral-400 hover:text-neutral-200';
+
+  // ── Desktop topbar nav item renderer ────────────────────────────────────
   const renderTopbarItem = (item: NavItem) => {
     const isActive =
       pathname === item.href ||
@@ -184,6 +217,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     if (hasChildren && filteredChildren.length === 0) return null;
 
+    const activeGradient = isParticipantTheme
+      ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white'
+      : 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white';
+
     if (hasChildren) {
       return (
         <DropdownMenu key={item.label} open={adminOpen} onOpenChange={setAdminOpen}>
@@ -191,9 +228,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <button
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none',
-                isActive
-                  ? 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                isActive ? activeGradient : navInactive
               )}
             >
               <item.icon size={16} />
@@ -201,11 +236,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <ChevronDown size={14} className={cn('transition-transform duration-200', adminOpen ? 'rotate-180' : '')} />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="bottom"
-            align="start"
-            className="bg-neutral-900 border-white/10 text-white"
-          >
+          <DropdownMenuContent side="bottom" align="start" className={dropdownContent}>
             {filteredChildren.map((child) => {
               const childActive = pathname === child.href;
               return (
@@ -213,8 +244,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   key={child.href}
                   onClick={() => router.push(child.href)}
                   className={cn(
-                    'cursor-pointer hover:bg-white/10 focus:bg-white/10',
-                    childActive && 'bg-white/5 text-white'
+                    dropdownItem,
+                    childActive && (isParticipantTheme ? 'bg-sky-50 text-sky-700' : 'bg-white/5 text-white')
                   )}
                 >
                   <child.icon size={15} className="mr-2" />
@@ -232,9 +263,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <span
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-            isActive
-              ? 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+            isActive ? activeGradient : navInactive
           )}
         >
           <item.icon size={16} />
@@ -244,7 +273,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   };
 
-  // Mobile drawer nav item renderer (unchanged behavior)
+  // ── Mobile drawer nav item renderer ─────────────────────────────────────
   const renderNavItem = (item: NavItem, isMobile = false) => {
     const isActive =
       pathname === item.href ||
@@ -254,15 +283,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     if (hasChildren && filteredChildren.length === 0) return null;
 
-    // --- Dropdown (Administración) ---
+    const activePill = isParticipantTheme
+      ? 'from-sky-500 to-teal-500'
+      : 'from-fuchsia-600 to-fuchsia-500';
+
     if (hasChildren) {
       return (
         <div key={item.label} className="space-y-1">
           <div
             onClick={() => setAdminOpen(!adminOpen)}
             className={cn(
-              'flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer text-neutral-400 hover:text-neutral-200',
-              isActive && 'text-white'
+              'flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer',
+              mobileNavInactive,
+              isActive && (isParticipantTheme ? 'text-slate-900 font-medium' : 'text-white')
             )}
           >
             <div className="flex items-center gap-3">
@@ -296,13 +329,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                         whileHover={{ x: 4 }}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative',
-                          childActive ? 'text-white font-medium' : 'text-neutral-400 hover:text-neutral-200'
+                          childActive ? 'text-white font-medium' : mobileNavInactive
                         )}
                       >
                         {childActive && (
                           <motion.div
                             layoutId="activeNavMobile"
-                            className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 rounded-lg"
+                            className={`absolute inset-0 bg-gradient-to-r ${activePill} rounded-lg`}
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           />
                         )}
@@ -319,7 +352,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       );
     }
 
-    // --- Simple nav item ---
     return (
       <Link key={item.href} href={item.href} onClick={() => isMobile && document.getElementById('close-sheet')?.click()}>
         <motion.div
@@ -327,13 +359,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           whileTap={{ scale: 0.98 }}
           className={cn(
             'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 relative',
-            isActive ? 'text-white font-medium' : 'text-neutral-400 hover:text-neutral-200'
+            isActive ? 'text-white font-medium' : mobileNavInactive
           )}
         >
           {isActive && (
             <motion.div
               layoutId="activeNavMobile"
-              className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 rounded-lg"
+              className={`absolute inset-0 bg-gradient-to-r ${activePill} rounded-lg`}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
           )}
@@ -354,16 +386,36 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Toaster position="top-right" />
 
-      {/* Unified Topbar — all breakpoints */}
-      <header className="sticky top-0 z-50 bg-neutral-950 border-b border-white/5 h-14 flex items-center gap-4 px-4 md:px-6">
+      {/* Participant mode accent stripe — only for admin switching modes */}
+      {isParticipantMode && (
+        <div className="h-1 bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400 sticky top-0 z-[51]" />
+      )}
+
+      {/* ── Unified Topbar ── */}
+      <header className={cn(
+        'sticky top-0 z-50 h-14 flex items-center gap-4 px-4 md:px-6 transition-all duration-300',
+        isParticipantTheme
+          ? 'bg-white border-b border-sky-100 shadow-sm'
+          : 'bg-neutral-950 border-b border-white/5'
+      )}>
 
         {/* Logo */}
         <Link
           href="/dashboard"
-          className="font-bold text-lg text-white tracking-tight shrink-0 mr-2"
+          className={cn(
+            'font-bold text-lg tracking-tight shrink-0 mr-2 transition-colors duration-300',
+            isParticipantTheme ? 'text-sky-700' : 'text-white'
+          )}
         >
           Oasis Digital
         </Link>
+
+        {/* Participant mode badge — only for admin switching modes */}
+        {isParticipantMode && (
+          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-sky-100 text-sky-700 border border-sky-200">
+            Participante
+          </span>
+        )}
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
@@ -373,25 +425,23 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* Spacer on mobile */}
         <div className="flex-1 md:hidden" />
 
-        {/* Admin/Participant mode toggle (Admin + SuperAdmin only) */}
+        {/* Mode toggle (Admin + SuperAdmin only) */}
         {isAdminUser && (
           <div className="hidden md:flex items-center gap-2">
-            {viewMode === 'participant' && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/30">
-                Participante
-              </span>
-            )}
             <button
-              onClick={() => setViewMode(viewMode === 'admin' ? 'participant' : 'admin')}
+              onClick={handleModeSwitch}
               title={viewMode === 'admin' ? 'Cambiar a vista participante' : 'Cambiar a vista admin'}
               className={cn(
-                'h-8 w-8 flex items-center justify-center rounded-lg border transition-colors focus:outline-none',
-                viewMode === 'participant'
-                  ? 'bg-fuchsia-600/20 border-fuchsia-500/40 text-fuchsia-300 hover:bg-fuchsia-600/30'
+                'flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-semibold transition-all duration-200',
+                isParticipantMode
+                  ? 'bg-sky-500 border-sky-600 text-white hover:bg-sky-600 shadow-sm shadow-sky-500/25'
                   : 'border-white/10 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
               )}
             >
-              <ArrowLeftRight size={15} />
+              <ArrowLeftRight size={13} />
+              <span className="hidden lg:inline">
+                {isParticipantMode ? 'Modo Admin' : 'Ver como participante'}
+              </span>
             </button>
           </div>
         )}
@@ -400,7 +450,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="hidden md:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="h-9 w-9 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-colors focus:outline-none">
+              <button className={cn(
+                'h-9 w-9 rounded-full overflow-hidden border transition-colors focus:outline-none',
+                isParticipantTheme
+                  ? 'border-sky-200 hover:border-sky-400'
+                  : 'border-white/10 hover:border-white/30'
+              )}>
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
@@ -412,26 +467,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="bottom"
-              align="end"
-              className="w-52 bg-neutral-900 border-white/10 text-white"
-            >
+            <DropdownMenuContent side="bottom" align="end" className={cn('w-52', dropdownContent)}>
               <DropdownMenuLabel className="pb-1">
                 <p className="font-medium text-sm truncate">{user.name}</p>
-                <p className="text-xs text-neutral-400 truncate font-normal">{user.email}</p>
+                <p className={cn('text-xs truncate font-normal', isParticipantTheme ? 'text-slate-400' : 'text-neutral-400')}>
+                  {user.email}
+                </p>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuSeparator className={isParticipantTheme ? 'bg-slate-100' : 'bg-white/10'} />
               <DropdownMenuItem
                 onClick={() => router.push('/profile')}
-                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                className={dropdownItem}
               >
                 <User size={15} className="mr-2" /> Mi Perfil
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuSeparator className={isParticipantTheme ? 'bg-slate-100' : 'bg-white/10'} />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="cursor-pointer text-red-400 focus:text-red-300 focus:bg-white/5"
+                className={cn(dropdownItem, 'text-red-500 focus:text-red-600')}
               >
                 <LogOut size={15} className="mr-2" /> Cerrar Sesión
               </DropdownMenuItem>
@@ -443,22 +496,65 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-white hover:bg-white/10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  isParticipantTheme
+                    ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/10'
+                )}
+              >
                 <Menu size={24} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[340px] bg-neutral-950 border-r border-white/5 p-0">
-              <SheetHeader className="p-4 border-b border-white/5">
-                <SheetTitle className="text-left font-bold text-xl text-white">Menú</SheetTitle>
+            <SheetContent
+              side="left"
+              className={cn(
+                'w-[300px] sm:w-[340px] p-0',
+                isParticipantTheme
+                  ? 'bg-white border-r border-sky-100'
+                  : 'bg-neutral-950 border-r border-white/5'
+              )}
+            >
+              {/* Stripe at top of sheet — only for admin switching modes */}
+              {isParticipantMode && (
+                <div className="h-1 bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
+              )}
+              <SheetHeader className={cn('p-4', isParticipantTheme ? 'border-b border-sky-100' : 'border-b border-white/5')}>
+                <SheetTitle className={cn('text-left font-bold text-xl', isParticipantTheme ? 'text-slate-900' : 'text-white')}>
+                  Menú
+                </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
                 {filteredNavItems.map((item) => renderNavItem(item, true))}
               </nav>
+              {/* Mobile: mode toggle (admin only) */}
+              {isAdminUser && (
+                <div className={cn('px-4 pb-2', isParticipantMode ? 'border-t border-sky-100 pt-3' : 'border-t border-white/5 pt-3')}>
+                  <button
+                    onClick={handleModeSwitch}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors',
+                      isParticipantMode
+                        ? 'bg-sky-500 text-white hover:bg-sky-600'
+                        : 'border border-white/10 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                    )}
+                  >
+                    <ArrowLeftRight size={15} />
+                    {isParticipantMode ? 'Volver a modo Admin' : 'Ver como participante'}
+                  </button>
+                </div>
+              )}
               {/* Mobile: User profile + actions */}
-              <div className="p-4 border-t border-white/5">
+              <div className={cn('p-4', isParticipantTheme ? 'border-t border-sky-100' : 'border-t border-white/5')}>
                 <div className="flex items-center gap-3 mb-3">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover border border-white/10" />
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className={cn('h-10 w-10 rounded-full object-cover border', isParticipantTheme ? 'border-sky-200' : 'border-white/10')}
+                    />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center border border-white/10">
                       <span className="text-sm font-semibold text-white">
@@ -467,14 +563,23 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                    <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+                    <p className={cn('text-sm font-medium truncate', isParticipantTheme ? 'text-slate-900' : 'text-white')}>
+                      {user.name}
+                    </p>
+                    <p className={cn('text-xs truncate', isParticipantTheme ? 'text-slate-500' : 'text-neutral-500')}>
+                      {user.email}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                    className={cn(
+                      'w-full justify-start gap-3',
+                      isParticipantTheme
+                        ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        : 'text-neutral-400 hover:text-white hover:bg-white/10'
+                    )}
                     onClick={() => { router.push('/profile'); document.getElementById('close-sheet')?.click(); }}
                   >
                     <User size={20} />
@@ -482,7 +587,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-neutral-400 hover:text-white hover:bg-white/10"
+                    className={cn(
+                      'w-full justify-start gap-3',
+                      isParticipantTheme
+                        ? 'text-red-500 hover:text-red-700 hover:bg-red-50'
+                        : 'text-neutral-400 hover:text-white hover:bg-white/10'
+                    )}
                     onClick={handleLogout}
                   >
                     <LogOut size={20} />
@@ -496,20 +606,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       </header>
 
-      {/* Main Content Area */}
+      {/* ── Main Content Area ── */}
       <main className="flex-1 min-w-0 bg-slate-50">
-        {/* Participant mode banner */}
-        {isAdminUser && viewMode === 'participant' && (
-          <div className="bg-fuchsia-600/10 border-b border-fuchsia-500/20 px-4 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-fuchsia-700 text-sm">
+        {/* Participant mode banner — only for admin switching modes */}
+        {isParticipantMode && (
+          <div className="bg-sky-500 px-4 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-white text-sm font-medium">
               <ArrowLeftRight size={14} />
-              <span>Estás en vista Participante — los cambios de navegación son solo visuales</span>
+              <span>Modo Participante activo — tu progreso y actividades son reales</span>
             </div>
             <button
-              onClick={() => setViewMode('admin')}
-              className="text-xs font-medium text-fuchsia-700 hover:text-fuchsia-900 underline underline-offset-2 transition-colors shrink-0"
+              onClick={handleModeSwitch}
+              className="text-xs font-semibold text-white bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors shrink-0"
             >
-              Volver a Admin
+              Salir del modo
             </button>
           </div>
         )}
