@@ -8,6 +8,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  viewMode: 'admin' | 'participant';
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName?: string) => Promise<void>;
   requestPasswordRecovery: (email: string) => Promise<void>;
@@ -16,6 +17,7 @@ interface AuthState {
   initializeSession: () => Promise<void>;
   addPoints: (points: number) => void;
   awardMedal: (medalId: string) => void;
+  setViewMode: (mode: 'admin' | 'participant') => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: false,
       error: null,
+      viewMode: 'admin' as const,
 
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
@@ -107,6 +110,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      setViewMode: (mode: 'admin' | 'participant') => {
+        set({ viewMode: mode });
+      },
+
       awardMedal: (medalId: string) => {
         const currentUser = get().user;
         if (currentUser) {
@@ -131,7 +138,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({ user: state.user, viewMode: state.viewMode }),
     }
   )
 );

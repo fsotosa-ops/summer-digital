@@ -62,6 +62,27 @@ export interface ApiOrgUpdate {
   settings?: Record<string, unknown> | null;
 }
 
+// --- CRM Org Profile DTO (crm.organization_profiles) ---
+
+export interface ApiCrmOrgProfile {
+  org_id: string;
+  website?: string | null;
+  phone?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  address?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApiCrmOrgProfileUpdate {
+  website?: string | null;
+  phone?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  address?: string | null;
+}
+
 export interface ApiMemberInvite {
   email: string;
   role?: ApiMemberRole;

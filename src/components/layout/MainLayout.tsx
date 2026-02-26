@@ -19,6 +19,7 @@ import {
   Settings,
   ChevronDown,
   Trophy,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -78,10 +79,12 @@ const NAV_ITEMS: NavItem[] = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, initializeSession } = useAuthStore();
+  const { user, logout, initializeSession, viewMode, setViewMode } = useAuthStore();
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
+
+  const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
 
   // Esperar a que Zustand persist termine de hidratar desde localStorage
   useEffect(() => {
@@ -156,11 +159,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
+  // Effective role for nav filtering: admins in participant mode see participant nav
+  const effectiveRole: UserRole = isAdminUser && viewMode === 'participant'
+    ? 'Participant'
+    : (user?.role ?? 'Subscriber');
+
   const filterItems = (items: NavItem[]) => {
     return items.filter((item) => {
       if (!user) return false;
       if (!item.allowedRoles) return true;
-      return item.allowedRoles.includes(user.role);
+      return item.allowedRoles.includes(effectiveRole);
     });
   };
 
@@ -365,6 +373,29 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* Spacer on mobile */}
         <div className="flex-1 md:hidden" />
 
+        {/* Admin/Participant mode toggle (Admin + SuperAdmin only) */}
+        {isAdminUser && (
+          <div className="hidden md:flex items-center gap-2">
+            {viewMode === 'participant' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-fuchsia-600/20 text-fuchsia-300 border border-fuchsia-500/30">
+                Participante
+              </span>
+            )}
+            <button
+              onClick={() => setViewMode(viewMode === 'admin' ? 'participant' : 'admin')}
+              title={viewMode === 'admin' ? 'Cambiar a vista participante' : 'Cambiar a vista admin'}
+              className={cn(
+                'h-8 w-8 flex items-center justify-center rounded-lg border transition-colors focus:outline-none',
+                viewMode === 'participant'
+                  ? 'bg-fuchsia-600/20 border-fuchsia-500/40 text-fuchsia-300 hover:bg-fuchsia-600/30'
+                  : 'border-white/10 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+              )}
+            >
+              <ArrowLeftRight size={15} />
+            </button>
+          </div>
+        )}
+
         {/* Avatar dropdown (desktop) */}
         <div className="hidden md:block">
           <DropdownMenu>
@@ -467,6 +498,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 bg-slate-50">
+        {/* Participant mode banner */}
+        {isAdminUser && viewMode === 'participant' && (
+          <div className="bg-fuchsia-600/10 border-b border-fuchsia-500/20 px-4 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-fuchsia-700 text-sm">
+              <ArrowLeftRight size={14} />
+              <span>Estás en vista Participante — los cambios de navegación son solo visuales</span>
+            </div>
+            <button
+              onClick={() => setViewMode('admin')}
+              className="text-xs font-medium text-fuchsia-700 hover:text-fuchsia-900 underline underline-offset-2 transition-colors shrink-0"
+            >
+              Volver a Admin
+            </button>
+          </div>
+        )}
         <div className="h-full overflow-auto p-4 md:p-8 max-w-7xl mx-auto">{children}</div>
       </main>
     </div>

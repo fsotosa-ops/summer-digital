@@ -14,6 +14,8 @@ import {
   ApiEnrollmentResponse,
   ApiEnrollmentDetailResponse,
   ApiUserPointsSummary,
+  ApiCrmOrgProfile,
+  ApiCrmOrgProfileUpdate,
 } from '@/types/api.types';
 
 class CrmService {
@@ -164,6 +166,16 @@ class CrmService {
     return apiClient.get<ApiUserPointsSummary>(
       `/gamification/admin/progress/user/${userId}/summary`,
     );
+  }
+
+  // --- CRM Org Profiles ---
+
+  async getOrgProfile(orgId: string): Promise<ApiCrmOrgProfile> {
+    return apiClient.get<ApiCrmOrgProfile>(`/crm/org-profiles/${orgId}`);
+  }
+
+  async updateOrgProfile(orgId: string, data: ApiCrmOrgProfileUpdate): Promise<ApiCrmOrgProfile> {
+    return apiClient.patch<ApiCrmOrgProfile>(`/crm/org-profiles/${orgId}`, data);
   }
 }
 
