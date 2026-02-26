@@ -51,6 +51,7 @@ import {
   Rocket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
   DndContext,
@@ -454,24 +455,15 @@ export default function JourneyEditorPage() {
 
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
-  const [assignedOrgIds, setAssignedOrgIds] = useState<Set<string>>(new Set());
-  const [initialOrgIds, setInitialOrgIds] = useState<Set<string>>(new Set());
+  const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
+  const [initialOrgIds, setInitialOrgIds] = useState<string[]>([]);
   const [loadingOrgAssign, setLoadingOrgAssign] = useState(false);
   const [savingOrgs, setSavingOrgs] = useState(false);
-  const [orgsExpanded, setOrgsExpanded] = useState(false);
-
-  const toggleOrgAssignment = (id: string) => {
-    setAssignedOrgIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
-      return next;
-    });
-  };
 
   const orgsDirty = (() => {
-    if (assignedOrgIds.size !== initialOrgIds.size) return true;
-    for (const id of assignedOrgIds) { if (!initialOrgIds.has(id)) return true; }
-    return false;
+    if (assignedOrgIds.length !== initialOrgIds.length) return true;
+    const initialSet = new Set(initialOrgIds);
+    return assignedOrgIds.some(id => !initialSet.has(id));
   })();
 
   const fetchData = async (effectiveOrgId?: string) => {
@@ -545,9 +537,9 @@ export default function JourneyEditorPage() {
           return 0;
         });
         setAllOrgs(sorted);
-        const currentIds = new Set(resp.organizations.map((o) => o.organization_id));
+        const currentIds = resp.organizations.map((o) => o.organization_id);
         setAssignedOrgIds(currentIds);
-        setInitialOrgIds(new Set(currentIds));
+        setInitialOrgIds([...currentIds]);
       } catch { /* silencioso */ }
       finally { setLoadingOrgAssign(false); }
     };
@@ -557,11 +549,13 @@ export default function JourneyEditorPage() {
   const handleSaveOrgs = async () => {
     setSavingOrgs(true);
     try {
-      const toAssign = [...assignedOrgIds].filter((id) => !initialOrgIds.has(id));
-      const toUnassign = [...initialOrgIds].filter((id) => !assignedOrgIds.has(id));
+      const initialSet = new Set(initialOrgIds);
+      const assignedSet = new Set(assignedOrgIds);
+      const toAssign = assignedOrgIds.filter((id) => !initialSet.has(id));
+      const toUnassign = initialOrgIds.filter((id) => !assignedSet.has(id));
       if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
       if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
-      setInitialOrgIds(new Set(assignedOrgIds));
+      setInitialOrgIds([...assignedOrgIds]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar organizaciones');
     } finally {
@@ -1257,92 +1251,61 @@ export default function JourneyEditorPage() {
       {/* Organizaciones habilitadas — solo SuperAdmin */}
       {isSuperAdmin && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
-                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
-            onClick={() => setOrgsExpanded((v) => !v)}
-          >
-            <div className="flex items-center gap-2">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-5 w-5 text-fuchsia-500" />
               <span className="text-sm font-semibold text-slate-700">Organizaciones habilitadas</span>
-              {assignedOrgIds.size > 0 && (
+              {assignedOrgIds.length > 0 && (
                 <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
-                  {assignedOrgIds.size}
+                  {assignedOrgIds.length}
                 </span>
               )}
             </div>
-            {orgsExpanded ? (
-              <ChevronUp className="h-4 w-4 text-slate-400" />
+            <p className="text-xs text-slate-400">
+              Selecciona las organizaciones que tienen acceso a este journey.
+            </p>
+          </div>
+
+          <div className="px-6 py-4 space-y-3">
+            {loadingOrgAssign ? (
+              <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+              </div>
+            ) : allOrgs.length === 0 ? (
+              <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
             ) : (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            )}
-          </button>
-          <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
-            Selecciona las organizaciones que tienen acceso a este journey.
-          </p>
+              <>
+                <MultiSelect
+                  options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
+                  selected={assignedOrgIds}
+                  onChange={setAssignedOrgIds}
+                  placeholder="Buscar y seleccionar organizaciones..."
+                />
 
-          {orgsExpanded && (
-            <div className="px-6 pb-6 space-y-3">
-              {loadingOrgAssign ? (
-                <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">
+                    {assignedOrgIds.length === 0
+                      ? 'Sin selección = abierto para todas las organizaciones.'
+                      : `${assignedOrgIds.length} organización(es) seleccionada(s).`}
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveOrgs}
+                    disabled={savingOrgs || !orgsDirty}
+                  >
+                    {savingOrgs ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar organizaciones'
+                    )}
+                  </Button>
                 </div>
-              ) : allOrgs.length === 0 ? (
-                <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
-              ) : (
-                <>
-                  <div className="max-h-56 overflow-y-auto space-y-1 border border-slate-200 rounded-lg p-2">
-                    {allOrgs.map((org) => {
-                      const checked = assignedOrgIds.has(org.id);
-                      return (
-                        <label
-                          key={org.id}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
-                            checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleOrgAssignment(org.id)}
-                            className="h-4 w-4 rounded accent-fuchsia-600"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>
-                            {org.slug && <p className="text-xs text-slate-400">{org.slug}</p>}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-400">
-                      {assignedOrgIds.size === 0
-                        ? 'Sin selección = abierto para todas las organizaciones.'
-                        : `${assignedOrgIds.size} organización(es) seleccionada(s).`}
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveOrgs}
-                      disabled={savingOrgs || !orgsDirty}
-                    >
-                      {savingOrgs ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                          Guardando...
-                        </>
-                      ) : (
-                        'Guardar organizaciones'
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       )}
 

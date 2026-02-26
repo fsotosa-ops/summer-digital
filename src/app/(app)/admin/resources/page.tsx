@@ -185,9 +185,16 @@ export default function AdminResourcesPage() {
           const results = await Promise.allSettled(
             organizations.map(org => resourceService.listResources(org.id, isPublished))
           );
-          data = results
+          const merged = results
             .filter((r): r is PromiseFulfilledResult<ApiResourceAdminRead[]> => r.status === 'fulfilled')
             .flatMap(r => r.value);
+          // Deduplicate: a resource shared across orgs appears once per org
+          const seen = new Set<string>();
+          data = merged.filter(r => {
+            if (seen.has(r.id)) return false;
+            seen.add(r.id);
+            return true;
+          });
         }
       } else if (orgId) {
         data = await resourceService.listResources(orgId, isPublished);
