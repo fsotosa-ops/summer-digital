@@ -308,13 +308,6 @@ function StepUrlField({
 }
 
 
-const ONBOARDING_TEMPLATE_STEPS = [
-  { title: 'Tu trayectoria',    icon: '🎓', points: 25, description: 'Camino profesional y académico.' },
-  { title: '¿De dónde eres?',   icon: '🌍', points: 25, description: 'País, estado y ciudad.' },
-  { title: 'Datos personales',  icon: '👤', points: 25, description: 'Fecha de nacimiento y género.' },
-  { title: 'Contacto y empresa',icon: '📬', points: 25, description: 'Teléfono y empresa actual.' },
-];
-
 export default function JourneyEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -367,7 +360,6 @@ export default function JourneyEditorPage() {
   const [isOnboardingJourney, setIsOnboardingJourney] = useState(false);
   const [initialIsOnboardingJourney, setInitialIsOnboardingJourney] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [applyingSteps, setApplyingSteps] = useState(false);
 
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
@@ -738,20 +730,6 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleApplyOnboardingSteps = async () => {
-    if (!orgId || !journey || applyingSteps) return;
-    setApplyingSteps(true);
-    try {
-      const result = await adminService.applyOnboardingTemplateSteps(orgId, journeyId);
-      await fetchData();
-      toast.success(`${result.steps_added} steps del template agregados al journey`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al aplicar template');
-    } finally {
-      setApplyingSteps(false);
-    }
-  };
-
   const handleSaveConfig = async () => {
     if (!orgId || !journey || savingConfig) return;
     setSavingConfig(true);
@@ -759,16 +737,22 @@ export default function JourneyEditorPage() {
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
-      if (Object.keys(updates).length > 0) {
-        await adminService.updateJourney(orgId, journeyId, updates);
-        setJourney(j => j ? { ...j, ...updates } : j);
+      if (isOnboardingJourney !== initialIsOnboardingJourney) updates.is_onboarding = isOnboardingJourney;
+
+      if (Object.keys(updates).length === 0) {
+        toast.success('Sin cambios que guardar');
+        return;
       }
-      if (isOnboardingJourney !== initialIsOnboardingJourney) {
-        await adminService.updateGamificationConfig(orgId, {
-          profile_completion_journey_id: isOnboardingJourney ? journey.id : null,
-        });
-        setInitialIsOnboardingJourney(isOnboardingJourney);
+
+      const updated = await adminService.updateJourney(orgId, journeyId, updates);
+      setJourney(j => j ? { ...j, ...updates, ...updated } : j);
+
+      // If toggle ON, reload steps (backend added template steps)
+      if (updates.is_onboarding === true) {
+        setSteps(await adminService.listSteps(orgId, journeyId));
       }
+
+      setInitialIsOnboardingJourney(isOnboardingJourney);
       toast.success('Configuración guardada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
@@ -1185,36 +1169,11 @@ export default function JourneyEditorPage() {
                   />
                 </div>
 
-                {/* Template steps — visible when toggle is on */}
+                {/* Info — visible when toggle is on */}
                 {isOnboardingJourney && (
-                  <div className="border-t border-sky-200 pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-sky-800">Steps del template disponibles</p>
-                    <div className="space-y-1.5">
-                      {ONBOARDING_TEMPLATE_STEPS.map((s) => (
-                        <div key={s.title} className="flex items-center gap-2.5 text-xs">
-                          <span className="text-base leading-none">{s.icon}</span>
-                          <span className="font-medium text-sky-900 flex-1">{s.title}</span>
-                          <span className="text-sky-500">{s.description}</span>
-                          <span className="bg-sky-200 text-sky-800 px-1.5 py-0.5 rounded font-medium shrink-0">
-                            {s.points} pts
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleApplyOnboardingSteps}
-                      disabled={applyingSteps || !orgId}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300
-                                 text-sky-700 text-xs font-semibold bg-white hover:bg-sky-50 transition-colors
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {applyingSteps
-                        ? <><Loader2 size={12} className="animate-spin" /> Aplicando...</>
-                        : <><Plus size={12} /> Agregar steps del template</>}
-                    </button>
+                  <div className="border-t border-sky-200 pt-3">
                     <p className="text-xs text-sky-500">
-                      Se agregan al final del journey. Podés reordenarlos o eliminarlos libremente.
+                      Al guardar, se agregarán automáticamente los steps de perfil CRM si aún no existen.
                     </p>
                   </div>
                 )}
