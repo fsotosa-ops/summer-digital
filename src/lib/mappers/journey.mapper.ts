@@ -9,9 +9,10 @@ const STEP_TYPE_TO_NODE_TYPE: Record<ApiStepType, NodeType> = {
   milestone: 'challenge',
   social_interaction: 'feedback',
   resource_consumption: 'article',
+  profile_field: 'profile',
 };
 
-const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback', 'pdf', 'presentation', 'kahoot'];
+const VALID_NODE_TYPES: NodeType[] = ['video', 'quiz', 'workshop', 'article', 'challenge', 'typeform', 'feedback', 'pdf', 'presentation', 'kahoot', 'profile'];
 
 const RESOURCE_TYPE_TO_NODE_TYPE: Record<string, NodeType> = {
   youtube: 'video',
@@ -97,6 +98,12 @@ export function mapApiToJourney(
 
     const basePoints = (stepFromJourney?.gamification_rules?.base_points as number) || 0;
 
+    // profile_field specific
+    const fieldNames = nodeType === 'profile'
+      ? ((config.field_names as string[]) || [])
+      : undefined;
+    const stepIcon = (config.icon as string) || undefined;
+
     return {
       id: stepProgress.step_id,
       title: stepProgress.title,
@@ -111,6 +118,8 @@ export function mapApiToJourney(
       embedUrl,
       videoWatched: isVideoType && isCompleted ? true : undefined,
       points: basePoints || undefined,
+      fieldNames,
+      stepIcon,
     };
   });
 
@@ -124,6 +133,7 @@ export function mapApiToJourney(
     organization_id: enrollment.organization_id || undefined,
     progress: enrollment.progress_percentage,
     nodes,
+    metadata: journey.metadata,
   };
 }
 
@@ -146,6 +156,8 @@ export function mapAdminDataToPreviewJourney(
     const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
+    const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
+    const stepIcon = (config.icon as string) || undefined;
 
     return {
       id: step.id,
@@ -159,6 +171,8 @@ export function mapAdminDataToPreviewJourney(
       externalUrl,
       videoUrl,
       embedUrl,
+      fieldNames,
+      stepIcon,
     };
   });
 
@@ -171,6 +185,7 @@ export function mapAdminDataToPreviewJourney(
     thumbnail_url: journey.thumbnail_url || undefined,
     progress: 0,
     nodes,
+    metadata: journey.metadata,
   };
 }
 
@@ -191,6 +206,8 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
+    const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
+    const stepIcon = (config.icon as string) || undefined;
 
     return {
       id: step.id,
@@ -204,6 +221,8 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
       externalUrl,
       videoUrl,
       embedUrl,
+      fieldNames,
+      stepIcon,
     };
   });
 
@@ -211,10 +230,11 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     id: journey.id,
     title: journey.title,
     description: journey.description || '',
-    status: journey.is_active ? 'active' : 'active', // Preview always shows as active
+    status: 'active', // Preview always shows as active
     category: journey.category || undefined,
     thumbnail_url: (journey as unknown as { thumbnail_url?: string }).thumbnail_url || undefined,
     progress: 0, // No progress in preview mode
     nodes,
+    metadata: journey.metadata,
   };
 }

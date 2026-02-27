@@ -48,6 +48,20 @@ class AdminService {
     return apiClient.post<ApiJourneyAdminRead>(`/journeys/${orgId}/admin/journeys/${journeyId}/archive`, {});
   }
 
+  async createOnboardingTemplate(orgId: string): Promise<{ journey: ApiJourneyAdminRead; already_existed: boolean }> {
+    return apiClient.post<{ journey: ApiJourneyAdminRead; already_existed: boolean }>(
+      `/journeys/${orgId}/admin/journeys/templates/onboarding`,
+      {},
+    );
+  }
+
+  async applyOnboardingTemplateSteps(orgId: string, journeyId: string): Promise<{ steps_added: number }> {
+    return apiClient.post<{ steps_added: number }>(
+      `/journeys/${orgId}/admin/journeys/${journeyId}/templates/onboarding/steps`,
+      {},
+    );
+  }
+
   // --- Member Management ---
 
   async listMembers(orgId: string): Promise<ApiMemberResponse[]> {
@@ -109,6 +123,10 @@ class AdminService {
   }
 
   // --- Gamification Config ---
+
+  async getGamificationConfig(orgId: string): Promise<Record<string, unknown> | null> {
+    return apiClient.get<Record<string, unknown> | null>(`/gamification/${orgId}/admin/config`);
+  }
 
   async updateGamificationConfig(orgId: string, data: Record<string, unknown>): Promise<void> {
     await apiClient.patch(`/gamification/${orgId}/admin/config`, data);

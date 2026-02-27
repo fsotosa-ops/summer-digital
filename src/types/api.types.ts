@@ -138,7 +138,14 @@ export type ApiStepType =
   | 'content_view'
   | 'milestone'
   | 'social_interaction'
-  | 'resource_consumption';
+  | 'resource_consumption'
+  | 'profile_field';
+
+export interface ProfileFieldStepConfig {
+  field_names: string[];
+  description?: string | null;
+  icon?: string | null;
+}
 
 export interface ApiJourneyStep {
   id: string;
@@ -157,6 +164,7 @@ export interface ApiJourney {
   organization_id: string;
   is_active: boolean;
   category?: string | null;
+  metadata?: Record<string, unknown>;
   steps?: ApiJourneyStep[];
 }
 
@@ -199,6 +207,7 @@ export interface ApiJourneyAdminRead {
   thumbnail_url?: string | null;
   category?: string | null;
   is_active: boolean;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   total_steps: number;

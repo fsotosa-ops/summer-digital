@@ -5,7 +5,20 @@ import { useParams, useRouter } from 'next/navigation';
 import { useJourneyStore } from '@/store/useJourneyStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { JourneyPlayer } from '@/features/journey/components/JourneyPlayer';
+import { JourneyWizard } from '@/features/journey/components/JourneyWizard';
 import { Loader2 } from 'lucide-react';
+
+/**
+ * Determines if a journey should render as the linear onboarding wizard
+ * (instead of the interactive map player).
+ * Criteria: the journey has metadata.is_onboarding === true,
+ * OR all its nodes are of type 'profile'.
+ */
+function isOnboardingJourney(journey: { metadata?: Record<string, unknown>; nodes: { type: string }[] }): boolean {
+  if (journey.metadata?.is_onboarding === true) return true;
+  if (journey.nodes.length > 0 && journey.nodes.every(n => n.type === 'profile')) return true;
+  return false;
+}
 
 export default function JourneyPlayerPage() {
   const params = useParams();
@@ -43,6 +56,16 @@ export default function JourneyPlayerPage() {
           ← Volver a Mis Journeys
         </button>
       </div>
+    );
+  }
+
+  // Onboarding journeys (profile_field steps) use the linear wizard instead of the map player
+  if (isOnboardingJourney(journey)) {
+    return (
+      <JourneyWizard
+        journey={journey}
+        onBack={() => router.push('/journey')}
+      />
     );
   }
 

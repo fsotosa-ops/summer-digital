@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 /* ─── Category badge helper ──────────────────────────── */
 function categoryBadgeClasses(cat: string): string {
@@ -79,6 +81,7 @@ export default function AdminJourneysPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
+  const [useOnboardingTemplate, setUseOnboardingTemplate] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<ApiJourneyCreate>({
@@ -204,6 +207,19 @@ export default function AdminJourneysPage() {
 
     setIsCreating(true);
     try {
+      if (useOnboardingTemplate) {
+        const result = await adminService.createOnboardingTemplate(ownerOrgId);
+        setCreateDialogOpen(false);
+        setFormData({ title: '', slug: '', description: '', category: '', is_active: false });
+        setAccessOrgIds([]);
+        setUseOnboardingTemplate(false);
+        if (result.already_existed) {
+          toast.info('Ya existe un Journey de Onboarding para esta organización. Redirigiendo...');
+        }
+        router.push(`/admin/journeys/${result.journey.id}`);
+        return;
+      }
+
       const newJourney = await adminService.createJourney(ownerOrgId, formData);
 
       if (extraOrgIds.length > 0) {
@@ -291,7 +307,11 @@ export default function AdminJourneysPage() {
             </div>
           </div>
           {canEdit && (
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <div className="flex items-center gap-2 flex-wrap">
+            <Dialog open={createDialogOpen} onOpenChange={(open) => {
+              setCreateDialogOpen(open);
+              if (!open) setUseOnboardingTemplate(false);
+            }}>
               <DialogTrigger asChild>
                 <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
                                    bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
@@ -315,7 +335,7 @@ export default function AdminJourneysPage() {
                       value={formData.title}
                       onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="Ej: Taller de Bienestar"
-                      required
+                      required={!useOnboardingTemplate}
                     />
                   </div>
 
@@ -345,13 +365,45 @@ export default function AdminJourneysPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="category">Categoría</Label>
-                    <Input
-                      id="category"
+                    <Select
                       value={formData.category || ''}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      placeholder="Ej: Talleres, Onboarding, Habilidades"
-                    />
+                      onValueChange={(val) => {
+                        setFormData({ ...formData, category: val });
+                        if (val !== 'Onboarding') setUseOnboardingTemplate(false);
+                      }}
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Seleccionar categoría..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Onboarding">Onboarding</SelectItem>
+                        <SelectItem value="Talleres">Talleres</SelectItem>
+                        <SelectItem value="Habilidades">Habilidades</SelectItem>
+                        <SelectItem value="Networking">Networking</SelectItem>
+                        <SelectItem value="Otro">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {formData.category === 'Onboarding' && (
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-sky-800">Usar template preconfigurado</p>
+                          <p className="text-xs text-sky-600">
+                            Crea 4 steps de perfil CRM con XP (trayectoria, ubicación, datos personales, contacto).
+                            Se completan automáticamente al guardar el perfil.
+                          </p>
+                        </div>
+                        <Switch checked={useOnboardingTemplate} onCheckedChange={setUseOnboardingTemplate} />
+                      </div>
+                      {useOnboardingTemplate && (
+                        <p className="text-xs text-sky-500">
+                          El título y slug serán reemplazados por los del template.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Organizaciones con acceso — mismo patrón que recursos */}
                   {isSuperAdmin && organizations.length > 0 && (
@@ -378,7 +430,7 @@ export default function AdminJourneysPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isCreating || !formData.title || (isSuperAdmin && accessOrgIds.length === 0)}
+                      disabled={isCreating || (!useOnboardingTemplate && !formData.title) || (isSuperAdmin && accessOrgIds.length === 0)}
                       className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -390,6 +442,7 @@ export default function AdminJourneysPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
       </div>

@@ -48,10 +48,12 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
-  Rocket,
+  ImageIcon,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Switch } from '@/components/ui/switch';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
   DndContext,
@@ -305,110 +307,13 @@ function StepUrlField({
   );
 }
 
-/* ─── Thumbnail URL card ─────────────────────────────── */
-function ThumbnailCard({
-  journey,
-  orgId,
-  onSaved,
-}: {
-  journey: ApiJourneyAdminRead | null;
-  orgId: string | undefined;
-  onSaved: (url: string | null) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [url, setUrl] = useState(journey?.thumbnail_url || '');
-  const [saving, setSaving] = useState(false);
 
-  // Keep in sync if journey changes from outside
-  useEffect(() => { setUrl(journey?.thumbnail_url || ''); }, [journey?.thumbnail_url]);
-
-  const handleSave = async () => {
-    if (!orgId || !journey) return;
-    setSaving(true);
-    try {
-      await adminService.updateJourney(orgId, journey.id, { thumbnail_url: url || null } as ApiJourneyUpdate);
-      onSaved(url || null);
-    } catch {
-      // silencioso
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
-                   hover:bg-slate-50 transition-colors cursor-pointer select-none"
-        onClick={() => setExpanded(v => !v)}
-      >
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded bg-gradient-to-br from-fuchsia-400 to-purple-500
-                          flex items-center justify-center shrink-0">
-            <span className="text-white text-[9px] font-bold">IMG</span>
-          </div>
-          <span className="text-sm font-semibold text-slate-700">Imagen de portada</span>
-          {journey?.thumbnail_url && (
-            <span className="text-xs bg-teal-50 text-teal-700 border border-teal-100 px-1.5 py-0.5 rounded-full">
-              Configurada
-            </span>
-          )}
-        </div>
-        {expanded
-          ? <ChevronUp className="h-4 w-4 text-slate-400" />
-          : <ChevronDown className="h-4 w-4 text-slate-400" />
-        }
-      </button>
-      <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
-        URL de imagen que reemplaza el gradiente de color en las tarjetas del journey.
-      </p>
-
-      {expanded && (
-        <div className="px-6 pb-6 space-y-4">
-          {/* Preview */}
-          {url && (
-            <div className="rounded-xl overflow-hidden h-32 border border-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="Preview" className="w-full h-full object-cover" />
-            </div>
-          )}
-          <div className="flex gap-2">
-            <Input
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://..."
-              className="flex-1 text-sm"
-            />
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold
-                         bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
-                         hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              Guardar
-            </button>
-            {url && (
-              <button
-                onClick={() => { setUrl(''); }}
-                className="px-3 py-2 rounded-lg text-sm text-slate-400 border border-slate-200
-                           hover:bg-slate-50 transition-colors"
-                title="Quitar imagen"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-slate-400">
-            Usa una imagen de 16:9 (ej: 1280×720) para mejor resultado.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+const ONBOARDING_TEMPLATE_STEPS = [
+  { title: 'Tu trayectoria',    icon: '🎓', points: 25, description: 'Camino profesional y académico.' },
+  { title: '¿De dónde eres?',   icon: '🌍', points: 25, description: 'País, estado y ciudad.' },
+  { title: 'Datos personales',  icon: '👤', points: 25, description: 'Fecha de nacimiento y género.' },
+  { title: 'Contacto y empresa',icon: '📬', points: 25, description: 'Teléfono y empresa actual.' },
+];
 
 export default function JourneyEditorPage() {
   const params = useParams();
@@ -450,8 +355,19 @@ export default function JourneyEditorPage() {
   const [rewardsExpanded, setRewardsExpanded] = useState(false);
   const [savingReward, setSavingReward] = useState(false);
 
-  // Onboarding journey config
-  const [isSettingOnboarding, setIsSettingOnboarding] = useState(false);
+  // Thumbnail inline editing
+  const [isEditingThumbnail, setIsEditingThumbnail] = useState(false);
+  const [editThumbnailUrl, setEditThumbnailUrl] = useState('');
+  const [savingThumbnail, setSavingThumbnail] = useState(false);
+
+  // Journey config section
+  const [configExpanded, setConfigExpanded] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [isOnboardingJourney, setIsOnboardingJourney] = useState(false);
+  const [initialIsOnboardingJourney, setInitialIsOnboardingJourney] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [applyingSteps, setApplyingSteps] = useState(false);
 
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
@@ -562,6 +478,23 @@ export default function JourneyEditorPage() {
       setSavingOrgs(false);
     }
   };
+
+  // Load gamification config to detect onboarding status + initialize config form
+  useEffect(() => {
+    if (!journey || !orgId) return;
+    setEditDescription(journey.description || '');
+    setEditCategory(journey.category || '');
+    const load = async () => {
+      try {
+        const config = await adminService.getGamificationConfig(orgId);
+        const isOnboarding = config?.profile_completion_journey_id === journey.id;
+        setIsOnboardingJourney(isOnboarding as boolean);
+        setInitialIsOnboardingJourney(isOnboarding as boolean);
+      } catch { /* silencioso */ }
+    };
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journey?.id, orgId]);
 
   // Load rewards catalog whenever the journey (and orgId) becomes available
   useEffect(() => {
@@ -791,18 +724,56 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleSetAsOnboarding = async () => {
-    if (!orgId || !journey || isSettingOnboarding) return;
-    setIsSettingOnboarding(true);
+  const handleSaveThumbnail = async () => {
+    if (!orgId || !journey) return;
+    setSavingThumbnail(true);
     try {
-      await adminService.updateGamificationConfig(orgId, {
-        profile_completion_journey_id: journey.id,
-      });
-      toast.success(`"${journey.title}" marcado como Journey de Onboarding`);
+      await adminService.updateJourney(orgId, journeyId, { thumbnail_url: editThumbnailUrl || null } as ApiJourneyUpdate);
+      setJourney(j => j ? { ...j, thumbnail_url: editThumbnailUrl || null } : j);
+      setIsEditingThumbnail(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al actualizar configuración');
+      toast.error(err instanceof Error ? err.message : 'Error al guardar imagen');
     } finally {
-      setIsSettingOnboarding(false);
+      setSavingThumbnail(false);
+    }
+  };
+
+  const handleApplyOnboardingSteps = async () => {
+    if (!orgId || !journey || applyingSteps) return;
+    setApplyingSteps(true);
+    try {
+      const result = await adminService.applyOnboardingTemplateSteps(orgId, journeyId);
+      await fetchData();
+      toast.success(`${result.steps_added} steps del template agregados al journey`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al aplicar template');
+    } finally {
+      setApplyingSteps(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!orgId || !journey || savingConfig) return;
+    setSavingConfig(true);
+    try {
+      const updates: ApiJourneyUpdate = {};
+      if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
+      if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
+      if (Object.keys(updates).length > 0) {
+        await adminService.updateJourney(orgId, journeyId, updates);
+        setJourney(j => j ? { ...j, ...updates } : j);
+      }
+      if (isOnboardingJourney !== initialIsOnboardingJourney) {
+        await adminService.updateGamificationConfig(orgId, {
+          profile_completion_journey_id: isOnboardingJourney ? journey.id : null,
+        });
+        setInitialIsOnboardingJourney(isOnboardingJourney);
+      }
+      toast.success('Configuración guardada');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -826,47 +797,50 @@ export default function JourneyEditorPage() {
     <div className="space-y-6">
       {/* ── Header card ────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        {/* Gradient hero / thumbnail */}
-        {journey?.thumbnail_url ? (
-          <div className="relative h-36 sm:h-44 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={journey.thumbnail_url} alt={journey.title}
-              className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            {/* Back button */}
-            <button onClick={() => router.push('/admin/journeys')}
-              className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-black/30 backdrop-blur-sm
-                         text-white flex items-center justify-center hover:bg-black/50 transition-colors">
-              <ChevronLeft size={16} />
-            </button>
-            {/* Status badge */}
-            <div className="absolute top-3 right-3">
-              <span className={cn(
-                'text-xs font-bold px-2.5 py-1 rounded-full',
-                journey.is_active
-                  ? 'bg-fuchsia-500 text-white'
-                  : 'bg-white/20 backdrop-blur-sm text-white border border-white/30'
-              )}>
-                {journey.is_active ? 'Activo' : 'Borrador'}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
-        )}
+        <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
 
         <div className="p-4 sm:p-6">
-          {/* Back + title row */}
+          {/* Back + thumbnail + title row */}
           <div className="flex items-start gap-3">
-            {!journey?.thumbnail_url && (
-              <button onClick={() => router.push('/admin/journeys')}
-                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
-                           flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
-                <ChevronLeft size={16} />
-              </button>
+            {/* Back button */}
+            <button onClick={() => router.push('/admin/journeys')}
+              className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
+                         flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
+              <ChevronLeft size={16} />
+            </button>
+
+            {/* Thumbnail mini — clickable to edit */}
+            {canEdit && (
+              <div className="relative shrink-0 group">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditThumbnailUrl(journey?.thumbnail_url || '');
+                    setIsEditingThumbnail(v => !v);
+                  }}
+                  title="Editar imagen de portada"
+                  className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
+                             hover:border-fuchsia-300 transition-colors relative block"
+                >
+                  {journey?.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
+                                    flex items-center justify-center">
+                      <ImageIcon size={18} className="text-white/70" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors
+                                  flex items-center justify-center">
+                    <Edit2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </button>
+              </div>
             )}
+
+            {/* Title + meta */}
             <div className="flex-1 min-w-0">
-              {/* Title (inline editable) */}
               {isEditingTitle ? (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Input
@@ -900,14 +874,17 @@ export default function JourneyEditorPage() {
                   >
                     {journey?.title}
                   </h1>
-                  {!journey?.thumbnail_url && (
-                    <Badge variant="outline" className={cn(
-                      'text-xs font-semibold shrink-0',
-                      journey?.is_active
-                        ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
-                        : 'bg-slate-100 text-slate-500 border-slate-200'
-                    )}>
-                      {journey?.is_active ? 'Activo' : 'Borrador'}
+                  <Badge variant="outline" className={cn(
+                    'text-xs font-semibold shrink-0',
+                    journey?.is_active
+                      ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  )}>
+                    {journey?.is_active ? 'Activo' : 'Borrador'}
+                  </Badge>
+                  {isOnboardingJourney && (
+                    <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
+                      Onboarding
                     </Badge>
                   )}
                 </div>
@@ -917,6 +894,35 @@ export default function JourneyEditorPage() {
               </p>
             </div>
           </div>
+
+          {/* Thumbnail URL inline edit */}
+          {isEditingThumbnail && canEdit && (
+            <div className="mt-3 ml-[132px] flex items-center gap-2 flex-wrap">
+              {editThumbnailUrl && (
+                <div className="h-12 w-20 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <Input
+                value={editThumbnailUrl}
+                onChange={e => setEditThumbnailUrl(e.target.value)}
+                placeholder="https://... (URL de imagen 16:9)"
+                className="flex-1 text-sm min-w-48"
+                autoFocus
+              />
+              <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
+                className="h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
+                           font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
+                {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                Guardar
+              </button>
+              <button onClick={() => setIsEditingThumbnail(false)}
+                className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Actions row */}
           <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
@@ -932,19 +938,6 @@ export default function JourneyEditorPage() {
 
             {canEdit && (
               <>
-                <button
-                  onClick={handleSetAsOnboarding}
-                  disabled={isSettingOnboarding || !orgId}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
-                             text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
-                             disabled:opacity-40"
-                >
-                  {isSettingOnboarding
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <Rocket size={14} />}
-                  Onboarding
-                </button>
-
                 <button
                   onClick={handleToggleActive}
                   disabled={isSaving}
@@ -1121,6 +1114,129 @@ export default function JourneyEditorPage() {
           )}
         </div>
       </div>
+
+      {/* Configuración del Journey */}
+      {canEdit && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
+                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
+            onClick={() => setConfigExpanded(v => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-slate-400" />
+              <span className="text-sm font-semibold text-slate-700">Configuración</span>
+              {isOnboardingJourney && (
+                <span className="text-xs bg-sky-100 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-full">
+                  Journey de Onboarding
+                </span>
+              )}
+            </div>
+            {configExpanded
+              ? <ChevronUp className="h-4 w-4 text-slate-400" />
+              : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          </button>
+
+          {configExpanded && (
+            <div className="px-6 py-5 space-y-4">
+              {/* Descripción */}
+              <div className="space-y-2">
+                <Label>Descripción</Label>
+                <Textarea
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  placeholder="Describe el objetivo del journey..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Categoría */}
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <Select value={editCategory || ''} onValueChange={setEditCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar categoría..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Onboarding">Onboarding</SelectItem>
+                    <SelectItem value="Talleres">Talleres</SelectItem>
+                    <SelectItem value="Habilidades">Habilidades</SelectItem>
+                    <SelectItem value="Networking">Networking</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Onboarding toggle */}
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-sky-800">Journey de Onboarding</p>
+                    <p className="text-xs text-sky-600 mt-0.5">
+                      Marca este journey como el proceso de bienvenida principal de la organización.
+                      Los steps de perfil CRM se completan automáticamente al guardar el perfil.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isOnboardingJourney}
+                    onCheckedChange={setIsOnboardingJourney}
+                    disabled={!orgId || savingConfig}
+                  />
+                </div>
+
+                {/* Template steps — visible when toggle is on */}
+                {isOnboardingJourney && (
+                  <div className="border-t border-sky-200 pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-sky-800">Steps del template disponibles</p>
+                    <div className="space-y-1.5">
+                      {ONBOARDING_TEMPLATE_STEPS.map((s) => (
+                        <div key={s.title} className="flex items-center gap-2.5 text-xs">
+                          <span className="text-base leading-none">{s.icon}</span>
+                          <span className="font-medium text-sky-900 flex-1">{s.title}</span>
+                          <span className="text-sky-500">{s.description}</span>
+                          <span className="bg-sky-200 text-sky-800 px-1.5 py-0.5 rounded font-medium shrink-0">
+                            {s.points} pts
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyOnboardingSteps}
+                      disabled={applyingSteps || !orgId}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300
+                                 text-sky-700 text-xs font-semibold bg-white hover:bg-sky-50 transition-colors
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {applyingSteps
+                        ? <><Loader2 size={12} className="animate-spin" /> Aplicando...</>
+                        : <><Plus size={12} /> Agregar steps del template</>}
+                    </button>
+                    <p className="text-xs text-sky-500">
+                      Se agregan al final del journey. Podés reordenarlos o eliminarlos libremente.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Save */}
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={handleSaveConfig}
+                  disabled={savingConfig || !orgId}
+                  className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingConfig
+                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
+                    : 'Guardar configuración'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recompensas del Journey */}
       {canEdit && (
@@ -1309,14 +1425,6 @@ export default function JourneyEditorPage() {
         </div>
       )}
 
-      {/* ── Thumbnail URL ── (collapsible card, canEdit only) */}
-      {canEdit && (
-        <ThumbnailCard
-          journey={journey}
-          orgId={orgId}
-          onSaved={(url) => setJourney(j => j ? { ...j, thumbnail_url: url } : j)}
-        />
-      )}
 
       {/* Step Dialog */}
       <Dialog open={stepDialogOpen} onOpenChange={(open) => {
