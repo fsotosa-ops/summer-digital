@@ -186,7 +186,7 @@ function SortableStepItem({
         <p className="font-medium text-slate-900 truncate">{step.title}</p>
         <p className="text-xs text-slate-500">
           {getStepTypeLabel(step.type)}
-          {step.type === 'profile_field' && step.config?.field_names && (
+          {step.type === 'profile_field' && Array.isArray(step.config?.field_names) && (
             <span className="text-slate-400"> — {(step.config.field_names as string[]).map(f => PROFILE_FIELD_LABELS[f] || f).join(', ')}</span>
           )}
         </p>
