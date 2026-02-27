@@ -9,7 +9,7 @@ import { JourneyCardCompact } from '@/features/journey/components/JourneyCard';
 
 /* ─── Section ────────────────────────────────────────── */
 export function ParticipantJourneysSection() {
-  const { journeys, isLoading, fetchJourneys, selectJourney } = useJourneyStore();
+  const { journeys, isLoading, fetchJourneys } = useJourneyStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export function ParticipantJourneysSection() {
               <JourneyCardCompact
                 key={j.id}
                 journey={j}
-                onContinue={() => { selectJourney(j.id); router.push('/journey'); }}
+                onContinue={() => router.push('/journey/' + j.id)}
               />
             ))}
             {extraCount > 0 && (

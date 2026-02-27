@@ -8,11 +8,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { journeyService } from '@/services/journey.service';
 import { organizationService } from '@/services/organization.service';
 import { ApiJourneyRead, ApiOrganization } from '@/types/api.types';
-import { JourneyMap } from '@/features/journey/components/JourneyMap';
 import { JourneyCard, categoryGradient } from '@/features/journey/components/JourneyCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -29,10 +27,8 @@ import {
   Plus,
   Building2,
   AlertCircle,
-  Star,
   History,
 } from 'lucide-react';
-import ReactConfetti from 'react-confetti';
 import { cn } from '@/lib/utils';
 
 /* ─── Empty state helper ──────────────────────────────── */
@@ -55,25 +51,12 @@ function EmptySection({
   );
 }
 
-function useWindowDimensions() {
-  const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
-  useEffect(() => {
-    function handleResize() { setWindowDimensions({ width: window.innerWidth, height: window.innerHeight }); }
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  return windowDimensions;
-}
-
 type Tab = 'progress' | 'available' | 'history';
 
 export default function JourneyPage() {
   const router = useRouter();
   const { user, viewMode } = useAuthStore();
-  const { journeys, fetchJourneys, fetchJourneysForAdmin, selectedJourneyId, selectJourney, isLoading } = useJourneyStore();
-  const { width, height } = useWindowDimensions();
-
+  const { journeys, fetchJourneys, fetchJourneysForAdmin, isLoading } = useJourneyStore();
   const [activeTab, setActiveTab] = useState<Tab>('progress');
   const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
@@ -219,47 +202,6 @@ export default function JourneyPage() {
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
-
-  // ── Selected journey: show map ─────────────────────────
-  if (selectedJourneyId) {
-    const activeJourney  = journeys.find(j => j.id === selectedJourneyId);
-    const completedSteps = activeJourney?.nodes.filter(n => n.status === 'completed').length ?? 0;
-    const totalSteps     = activeJourney?.nodes.length ?? 0;
-    const xpEarned       = activeJourney?.nodes
-      .filter(n => n.status === 'completed')
-      .reduce((sum, n) => sum + (n.points || 0), 0) ?? 0;
-
-    return (
-      <div className="space-y-4">
-        {activeJourney?.status === 'completed' && activeJourney.progress === 100 && (
-          <div className="fixed inset-0 pointer-events-none z-50">
-            <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={500} />
-          </div>
-        )}
-        <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-bold text-slate-800 truncate">{activeJourney?.title}</h2>
-              <span className="text-sm font-semibold text-teal-600 ml-3 flex-shrink-0">
-                Paso {completedSteps} / {totalSteps}
-              </span>
-            </div>
-            <Progress value={activeJourney?.progress ?? 0} className="h-2 bg-slate-100" indicatorClassName="bg-teal-500" />
-          </div>
-          {xpEarned > 0 && (
-            <div className="flex-shrink-0 flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-full px-3 py-1">
-              <Star className="h-4 w-4 text-teal-600" />
-              <span className="text-sm font-bold text-teal-700">{xpEarned} XP</span>
-            </div>
-          )}
-          {activeJourney?.status === 'completed' && (
-            <Badge className="bg-teal-500 text-white flex-shrink-0">Completado</Badge>
-          )}
-        </div>
-        <JourneyMap />
       </div>
     );
   }
@@ -456,7 +398,7 @@ export default function JourneyPage() {
                   key={journey.id}
                   journey={journey}
                   isParticipantContext={!isAdminMode}
-                  onContinue={() => selectJourney(journey.id)}
+                  onContinue={() => router.push('/journey/' + journey.id)}
                 />
               ))}
             </motion.div>
@@ -569,7 +511,7 @@ export default function JourneyPage() {
                     transition={{ type: 'spring', stiffness: 300, damping: 22 }}
                     className="bg-white border border-slate-100 rounded-2xl overflow-hidden
                                flex flex-col shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => selectJourney(journey.id)}
+                    onClick={() => router.push('/journey/' + journey.id)}
                   >
                     {journey.thumbnail_url ? (
                       <div className="h-24 relative overflow-hidden">
@@ -600,7 +542,7 @@ export default function JourneyPage() {
                         </span>
                       )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); selectJourney(journey.id); }}
+                        onClick={(e) => { e.stopPropagation(); router.push('/journey/' + journey.id); }}
                         className="mt-auto text-xs font-semibold text-slate-500 hover:text-teal-600
                                    border border-slate-200 hover:border-teal-200 rounded-xl py-2 transition-colors"
                       >

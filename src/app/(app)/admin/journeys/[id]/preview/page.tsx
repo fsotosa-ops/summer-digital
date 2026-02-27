@@ -7,7 +7,7 @@ import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
 import { mapAdminDataToPreviewJourney } from '@/lib/mappers';
 import { Journey } from '@/types';
-import { JourneyPreviewMap } from '@/features/journey/components/JourneyPreviewMap';
+import { JourneyPlayer } from '@/features/journey/components/JourneyPlayer';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -87,8 +87,9 @@ export default function JourneyPreviewPage() {
   }
 
   return (
-    <JourneyPreviewMap
-      initialJourney={previewJourney}
+    <JourneyPlayer
+      journey={previewJourney}
+      isPreviewMode
       onBack={() => router.push(`/admin/journeys/${journeyId}`)}
     />
   );
