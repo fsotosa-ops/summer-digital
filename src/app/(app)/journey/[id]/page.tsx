@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react';
  */
 function isOnboardingJourney(journey: { metadata?: Record<string, unknown>; nodes: { type: string }[] }): boolean {
   if (journey.metadata?.is_onboarding === true) return true;
-  if (journey.nodes.length > 0 && journey.nodes.every(n => n.type === 'profile')) return true;
+  if (journey.nodes.length > 0 && journey.nodes.some(n => n.type === 'profile')) return true;
   return false;
 }
 

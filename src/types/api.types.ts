@@ -235,6 +235,7 @@ export interface ApiJourneyUpdate {
   thumbnail_url?: string | null;
   is_active?: boolean;
   metadata?: Record<string, unknown>;
+  is_onboarding?: boolean | null;
 }
 
 // --- Organization Member DTOs ---

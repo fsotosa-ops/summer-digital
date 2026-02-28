@@ -8,8 +8,15 @@ import { organizationService } from '@/services/organization.service';
 import { mapAdminDataToPreviewJourney } from '@/lib/mappers';
 import { Journey } from '@/types';
 import { JourneyPlayer } from '@/features/journey/components/JourneyPlayer';
+import { JourneyWizard } from '@/features/journey/components/JourneyWizard';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+
+function isOnboardingJourney(journey: Journey): boolean {
+  if (journey.metadata?.is_onboarding === true) return true;
+  if (journey.nodes.length > 0 && journey.nodes.every(n => n.type === 'profile')) return true;
+  return false;
+}
 
 export default function JourneyPreviewPage() {
   const params = useParams();
@@ -83,6 +90,16 @@ export default function JourneyPreviewPage() {
           <p className="text-red-600">{error || 'No se encontró el journey'}</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (isOnboardingJourney(previewJourney)) {
+    return (
+      <JourneyWizard
+        journey={previewJourney}
+        isPreviewMode
+        onBack={() => router.push(`/admin/journeys/${journeyId}`)}
+      />
     );
   }
 

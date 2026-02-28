@@ -6,7 +6,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
 import { toast } from 'sonner';
-import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiRewardRead, ApiUnlockCondition } from '@/types/api.types';
+import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiRewardRead, ApiUnlockCondition, ApiFieldOption } from '@/types/api.types';
+import { crmService } from '@/services/crm.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +51,7 @@ import {
   Trophy,
   ImageIcon,
   Settings,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -80,7 +82,22 @@ const STEP_TYPE_OPTIONS: { value: ApiStepType; label: string; icon: React.Elemen
   { value: 'milestone', label: 'Desafío', icon: Gamepad2 },
   { value: 'social_interaction', label: 'Interacción / Feedback', icon: MessageSquare },
   { value: 'resource_consumption', label: 'Artículo / Recurso', icon: BookOpen },
+  { value: 'profile_field', label: 'Campo de Perfil CRM', icon: User },
 ];
+
+const PROFILE_FIELD_LABELS: Record<string, string> = {
+  phone: 'Teléfono',
+  company: 'Empresa',
+  birth_date: 'Fecha de nacimiento',
+  gender: 'Género',
+  education_level: 'Nivel educativo',
+  occupation: 'Ocupación',
+  country: 'País',
+  state: 'Estado / Provincia',
+  city: 'Ciudad',
+};
+
+const ALL_PROFILE_FIELDS = Object.keys(PROFILE_FIELD_LABELS);
 
 function generateSlug(title: string) {
   return title
@@ -167,7 +184,12 @@ function SortableStepItem({
 
       <div className="flex-1 min-w-0">
         <p className="font-medium text-slate-900 truncate">{step.title}</p>
-        <p className="text-xs text-slate-500">{getStepTypeLabel(step.type)}</p>
+        <p className="text-xs text-slate-500">
+          {getStepTypeLabel(step.type)}
+          {step.type === 'profile_field' && Array.isArray(step.config?.field_names) && (
+            <span className="text-slate-400"> — {(step.config.field_names as string[]).map(f => PROFILE_FIELD_LABELS[f] || f).join(', ')}</span>
+          )}
+        </p>
       </div>
 
       <div className="flex items-center gap-1">
@@ -308,13 +330,6 @@ function StepUrlField({
 }
 
 
-const ONBOARDING_TEMPLATE_STEPS = [
-  { title: 'Tu trayectoria',    icon: '🎓', points: 25, description: 'Camino profesional y académico.' },
-  { title: '¿De dónde eres?',   icon: '🌍', points: 25, description: 'País, estado y ciudad.' },
-  { title: 'Datos personales',  icon: '👤', points: 25, description: 'Fecha de nacimiento y género.' },
-  { title: 'Contacto y empresa',icon: '📬', points: 25, description: 'Teléfono y empresa actual.' },
-];
-
 export default function JourneyEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -348,6 +363,8 @@ export default function JourneyEditorPage() {
   });
   // In-session cache: preserves config per type when switching types in the dialog
   const [configsByType, setConfigsByType] = useState<Partial<Record<ApiStepType, Record<string, unknown>>>>({});
+  // CRM field options for profile_field steps
+  const [fieldOptions, setFieldOptions] = useState<Record<string, ApiFieldOption[]>>({});
 
   // Rewards assignment
   const [rewards, setRewards] = useState<ApiRewardRead[]>([]);
@@ -367,7 +384,6 @@ export default function JourneyEditorPage() {
   const [isOnboardingJourney, setIsOnboardingJourney] = useState(false);
   const [initialIsOnboardingJourney, setInitialIsOnboardingJourney] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [applyingSteps, setApplyingSteps] = useState(false);
 
   // Org assignment management (SuperAdmin only)
   const [allOrgs, setAllOrgs] = useState<ApiOrganization[]>([]);
@@ -436,6 +452,18 @@ export default function JourneyEditorPage() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId, user?.organizationId]);
+
+  // Load CRM field options (for profile_field steps preview)
+  useEffect(() => {
+    crmService.listFieldOptions().then(opts => {
+      const grouped: Record<string, ApiFieldOption[]> = {};
+      for (const o of opts) {
+        if (!grouped[o.field_name]) grouped[o.field_name] = [];
+        grouped[o.field_name].push(o);
+      }
+      setFieldOptions(grouped);
+    }).catch(() => {});
+  }, []);
 
   // Load all orgs + current journey org assignments (SuperAdmin only)
   useEffect(() => {
@@ -738,20 +766,6 @@ export default function JourneyEditorPage() {
     }
   };
 
-  const handleApplyOnboardingSteps = async () => {
-    if (!orgId || !journey || applyingSteps) return;
-    setApplyingSteps(true);
-    try {
-      const result = await adminService.applyOnboardingTemplateSteps(orgId, journeyId);
-      await fetchData();
-      toast.success(`${result.steps_added} steps del template agregados al journey`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al aplicar template');
-    } finally {
-      setApplyingSteps(false);
-    }
-  };
-
   const handleSaveConfig = async () => {
     if (!orgId || !journey || savingConfig) return;
     setSavingConfig(true);
@@ -759,16 +773,22 @@ export default function JourneyEditorPage() {
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
-      if (Object.keys(updates).length > 0) {
-        await adminService.updateJourney(orgId, journeyId, updates);
-        setJourney(j => j ? { ...j, ...updates } : j);
+      if (isOnboardingJourney !== initialIsOnboardingJourney) updates.is_onboarding = isOnboardingJourney;
+
+      if (Object.keys(updates).length === 0) {
+        toast.success('Sin cambios que guardar');
+        return;
       }
-      if (isOnboardingJourney !== initialIsOnboardingJourney) {
-        await adminService.updateGamificationConfig(orgId, {
-          profile_completion_journey_id: isOnboardingJourney ? journey.id : null,
-        });
-        setInitialIsOnboardingJourney(isOnboardingJourney);
+
+      const updated = await adminService.updateJourney(orgId, journeyId, updates);
+      setJourney(j => j ? { ...j, ...updates, ...updated } : j);
+
+      // If toggle ON, reload steps (backend added template steps)
+      if (updates.is_onboarding === true) {
+        setSteps(await adminService.listSteps(orgId, journeyId));
       }
+
+      setInitialIsOnboardingJourney(isOnboardingJourney);
       toast.success('Configuración guardada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
@@ -1185,36 +1205,11 @@ export default function JourneyEditorPage() {
                   />
                 </div>
 
-                {/* Template steps — visible when toggle is on */}
+                {/* Info — visible when toggle is on */}
                 {isOnboardingJourney && (
-                  <div className="border-t border-sky-200 pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-sky-800">Steps del template disponibles</p>
-                    <div className="space-y-1.5">
-                      {ONBOARDING_TEMPLATE_STEPS.map((s) => (
-                        <div key={s.title} className="flex items-center gap-2.5 text-xs">
-                          <span className="text-base leading-none">{s.icon}</span>
-                          <span className="font-medium text-sky-900 flex-1">{s.title}</span>
-                          <span className="text-sky-500">{s.description}</span>
-                          <span className="bg-sky-200 text-sky-800 px-1.5 py-0.5 rounded font-medium shrink-0">
-                            {s.points} pts
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleApplyOnboardingSteps}
-                      disabled={applyingSteps || !orgId}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300
-                                 text-sky-700 text-xs font-semibold bg-white hover:bg-sky-50 transition-colors
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {applyingSteps
-                        ? <><Loader2 size={12} className="animate-spin" /> Aplicando...</>
-                        : <><Plus size={12} /> Agregar steps del template</>}
-                    </button>
+                  <div className="border-t border-sky-200 pt-3">
                     <p className="text-xs text-sky-500">
-                      Se agregan al final del journey. Podés reordenarlos o eliminarlos libremente.
+                      Al guardar, se agregarán automáticamente los steps de perfil CRM si aún no existen.
                     </p>
                   </div>
                 )}
@@ -1579,6 +1574,80 @@ export default function JourneyEditorPage() {
                   setStepForm({ ...stepForm, config: newConfig });
                 }}
               />
+            )}
+
+            {/* Profile field configuration */}
+            {stepForm.type === 'profile_field' && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Campos de perfil CRM</Label>
+                  <p className="text-xs text-slate-500">
+                    Selecciona los campos que el miembro deberá completar en este step.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_PROFILE_FIELDS.map(field => {
+                      const selected = ((stepForm.config?.field_names as string[]) || []).includes(field);
+                      return (
+                        <button
+                          key={field}
+                          type="button"
+                          onClick={() => {
+                            const current = (stepForm.config?.field_names as string[]) || [];
+                            const updated = selected
+                              ? current.filter(f => f !== field)
+                              : [...current, field];
+                            setStepForm({
+                              ...stepForm,
+                              config: { ...stepForm.config, field_names: updated },
+                            });
+                          }}
+                          className={cn(
+                            'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+                            selected
+                              ? 'bg-sky-50 border-sky-300 text-sky-700'
+                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                          )}
+                        >
+                          {PROFILE_FIELD_LABELS[field]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Preview of field options for selected fields */}
+                {((stepForm.config?.field_names as string[]) || []).length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-slate-600">Vista previa de opciones</p>
+                    {((stepForm.config?.field_names as string[]) || []).map(fieldName => {
+                      const opts = fieldOptions[fieldName] || [];
+                      const label = PROFILE_FIELD_LABELS[fieldName] || fieldName;
+                      return (
+                        <div key={fieldName} className="space-y-1">
+                          <p className="text-xs font-medium text-slate-700">{label}</p>
+                          {opts.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {opts.map(o => (
+                                <span key={o.id} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">
+                                  {o.label}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">
+                              {['country', 'state', 'city'].includes(fieldName)
+                                ? 'Usa selector de ubicación'
+                                : ['phone', 'company', 'birth_date'].includes(fieldName)
+                                ? 'Campo de texto libre'
+                                : 'Sin opciones configuradas en CRM'}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="space-y-2">
