@@ -50,7 +50,6 @@ import {
   ChevronUp,
   Trophy,
   ImageIcon,
-  Settings,
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -377,7 +376,6 @@ export default function JourneyEditorPage() {
   const [savingThumbnail, setSavingThumbnail] = useState(false);
 
   // Journey config section
-  const [configExpanded, setConfigExpanded] = useState(false);
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
@@ -387,8 +385,6 @@ export default function JourneyEditorPage() {
   const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
   const [initialOrgIds, setInitialOrgIds] = useState<string[]>([]);
   const [loadingOrgAssign, setLoadingOrgAssign] = useState(false);
-  const [savingOrgs, setSavingOrgs] = useState(false);
-
   const orgsDirty = (() => {
     if (assignedOrgIds.length !== initialOrgIds.length) return true;
     const initialSet = new Set(initialOrgIds);
@@ -486,23 +482,6 @@ export default function JourneyEditorPage() {
     };
     load();
   }, [isSuperAdmin, journey, journeyId]);
-
-  const handleSaveOrgs = async () => {
-    setSavingOrgs(true);
-    try {
-      const initialSet = new Set(initialOrgIds);
-      const assignedSet = new Set(assignedOrgIds);
-      const toAssign = assignedOrgIds.filter((id) => !initialSet.has(id));
-      const toUnassign = initialOrgIds.filter((id) => !assignedSet.has(id));
-      if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
-      if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
-      setInitialOrgIds([...assignedOrgIds]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar organizaciones');
-    } finally {
-      setSavingOrgs(false);
-    }
-  };
 
   // Initialize config form fields from journey data
   useEffect(() => {
@@ -754,10 +733,22 @@ export default function JourneyEditorPage() {
     }
   };
 
+  // Computed dirty flags for global save
+  const journeyDirty = (() => {
+    if (!journey) return false;
+    if (editDescription !== (journey.description || '')) return true;
+    if (editCategory !== (journey.category || '')) return true;
+    return false;
+  })();
+  const configDirty = journeyDirty || orgsDirty;
+
   const handleSaveConfig = async () => {
     if (!orgId || !journey || savingConfig) return;
     setSavingConfig(true);
     try {
+      const promises: Promise<unknown>[] = [];
+
+      // Journey field updates
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
@@ -767,19 +758,38 @@ export default function JourneyEditorPage() {
       const wasOnboarding = journey.category === 'Onboarding';
       if (isNowOnboarding !== wasOnboarding) updates.is_onboarding = isNowOnboarding;
 
-      if (Object.keys(updates).length === 0) {
+      if (Object.keys(updates).length > 0) {
+        promises.push(
+          adminService.updateJourney(orgId, journeyId, updates).then(async (updated) => {
+            setJourney(j => j ? { ...j, ...updates, ...updated } : j);
+            if (updates.is_onboarding === true) {
+              setSteps(await adminService.listSteps(orgId, journeyId));
+            }
+          })
+        );
+      }
+
+      // Org assignment updates (SuperAdmin)
+      if (isSuperAdmin && orgsDirty) {
+        const initialSet = new Set(initialOrgIds);
+        const assignedSet = new Set(assignedOrgIds);
+        const toAssign = assignedOrgIds.filter((id) => !initialSet.has(id));
+        const toUnassign = initialOrgIds.filter((id) => !assignedSet.has(id));
+        promises.push(
+          (async () => {
+            if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
+            if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
+            setInitialOrgIds([...assignedOrgIds]);
+          })()
+        );
+      }
+
+      if (promises.length === 0) {
         toast.success('Sin cambios que guardar');
         return;
       }
 
-      const updated = await adminService.updateJourney(orgId, journeyId, updates);
-      setJourney(j => j ? { ...j, ...updates, ...updated } : j);
-
-      // If category changed to Onboarding, reload steps (backend adds template profile steps)
-      if (updates.is_onboarding === true) {
-        setSteps(await adminService.listSteps(orgId, journeyId));
-      }
-
+      await Promise.all(promises);
       toast.success('Configuración guardada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
@@ -991,7 +1001,7 @@ export default function JourneyEditorPage() {
 
         {/* Config card — always visible in sidebar */}
         {canEdit && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
             <div className="space-y-1.5">
               <Label>Descripción</Label>
               <Textarea
@@ -1003,33 +1013,29 @@ export default function JourneyEditorPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Categoría</Label>
-              <Select value={editCategory || ''} onValueChange={setEditCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Onboarding">Onboarding</SelectItem>
-                  <SelectItem value="Talleres">Talleres</SelectItem>
-                  <SelectItem value="Habilidades">Habilidades</SelectItem>
-                  <SelectItem value="Networking">Networking</SelectItem>
-                  <SelectItem value="Otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-1.5">
+                {['Onboarding', 'Talleres', 'Habilidades', 'Networking', 'Otro'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEditCategory(editCategory === cat ? '' : cat)}
+                    className={cn(
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                      editCategory === cat
+                        ? 'bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700'
+                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
               {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
                 <p className="text-xs text-sky-500 mt-1">
                   Al guardar se agregarán steps de perfil CRM.
                 </p>
               )}
             </div>
-            <Button
-              onClick={handleSaveConfig}
-              disabled={savingConfig || !orgId}
-              className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {savingConfig
-                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
-                : 'Guardar configuración'}
-            </Button>
           </div>
         )}
 
@@ -1192,33 +1198,28 @@ export default function JourneyEditorPage() {
                     onChange={setAssignedOrgIds}
                     placeholder="Buscar organizaciones..."
                   />
-
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-400">
-                      {assignedOrgIds.length === 0
-                        ? 'Sin selección = abierto para todas.'
-                        : `${assignedOrgIds.length} org(s) seleccionada(s).`}
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveOrgs}
-                      disabled={savingOrgs || !orgsDirty}
-                      className="w-full"
-                    >
-                      {savingOrgs ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                          Guardando...
-                        </>
-                      ) : (
-                        'Guardar organizaciones'
-                      )}
-                    </Button>
-                  </div>
+                  <p className="text-xs text-slate-400">
+                    {assignedOrgIds.length === 0
+                      ? 'Sin selección = abierto para todas.'
+                      : `${assignedOrgIds.length} org(s) seleccionada(s).`}
+                  </p>
                 </>
               )}
             </div>
           </div>
+        )}
+
+        {/* Global save button — saves config + orgs */}
+        {canEdit && (
+          <Button
+            onClick={handleSaveConfig}
+            disabled={savingConfig || !orgId || !configDirty}
+            className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingConfig
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
+              : 'Guardar configuración'}
+          </Button>
         )}
 
         </div>{/* end left sidebar */}
