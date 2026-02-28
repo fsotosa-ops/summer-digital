@@ -50,12 +50,10 @@ import {
   ChevronUp,
   Trophy,
   ImageIcon,
-  Settings,
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { Switch } from '@/components/ui/switch';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
   DndContext,
@@ -378,11 +376,8 @@ export default function JourneyEditorPage() {
   const [savingThumbnail, setSavingThumbnail] = useState(false);
 
   // Journey config section
-  const [configExpanded, setConfigExpanded] = useState(false);
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [isOnboardingJourney, setIsOnboardingJourney] = useState(false);
-  const [initialIsOnboardingJourney, setInitialIsOnboardingJourney] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Org assignment management (SuperAdmin only)
@@ -390,8 +385,6 @@ export default function JourneyEditorPage() {
   const [assignedOrgIds, setAssignedOrgIds] = useState<string[]>([]);
   const [initialOrgIds, setInitialOrgIds] = useState<string[]>([]);
   const [loadingOrgAssign, setLoadingOrgAssign] = useState(false);
-  const [savingOrgs, setSavingOrgs] = useState(false);
-
   const orgsDirty = (() => {
     if (assignedOrgIds.length !== initialOrgIds.length) return true;
     const initialSet = new Set(initialOrgIds);
@@ -490,37 +483,11 @@ export default function JourneyEditorPage() {
     load();
   }, [isSuperAdmin, journey, journeyId]);
 
-  const handleSaveOrgs = async () => {
-    setSavingOrgs(true);
-    try {
-      const initialSet = new Set(initialOrgIds);
-      const assignedSet = new Set(assignedOrgIds);
-      const toAssign = assignedOrgIds.filter((id) => !initialSet.has(id));
-      const toUnassign = initialOrgIds.filter((id) => !assignedSet.has(id));
-      if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
-      if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
-      setInitialOrgIds([...assignedOrgIds]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar organizaciones');
-    } finally {
-      setSavingOrgs(false);
-    }
-  };
-
-  // Load gamification config to detect onboarding status + initialize config form
+  // Initialize config form fields from journey data
   useEffect(() => {
     if (!journey || !orgId) return;
     setEditDescription(journey.description || '');
     setEditCategory(journey.category || '');
-    const load = async () => {
-      try {
-        const config = await adminService.getGamificationConfig(orgId);
-        const isOnboarding = config?.profile_completion_journey_id === journey.id;
-        setIsOnboardingJourney(isOnboarding as boolean);
-        setInitialIsOnboardingJourney(isOnboarding as boolean);
-      } catch { /* silencioso */ }
-    };
-    load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
@@ -766,29 +733,63 @@ export default function JourneyEditorPage() {
     }
   };
 
+  // Computed dirty flags for global save
+  const journeyDirty = (() => {
+    if (!journey) return false;
+    if (editDescription !== (journey.description || '')) return true;
+    if (editCategory !== (journey.category || '')) return true;
+    return false;
+  })();
+  const configDirty = journeyDirty || orgsDirty;
+
   const handleSaveConfig = async () => {
     if (!orgId || !journey || savingConfig) return;
     setSavingConfig(true);
     try {
+      const promises: Promise<unknown>[] = [];
+
+      // Journey field updates
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
-      if (isOnboardingJourney !== initialIsOnboardingJourney) updates.is_onboarding = isOnboardingJourney;
 
-      if (Object.keys(updates).length === 0) {
+      // Derive onboarding flag from category
+      const isNowOnboarding = editCategory === 'Onboarding';
+      const wasOnboarding = journey.category === 'Onboarding';
+      if (isNowOnboarding !== wasOnboarding) updates.is_onboarding = isNowOnboarding;
+
+      if (Object.keys(updates).length > 0) {
+        promises.push(
+          adminService.updateJourney(orgId, journeyId, updates).then(async (updated) => {
+            setJourney(j => j ? { ...j, ...updates, ...updated } : j);
+            if (updates.is_onboarding === true) {
+              setSteps(await adminService.listSteps(orgId, journeyId));
+            }
+          })
+        );
+      }
+
+      // Org assignment updates (SuperAdmin)
+      if (isSuperAdmin && orgsDirty) {
+        const initialSet = new Set(initialOrgIds);
+        const assignedSet = new Set(assignedOrgIds);
+        const toAssign = assignedOrgIds.filter((id) => !initialSet.has(id));
+        const toUnassign = initialOrgIds.filter((id) => !assignedSet.has(id));
+        promises.push(
+          (async () => {
+            if (toAssign.length > 0) await adminService.assignJourneyOrganizations(journeyId, toAssign);
+            if (toUnassign.length > 0) await adminService.unassignJourneyOrganizations(journeyId, toUnassign);
+            setInitialOrgIds([...assignedOrgIds]);
+          })()
+        );
+      }
+
+      if (promises.length === 0) {
         toast.success('Sin cambios que guardar');
         return;
       }
 
-      const updated = await adminService.updateJourney(orgId, journeyId, updates);
-      setJourney(j => j ? { ...j, ...updates, ...updated } : j);
-
-      // If toggle ON, reload steps (backend added template steps)
-      if (updates.is_onboarding === true) {
-        setSteps(await adminService.listSteps(orgId, journeyId));
-      }
-
-      setInitialIsOnboardingJourney(isOnboardingJourney);
+      await Promise.all(promises);
       toast.success('Configuración guardada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
@@ -822,157 +823,120 @@ export default function JourneyEditorPage() {
         </div>
       )}
 
-      {/* ── Two-column layout: sidebar + roadmap ───────── */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* ── Journey header banner ───────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
 
-        {/* LEFT SIDEBAR */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6">
+        <div className="p-4 sm:p-5">
+          {/* Top row: back + thumbnail + title + actions */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+            {/* Left: back + thumbnail + info */}
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <button onClick={() => router.push('/admin/journeys')}
+                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
+                           flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
+                <ChevronLeft size={16} />
+              </button>
 
-        {/* Identity card */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
-
-          <div className="p-4">
-          {/* Back + thumbnail + title row */}
-          <div className="flex items-start gap-3">
-            {/* Back button */}
-            <button onClick={() => router.push('/admin/journeys')}
-              className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
-                         flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
-              <ChevronLeft size={16} />
-            </button>
-
-            {/* Thumbnail mini — clickable to edit */}
-            {canEdit && (
-              <div className="relative shrink-0 group">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditThumbnailUrl(journey?.thumbnail_url || '');
-                    setIsEditingThumbnail(v => !v);
-                  }}
-                  title="Editar imagen de portada"
-                  className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
-                             hover:border-fuchsia-300 transition-colors relative block"
-                >
-                  {journey?.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
-                                    flex items-center justify-center">
-                      <ImageIcon size={18} className="text-white/70" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors
-                                  flex items-center justify-center">
-                    <Edit2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Title + meta */}
-            <div className="flex-1 min-w-0">
-              {isEditingTitle ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveTitle();
-                      if (e.key === 'Escape') setIsEditingTitle(false);
+              {/* Thumbnail mini — clickable to edit */}
+              {canEdit && (
+                <div className="relative shrink-0 group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditThumbnailUrl(journey?.thumbnail_url || '');
+                      setIsEditingThumbnail(v => !v);
                     }}
-                    className="text-xl font-bold h-9 min-w-0 flex-1"
-                    autoFocus
-                  />
-                  <button onClick={handleSaveTitle} disabled={isSaving}
-                    className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
-                    <Check size={14} />
-                  </button>
-                  <button onClick={() => setIsEditingTitle(false)}
-                    className="h-8 w-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1
-                    className={cn(
-                      'text-xl font-bold text-slate-900 truncate',
-                      canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
-                    )}
-                    onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
-                    title={canEdit ? 'Click para editar' : undefined}
+                    title="Editar imagen de portada"
+                    className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
+                               hover:border-fuchsia-300 transition-colors relative block"
                   >
-                    {journey?.title}
-                  </h1>
-                  <Badge variant="outline" className={cn(
-                    'text-xs font-semibold shrink-0',
-                    journey?.is_active
-                      ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
-                      : 'bg-slate-100 text-slate-500 border-slate-200'
-                  )}>
-                    {journey?.is_active ? 'Activo' : 'Borrador'}
-                  </Badge>
-                  {isOnboardingJourney && (
-                    <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
-                      Onboarding
-                    </Badge>
-                  )}
+                    {journey?.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
+                                      flex items-center justify-center">
+                        <ImageIcon size={18} className="text-white/70" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors
+                                    flex items-center justify-center">
+                      <Edit2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 </div>
               )}
-              <p className="text-sm text-slate-400 mt-1 truncate">
-                {journey?.description || 'Sin descripción'} · /{journey?.slug}
-              </p>
-            </div>
-          </div>
 
-          {/* Thumbnail URL inline edit */}
-          {isEditingThumbnail && canEdit && (
-            <div className="mt-3 space-y-2">
-              {editThumbnailUrl && (
-                <div className="w-full h-24 rounded-lg overflow-hidden border border-slate-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <Input
-                value={editThumbnailUrl}
-                onChange={e => setEditThumbnailUrl(e.target.value)}
-                placeholder="https://... (URL de imagen 16:9)"
-                className="w-full text-sm"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
-                  className="flex-1 h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
-                             font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
-                  {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                  Guardar
-                </button>
-                <button onClick={() => setIsEditingThumbnail(false)}
-                  className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
-                  <X size={14} />
-                </button>
+              {/* Title + meta */}
+              <div className="flex-1 min-w-0">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveTitle();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      className="text-lg font-bold h-9 min-w-0 flex-1"
+                      autoFocus
+                    />
+                    <button onClick={handleSaveTitle} disabled={isSaving}
+                      className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors shrink-0">
+                      <Check size={14} />
+                    </button>
+                    <button onClick={() => setIsEditingTitle(false)}
+                      className="h-8 w-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1
+                      className={cn(
+                        'text-lg sm:text-xl font-bold text-slate-900',
+                        canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
+                      )}
+                      onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
+                      title={canEdit ? 'Click para editar' : undefined}
+                    >
+                      {journey?.title}
+                    </h1>
+                    <Badge variant="outline" className={cn(
+                      'text-xs font-semibold shrink-0',
+                      journey?.is_active
+                        ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    )}>
+                      {journey?.is_active ? 'Activo' : 'Borrador'}
+                    </Badge>
+                    {journey?.category === 'Onboarding' && (
+                      <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
+                        Onboarding
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <p className="text-sm text-slate-400 mt-0.5 truncate">
+                  {journey?.description || 'Sin descripción'} · /{journey?.slug}
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Actions row */}
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-            <button
-              onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
-              disabled={steps.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
-                         text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
-                         disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Eye size={14} /> Vista Previa
-            </button>
+            {/* Right: actions */}
+            <div className="flex items-center gap-2 shrink-0 sm:mt-0.5">
+              <button
+                onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
+                disabled={steps.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                           text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Eye size={14} /> Vista Previa
+              </button>
 
-            {canEdit && (
-              <>
+              {canEdit && (
                 <button
                   onClick={handleToggleActive}
                   disabled={isSaving}
@@ -991,16 +955,52 @@ export default function JourneyEditorPage() {
                   }
                   {journey?.is_active ? 'Archivar' : 'Publicar'}
                 </button>
+              )}
+            </div>
+          </div>
 
-              </>
-            )}
-          </div>
-          </div>
+          {/* Thumbnail URL inline edit — full width below */}
+          {isEditingThumbnail && canEdit && (
+            <div className="mt-3 space-y-2">
+              {editThumbnailUrl && (
+                <div className="w-full max-w-md h-24 rounded-lg overflow-hidden border border-slate-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex gap-2 max-w-md">
+                <Input
+                  value={editThumbnailUrl}
+                  onChange={e => setEditThumbnailUrl(e.target.value)}
+                  placeholder="https://... (URL de imagen 16:9)"
+                  className="flex-1 text-sm"
+                  autoFocus
+                />
+                <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
+                  className="h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
+                             font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
+                  {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  Guardar
+                </button>
+                <button onClick={() => setIsEditingThumbnail(false)}
+                  className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* ── Two-column layout: sidebar + roadmap ───────── */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* LEFT SIDEBAR */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:scrollbar-thin">
 
         {/* Config card — always visible in sidebar */}
         {canEdit && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
             <div className="space-y-1.5">
               <Label>Descripción</Label>
               <Textarea
@@ -1012,47 +1012,213 @@ export default function JourneyEditorPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Categoría</Label>
-              <Select value={editCategory || ''} onValueChange={setEditCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Onboarding">Onboarding</SelectItem>
-                  <SelectItem value="Talleres">Talleres</SelectItem>
-                  <SelectItem value="Habilidades">Habilidades</SelectItem>
-                  <SelectItem value="Networking">Networking</SelectItem>
-                  <SelectItem value="Otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700">Onboarding</p>
-                <p className="text-xs text-slate-400 mt-0.5 leading-tight">
-                  Proceso de bienvenida principal de la org.
+              <div className="flex flex-wrap gap-1.5">
+                {['Onboarding', 'Talleres', 'Habilidades', 'Networking', 'Otro'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEditCategory(editCategory === cat ? '' : cat)}
+                    className={cn(
+                      'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                      editCategory === cat
+                        ? 'bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700'
+                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
+                <p className="text-xs text-sky-500 mt-1">
+                  Al guardar se agregarán steps de perfil CRM.
                 </p>
-                {isOnboardingJourney && (
-                  <p className="text-xs text-sky-500 mt-1">
-                    Al guardar se agregarán steps de perfil CRM.
-                  </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recompensas del Journey — sidebar card */}
+        {canEdit && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-3
+                         hover:bg-slate-50 transition-colors cursor-pointer select-none"
+              onClick={() => setRewardsExpanded((v) => !v)}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
+                <span className="text-sm font-semibold text-slate-700 truncate">Recompensas</span>
+                {linkedRewardsCount > 0 && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">
+                    {linkedRewardsCount}
+                  </span>
                 )}
               </div>
-              <Switch
-                checked={isOnboardingJourney}
-                onCheckedChange={setIsOnboardingJourney}
-                disabled={!orgId || savingConfig}
-              />
-            </div>
-            <Button
-              onClick={handleSaveConfig}
-              disabled={savingConfig || !orgId}
-              className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {savingConfig
-                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
-                : 'Guardar configuración'}
-            </Button>
+              {rewardsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+              )}
+            </button>
+
+            {rewardsExpanded && (
+              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                <p className="text-xs text-slate-400 pt-2">
+                  Badges o puntos al completar steps o el journey.
+                </p>
+                {rewardsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                  </div>
+                ) : rewards.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-1">
+                    Sin recompensas en el catálogo.{' '}
+                    <span className="text-slate-500">Créalas en <strong>Gamificación → Recompensas</strong>.</span>
+                  </p>
+                ) : (
+                  <>
+                    {/* Journey completion reward */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                        Al completar el Journey
+                      </p>
+                      <Select
+                        value={getJourneyCompletionReward()?.id ?? '__none__'}
+                        onValueChange={(val) =>
+                          handleLinkRewardToJourney(val === '__none__' ? null : val)
+                        }
+                        disabled={savingReward}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Sin recompensa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sin recompensa</SelectItem>
+                          {rewards.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                              {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="h-px bg-slate-100" />
+
+                    {/* Per-step rewards */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-slate-400" />
+                        Por step completado
+                      </p>
+                      {steps.length === 0 ? (
+                        <p className="text-xs text-slate-400">
+                          Agrega steps para asignar recompensas.
+                        </p>
+                      ) : (
+                        steps.map((step) => {
+                          const Icon = getStepIcon(step.type, step.config);
+                          return (
+                            <div key={step.id} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                  <Icon className="h-3 w-3 text-slate-500" />
+                                </div>
+                                <span className="text-xs text-slate-700 truncate">
+                                  {step.title}
+                                </span>
+                              </div>
+                              <Select
+                                value={getStepReward(step.id)?.id ?? '__none__'}
+                                onValueChange={(val) =>
+                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
+                                }
+                                disabled={savingReward}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Sin recompensa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
+                                  {rewards.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.name}
+                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Organizaciones habilitadas — sidebar card, solo SuperAdmin */}
+        {isSuperAdmin && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 className="h-4 w-4 text-fuchsia-500" />
+                <span className="text-sm font-semibold text-slate-700">Organizaciones</span>
+                {assignedOrgIds.length > 0 && (
+                  <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full">
+                    {assignedOrgIds.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Organizaciones con acceso a este journey.
+              </p>
+            </div>
+
+            <div className="px-4 pb-4 space-y-3">
+              {loadingOrgAssign ? (
+                <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                </div>
+              ) : allOrgs.length === 0 ? (
+                <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
+              ) : (
+                <>
+                  <MultiSelect
+                    options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
+                    selected={assignedOrgIds}
+                    onChange={setAssignedOrgIds}
+                    placeholder="Buscar organizaciones..."
+                  />
+                  <p className="text-xs text-slate-400">
+                    {assignedOrgIds.length === 0
+                      ? 'Sin selección = abierto para todas.'
+                      : `${assignedOrgIds.length} org(s) seleccionada(s).`}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Global save button — saves config + orgs */}
+        {canEdit && (
+          <Button
+            onClick={handleSaveConfig}
+            disabled={savingConfig || !orgId || !configDirty}
+            className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingConfig
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
+              : 'Guardar configuración'}
+          </Button>
         )}
 
         </div>{/* end left sidebar */}
@@ -1098,7 +1264,39 @@ export default function JourneyEditorPage() {
             </div>
           ) : (
             <div className="relative">
-              {/* Visual Roadmap — hidden on mobile */}
+              {/* Visual Roadmap — mobile: horizontal scroll strip */}
+              <div className="sm:hidden overflow-x-auto pb-2 -mx-1">
+                <div className="flex items-center gap-2 px-1" style={{ minWidth: `${Math.max(steps.length * 80, 200)}px` }}>
+                  {steps.map((step, index) => {
+                    const Icon = getStepIcon(step.type, step.config);
+                    return (
+                      <div key={step.id} className="flex items-center gap-2">
+                        <div
+                          className={cn('flex flex-col items-center gap-1.5 shrink-0', canEdit && 'cursor-pointer')}
+                          onClick={canEdit ? () => openEditDialog(step) : undefined}
+                        >
+                          <div className="relative">
+                            <div className="w-11 h-11 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
+                              <Icon className="h-4 w-4 text-slate-600" />
+                            </div>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">
+                              {index + 1}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-medium text-slate-600 text-center w-16 truncate">
+                            {step.title}
+                          </span>
+                        </div>
+                        {index < steps.length - 1 && (
+                          <div className="w-6 h-0.5 bg-slate-300 rounded-full shrink-0 -mt-4" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Visual Roadmap — desktop: positioned nodes */}
               <div className="hidden sm:block relative bg-slate-50 rounded-xl p-6 min-h-[320px] overflow-hidden border border-slate-200">
                 {/* Grid Background */}
                 <div
@@ -1212,194 +1410,6 @@ export default function JourneyEditorPage() {
         </div>{/* end right main */}
 
       </div>{/* end two-column layout */}
-
-      {/* Recompensas del Journey */}
-      {canEdit && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
-                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
-            onClick={() => setRewardsExpanded((v) => !v)}
-          >
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              <span className="text-sm font-semibold text-slate-700">Recompensas del Journey</span>
-              {linkedRewardsCount > 0 && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                  {linkedRewardsCount} asignada{linkedRewardsCount !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            {rewardsExpanded ? (
-              <ChevronUp className="h-4 w-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            )}
-          </button>
-
-          {rewardsExpanded && (
-            <div className="px-6 pb-6 space-y-5">
-              <p className="text-xs text-slate-400 pt-1">
-                Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
-              </p>
-              {rewardsLoading ? (
-                <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando recompensas...
-                </div>
-              ) : rewards.length === 0 ? (
-                <p className="text-sm text-slate-400 py-2">
-                  No hay recompensas en el catálogo de esta organización.{' '}
-                  <span className="text-slate-500">Créalas primero en <strong>Gamificación → Recompensas</strong>.</span>
-                </p>
-              ) : (
-                <>
-                  {/* Journey completion reward */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                      <Trophy className="h-4 w-4 text-amber-500" />
-                      Al completar el Journey
-                    </p>
-                    <Select
-                      value={getJourneyCompletionReward()?.id ?? '__none__'}
-                      onValueChange={(val) =>
-                        handleLinkRewardToJourney(val === '__none__' ? null : val)
-                      }
-                      disabled={savingReward}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin recompensa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Sin recompensa</SelectItem>
-                        {rewards.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.name}
-                            {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="h-px bg-slate-100" />
-
-                  {/* Per-step rewards */}
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                      <Star className="h-4 w-4 text-slate-400" />
-                      Por step completado
-                    </p>
-                    {steps.length === 0 ? (
-                      <p className="text-xs text-slate-400">
-                        Agrega steps al journey para asignarles recompensas.
-                      </p>
-                    ) : (
-                      steps.map((step) => {
-                        const Icon = getStepIcon(step.type, step.config);
-                        return (
-                          <div key={step.id} className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                              <Icon className="h-3.5 w-3.5 text-slate-500" />
-                            </div>
-                            <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">
-                              {step.title}
-                            </span>
-                            <div className="w-56 flex-shrink-0">
-                              <Select
-                                value={getStepReward(step.id)?.id ?? '__none__'}
-                                onValueChange={(val) =>
-                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
-                                }
-                                disabled={savingReward}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Sin recompensa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
-                                  {rewards.map((r) => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                      {r.name}
-                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Organizaciones habilitadas — solo SuperAdmin */}
-      {isSuperAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-5 w-5 text-fuchsia-500" />
-              <span className="text-sm font-semibold text-slate-700">Organizaciones habilitadas</span>
-              {assignedOrgIds.length > 0 && (
-                <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
-                  {assignedOrgIds.length}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-400">
-              Selecciona las organizaciones que tienen acceso a este journey.
-            </p>
-          </div>
-
-          <div className="px-6 py-4 space-y-3">
-            {loadingOrgAssign ? (
-              <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
-              </div>
-            ) : allOrgs.length === 0 ? (
-              <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
-            ) : (
-              <>
-                <MultiSelect
-                  options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
-                  selected={assignedOrgIds}
-                  onChange={setAssignedOrgIds}
-                  placeholder="Buscar y seleccionar organizaciones..."
-                />
-
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">
-                    {assignedOrgIds.length === 0
-                      ? 'Sin selección = abierto para todas las organizaciones.'
-                      : `${assignedOrgIds.length} organización(es) seleccionada(s).`}
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveOrgs}
-                    disabled={savingOrgs || !orgsDirty}
-                  >
-                    {savingOrgs ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      'Guardar organizaciones'
-                    )}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
 
       {/* Step Dialog */}
       <Dialog open={stepDialogOpen} onOpenChange={(open) => {
