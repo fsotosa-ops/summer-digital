@@ -189,12 +189,13 @@ function ConditionRow({
             <SelectValue placeholder="Selecciona un journey..." />
           </SelectTrigger>
           <SelectContent>
-            {journeys.length === 0 && (
-              <SelectItem value="" disabled>Sin journeys disponibles</SelectItem>
+            {journeys.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-slate-400">Sin journeys disponibles</p>
+            ) : (
+              journeys.map((j) => (
+                <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+              ))
             )}
-            {journeys.map((j) => (
-              <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
-            ))}
           </SelectContent>
         </Select>
       )}
@@ -212,12 +213,13 @@ function ConditionRow({
               <SelectValue placeholder="1. Selecciona un journey..." />
             </SelectTrigger>
             <SelectContent>
-              {journeys.length === 0 && (
-                <SelectItem value="" disabled>Sin journeys disponibles</SelectItem>
+              {journeys.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-slate-400">Sin journeys disponibles</p>
+              ) : (
+                journeys.map((j) => (
+                  <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+                ))
               )}
-              {journeys.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
-              ))}
             </SelectContent>
           </Select>
 
@@ -234,16 +236,17 @@ function ConditionRow({
                 }
               </SelectTrigger>
               <SelectContent>
-                {steps.length === 0 && !loadingSteps && (
-                  <SelectItem value="" disabled>Sin steps disponibles</SelectItem>
+                {steps.length === 0 && !loadingSteps ? (
+                  <p className="px-3 py-2 text-xs text-slate-400">Sin steps disponibles</p>
+                ) : (
+                  steps
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.order_index + 1}. {s.title}
+                      </SelectItem>
+                    ))
                 )}
-                {steps
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.order_index + 1}. {s.title}
-                    </SelectItem>
-                  ))}
               </SelectContent>
             </Select>
           )}
