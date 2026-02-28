@@ -334,6 +334,37 @@ export default function GamificationAdminPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pointsAutoCalculated, setPointsAutoCalculated] = useState(false);
+
+  // Auto-calculate reward points from journey/step conditions
+  const recalcPoints = async (conditions: ApiUnlockConditionItem[], type: string) => {
+    if (!orgId || type !== 'points') return;
+    const relevant = conditions.filter(
+      (c) =>
+        (c.type === 'journey_completed' && c.journey_id) ||
+        (c.type === 'step_completed' && c.journey_id && c.step_id),
+    );
+    if (relevant.length === 0) return;
+
+    let total = 0;
+    for (const cond of relevant) {
+      try {
+        const steps = await journeyService.listAdminSteps(orgId, cond.journey_id!);
+        if (cond.type === 'journey_completed') {
+          total += steps.reduce((sum, s) => sum + (s.gamification_rules?.base_points ?? 0), 0);
+        } else if (cond.type === 'step_completed' && cond.step_id) {
+          const step = steps.find((s) => s.id === cond.step_id);
+          if (step) total += step.gamification_rules?.base_points ?? 0;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    if (total > 0) {
+      setRewardForm((prev) => ({ ...prev, points: total }));
+      setPointsAutoCalculated(true);
+    }
+  };
 
   const fetchConfig = async () => {
     if (!orgId) return;
@@ -439,6 +470,7 @@ export default function GamificationAdminPage() {
     setEditingReward(null);
     setRewardForm(EMPTY_REWARD_FORM);
     setAssignedOrgIds(new Set(orgId ? [orgId] : []));
+    setPointsAutoCalculated(false);
     setRewardDialogOpen(true);
   };
 
@@ -446,6 +478,7 @@ export default function GamificationAdminPage() {
     setEditingReward(reward);
     setRewardForm(rewardToForm(reward));
     setAssignedOrgIds(new Set());
+    setPointsAutoCalculated(false);
     setRewardDialogOpen(true);
     // Cargar orgs asignadas en background
     setLoadingOrgAssign(true);
@@ -472,18 +505,18 @@ export default function GamificationAdminPage() {
   };
 
   const updateCondition = (index: number, updated: ApiUnlockConditionItem) => {
-    setRewardForm((prev) => {
-      const conditions = [...prev.conditions];
-      conditions[index] = updated;
-      return { ...prev, conditions };
-    });
+    const newConditions = [...rewardForm.conditions];
+    newConditions[index] = updated;
+    setRewardForm((prev) => ({ ...prev, conditions: newConditions }));
+    // Auto-calc points when journey/step selection changes
+    recalcPoints(newConditions, rewardForm.type);
   };
 
   const removeCondition = (index: number) => {
-    setRewardForm((prev) => ({
-      ...prev,
-      conditions: prev.conditions.filter((_, i) => i !== index),
-    }));
+    const newConditions = rewardForm.conditions.filter((_, i) => i !== index);
+    setRewardForm((prev) => ({ ...prev, conditions: newConditions }));
+    // Recalc points after removing a condition
+    recalcPoints(newConditions, rewardForm.type);
   };
 
   const handleSaveReward = async () => {
@@ -830,7 +863,10 @@ export default function GamificationAdminPage() {
                   <button
                     key={preset}
                     type="button"
-                    onClick={() => setRewardForm({ ...rewardForm, type: preset })}
+                    onClick={() => {
+                      setRewardForm({ ...rewardForm, type: preset });
+                      if (preset === 'points') recalcPoints(rewardForm.conditions, 'points');
+                    }}
                     className={cn(
                       'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
                       rewardForm.type === preset
@@ -862,8 +898,15 @@ export default function GamificationAdminPage() {
                 <Zap className="h-4 w-4 text-fuchsia-500" />
                 Puntos que otorga
               </Label>
-              <Input type="number" min={0} value={rewardForm.points} onChange={(e) => setRewardForm({ ...rewardForm, points: parseInt(e.target.value) || 0 })} placeholder="0" />
-              <p className="text-xs text-slate-400">Puntos acreditados al usuario cuando gana esta recompensa.</p>
+              <Input type="number" min={0} value={rewardForm.points} onChange={(e) => { setRewardForm({ ...rewardForm, points: parseInt(e.target.value) || 0 }); setPointsAutoCalculated(false); }} placeholder="0" />
+              {pointsAutoCalculated ? (
+                <p className="text-xs text-fuchsia-500 flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Calculado automáticamente desde el journey/step asociado.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400">Puntos acreditados al usuario cuando gana esta recompensa.</p>
+              )}
             </div>
 
             {/* Condiciones */}
