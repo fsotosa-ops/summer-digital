@@ -823,157 +823,120 @@ export default function JourneyEditorPage() {
         </div>
       )}
 
-      {/* ── Two-column layout: sidebar + roadmap ───────── */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {/* ── Journey header banner ───────── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
 
-        {/* LEFT SIDEBAR */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:scrollbar-thin">
+        <div className="p-4 sm:p-5">
+          {/* Top row: back + thumbnail + title + actions */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+            {/* Left: back + thumbnail + info */}
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <button onClick={() => router.push('/admin/journeys')}
+                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
+                           flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
+                <ChevronLeft size={16} />
+              </button>
 
-        {/* Identity card */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
-
-          <div className="p-4">
-          {/* Back + thumbnail + title row */}
-          <div className="flex items-start gap-3">
-            {/* Back button */}
-            <button onClick={() => router.push('/admin/journeys')}
-              className="h-8 w-8 rounded-lg border border-slate-200 text-slate-500
-                         flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0 mt-0.5">
-              <ChevronLeft size={16} />
-            </button>
-
-            {/* Thumbnail mini — clickable to edit */}
-            {canEdit && (
-              <div className="relative shrink-0 group">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditThumbnailUrl(journey?.thumbnail_url || '');
-                    setIsEditingThumbnail(v => !v);
-                  }}
-                  title="Editar imagen de portada"
-                  className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
-                             hover:border-fuchsia-300 transition-colors relative block"
-                >
-                  {journey?.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
-                                    flex items-center justify-center">
-                      <ImageIcon size={18} className="text-white/70" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors
-                                  flex items-center justify-center">
-                    <Edit2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Title + meta */}
-            <div className="flex-1 min-w-0">
-              {isEditingTitle ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveTitle();
-                      if (e.key === 'Escape') setIsEditingTitle(false);
+              {/* Thumbnail mini — clickable to edit */}
+              {canEdit && (
+                <div className="relative shrink-0 group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditThumbnailUrl(journey?.thumbnail_url || '');
+                      setIsEditingThumbnail(v => !v);
                     }}
-                    className="text-xl font-bold h-9 min-w-0 flex-1"
-                    autoFocus
-                  />
-                  <button onClick={handleSaveTitle} disabled={isSaving}
-                    className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
-                    <Check size={14} />
-                  </button>
-                  <button onClick={() => setIsEditingTitle(false)}
-                    className="h-8 w-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1
-                    className={cn(
-                      'text-xl font-bold text-slate-900 truncate',
-                      canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
-                    )}
-                    onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
-                    title={canEdit ? 'Click para editar' : undefined}
+                    title="Editar imagen de portada"
+                    className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
+                               hover:border-fuchsia-300 transition-colors relative block"
                   >
-                    {journey?.title}
-                  </h1>
-                  <Badge variant="outline" className={cn(
-                    'text-xs font-semibold shrink-0',
-                    journey?.is_active
-                      ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
-                      : 'bg-slate-100 text-slate-500 border-slate-200'
-                  )}>
-                    {journey?.is_active ? 'Activo' : 'Borrador'}
-                  </Badge>
-                  {journey?.category === 'Onboarding' && (
-                    <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
-                      Onboarding
-                    </Badge>
-                  )}
+                    {journey?.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
+                                      flex items-center justify-center">
+                        <ImageIcon size={18} className="text-white/70" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors
+                                    flex items-center justify-center">
+                      <Edit2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 </div>
               )}
-              <p className="text-sm text-slate-400 mt-1 truncate">
-                {journey?.description || 'Sin descripción'} · /{journey?.slug}
-              </p>
-            </div>
-          </div>
 
-          {/* Thumbnail URL inline edit */}
-          {isEditingThumbnail && canEdit && (
-            <div className="mt-3 space-y-2">
-              {editThumbnailUrl && (
-                <div className="w-full h-24 rounded-lg overflow-hidden border border-slate-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <Input
-                value={editThumbnailUrl}
-                onChange={e => setEditThumbnailUrl(e.target.value)}
-                placeholder="https://... (URL de imagen 16:9)"
-                className="w-full text-sm"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
-                  className="flex-1 h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
-                             font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
-                  {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                  Guardar
-                </button>
-                <button onClick={() => setIsEditingThumbnail(false)}
-                  className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
-                  <X size={14} />
-                </button>
+              {/* Title + meta */}
+              <div className="flex-1 min-w-0">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveTitle();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      className="text-lg font-bold h-9 min-w-0 flex-1"
+                      autoFocus
+                    />
+                    <button onClick={handleSaveTitle} disabled={isSaving}
+                      className="h-8 w-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors shrink-0">
+                      <Check size={14} />
+                    </button>
+                    <button onClick={() => setIsEditingTitle(false)}
+                      className="h-8 w-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1
+                      className={cn(
+                        'text-lg sm:text-xl font-bold text-slate-900',
+                        canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
+                      )}
+                      onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
+                      title={canEdit ? 'Click para editar' : undefined}
+                    >
+                      {journey?.title}
+                    </h1>
+                    <Badge variant="outline" className={cn(
+                      'text-xs font-semibold shrink-0',
+                      journey?.is_active
+                        ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    )}>
+                      {journey?.is_active ? 'Activo' : 'Borrador'}
+                    </Badge>
+                    {journey?.category === 'Onboarding' && (
+                      <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
+                        Onboarding
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <p className="text-sm text-slate-400 mt-0.5 truncate">
+                  {journey?.description || 'Sin descripción'} · /{journey?.slug}
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Actions row */}
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-            <button
-              onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
-              disabled={steps.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
-                         text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
-                         disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Eye size={14} /> Vista Previa
-            </button>
+            {/* Right: actions */}
+            <div className="flex items-center gap-2 shrink-0 sm:mt-0.5">
+              <button
+                onClick={() => router.push(`/admin/journeys/${journeyId}/preview`)}
+                disabled={steps.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200
+                           text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Eye size={14} /> Vista Previa
+              </button>
 
-            {canEdit && (
-              <>
+              {canEdit && (
                 <button
                   onClick={handleToggleActive}
                   disabled={isSaving}
@@ -992,12 +955,48 @@ export default function JourneyEditorPage() {
                   }
                   {journey?.is_active ? 'Archivar' : 'Publicar'}
                 </button>
+              )}
+            </div>
+          </div>
 
-              </>
-            )}
-          </div>
-          </div>
+          {/* Thumbnail URL inline edit — full width below */}
+          {isEditingThumbnail && canEdit && (
+            <div className="mt-3 space-y-2">
+              {editThumbnailUrl && (
+                <div className="w-full max-w-md h-24 rounded-lg overflow-hidden border border-slate-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex gap-2 max-w-md">
+                <Input
+                  value={editThumbnailUrl}
+                  onChange={e => setEditThumbnailUrl(e.target.value)}
+                  placeholder="https://... (URL de imagen 16:9)"
+                  className="flex-1 text-sm"
+                  autoFocus
+                />
+                <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
+                  className="h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
+                             font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
+                  {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  Guardar
+                </button>
+                <button onClick={() => setIsEditingThumbnail(false)}
+                  className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* ── Two-column layout: sidebar + roadmap ───────── */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* LEFT SIDEBAR */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:scrollbar-thin">
 
         {/* Config card — always visible in sidebar */}
         {canEdit && (
@@ -1265,7 +1264,39 @@ export default function JourneyEditorPage() {
             </div>
           ) : (
             <div className="relative">
-              {/* Visual Roadmap — hidden on mobile */}
+              {/* Visual Roadmap — mobile: horizontal scroll strip */}
+              <div className="sm:hidden overflow-x-auto pb-2 -mx-1">
+                <div className="flex items-center gap-2 px-1" style={{ minWidth: `${Math.max(steps.length * 80, 200)}px` }}>
+                  {steps.map((step, index) => {
+                    const Icon = getStepIcon(step.type, step.config);
+                    return (
+                      <div key={step.id} className="flex items-center gap-2">
+                        <div
+                          className={cn('flex flex-col items-center gap-1.5 shrink-0', canEdit && 'cursor-pointer')}
+                          onClick={canEdit ? () => openEditDialog(step) : undefined}
+                        >
+                          <div className="relative">
+                            <div className="w-11 h-11 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
+                              <Icon className="h-4 w-4 text-slate-600" />
+                            </div>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">
+                              {index + 1}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-medium text-slate-600 text-center w-16 truncate">
+                            {step.title}
+                          </span>
+                        </div>
+                        {index < steps.length - 1 && (
+                          <div className="w-6 h-0.5 bg-slate-300 rounded-full shrink-0 -mt-4" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Visual Roadmap — desktop: positioned nodes */}
               <div className="hidden sm:block relative bg-slate-50 rounded-xl p-6 min-h-[320px] overflow-hidden border border-slate-200">
                 {/* Grid Background */}
                 <div
