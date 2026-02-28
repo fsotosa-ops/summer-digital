@@ -281,7 +281,7 @@ export function JourneyWizard({
     const cCount = updatedNodes.filter(n => n.status === 'completed').length;
     const newProgress = Math.round((cCount / updatedNodes.length) * 100);
     setSimJourney({ ...journey, nodes: updatedNodes, progress: newProgress });
-    showXp(node.points || 25);
+    showXp(node.points ?? 10);
     if (newProgress === 100) setTimeout(() => setShowCelebration(true), 800);
   };
 
@@ -301,7 +301,7 @@ export function JourneyWizard({
       setContact(saved);
       triggerStepSuccess();
       await fetchJourneys(user?.organizationId ?? undefined);
-      showXp(currentNode.points || 25);
+      showXp(currentNode.points ?? 10);
       checkJourneyComplete();
     } catch (err) {
       console.error('[JourneyWizard] error completing step:', err);
@@ -327,7 +327,7 @@ export function JourneyWizard({
       setContact(saved);
       triggerStepSuccess();
       await fetchJourneys(user?.organizationId ?? undefined);
-      showXp(currentNode.points || 25);
+      showXp(currentNode.points ?? 10);
       checkJourneyComplete();
     } catch (err) {
       console.error('[JourneyWizard] error completing step:', err);
@@ -344,7 +344,7 @@ export function JourneyWizard({
       if (isPreviewMode) { simCompleteNode(node); return; }
       triggerStepSuccess();
       await completeActivity(node.id);
-      showXp(node.points || 25);
+      showXp(node.points ?? 10);
       checkJourneyComplete();
     } catch (err) {
       console.error('[JourneyWizard] error completing milestone:', err);

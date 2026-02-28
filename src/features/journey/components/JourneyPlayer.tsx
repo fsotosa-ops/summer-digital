@@ -143,7 +143,7 @@ export function JourneyPlayer({
 
   // ─── Core completion logic ─────────────────────────────────────
   const triggerCompletion = async (node: JourneyNode, responseId?: string) => {
-    const points = node.points || 10;
+    const points = node.points ?? 10;
 
     if (isPreviewMode) {
       const nodeIndex = journey.nodes.findIndex(n => n.id === node.id);
