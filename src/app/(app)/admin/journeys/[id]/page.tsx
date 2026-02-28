@@ -364,11 +364,10 @@ export default function JourneyEditorPage() {
   // CRM field options for profile_field steps
   const [fieldOptions, setFieldOptions] = useState<Record<string, ApiFieldOption[]>>({});
 
-  // Rewards assignment
+  // Rewards (read-only view)
   const [rewards, setRewards] = useState<ApiRewardRead[]>([]);
   const [rewardsLoading, setRewardsLoading] = useState(false);
   const [rewardsExpanded, setRewardsExpanded] = useState(false);
-  const [savingReward, setSavingReward] = useState(false);
 
   // Thumbnail inline editing
   const [isEditingThumbnail, setIsEditingThumbnail] = useState(false);
@@ -506,31 +505,7 @@ export default function JourneyEditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
-  // --- Reward helpers ---
-
-  const getStepReward = (stepId: string): ApiRewardRead | undefined =>
-    rewards.find((r) => {
-      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
-      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
-        return (uc as ApiUnlockCondition).conditions.some(
-          (c) => c.type === 'step_completed' && c.step_id === stepId
-        );
-      }
-      return false;
-    });
-
-  const getJourneyCompletionReward = (): ApiRewardRead | undefined =>
-    rewards.find((r) => {
-      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
-      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
-        return (uc as ApiUnlockCondition).conditions.some(
-          (c) =>
-            c.type === 'journey_completed' &&
-            (!c.journey_id || c.journey_id === journey?.id)
-        );
-      }
-      return false;
-    });
+  // --- Reward helpers (read-only) ---
 
   const linkedRewardsCount = rewards.filter((r) => {
     const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
@@ -543,54 +518,30 @@ export default function JourneyEditorPage() {
     );
   }).length;
 
-  const handleLinkRewardToStep = async (stepId: string, rewardId: string | null) => {
-    if (!orgId || savingReward) return;
-    setSavingReward(true);
-    try {
-      const prev = getStepReward(stepId);
-      if (prev) {
-        await adminService.updateReward(orgId, prev.id, {
-          unlock_condition: { operator: 'AND', conditions: [] },
-        });
+  // Rewards for this journey (filtered from catalog)
+  const getStepRewards = (stepId: string): ApiRewardRead[] =>
+    rewards.filter((r) => {
+      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
+      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
+        return (uc as ApiUnlockCondition).conditions.some(
+          (c) => c.type === 'step_completed' && c.step_id === stepId
+        );
       }
-      if (rewardId) {
-        await adminService.updateReward(orgId, rewardId, {
-          unlock_condition: { operator: 'AND', conditions: [{ type: 'step_completed', step_id: stepId }] },
-        });
-      }
-      setRewards(await adminService.listRewards(orgId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al asignar recompensa');
-    } finally {
-      setSavingReward(false);
-    }
-  };
+      return false;
+    });
 
-  const handleLinkRewardToJourney = async (rewardId: string | null) => {
-    if (!orgId || !journey || savingReward) return;
-    setSavingReward(true);
-    try {
-      const prev = getJourneyCompletionReward();
-      if (prev) {
-        await adminService.updateReward(orgId, prev.id, {
-          unlock_condition: { operator: 'AND', conditions: [] },
-        });
+  const getJourneyCompletionRewards = (): ApiRewardRead[] =>
+    rewards.filter((r) => {
+      const uc = r.unlock_condition as ApiUnlockCondition | Record<string, unknown>;
+      if ('conditions' in uc && Array.isArray((uc as ApiUnlockCondition).conditions)) {
+        return (uc as ApiUnlockCondition).conditions.some(
+          (c) =>
+            c.type === 'journey_completed' &&
+            (!c.journey_id || c.journey_id === journey?.id)
+        );
       }
-      if (rewardId) {
-        await adminService.updateReward(orgId, rewardId, {
-          unlock_condition: {
-            operator: 'AND',
-            conditions: [{ type: 'journey_completed', journey_id: journey.id }],
-          },
-        });
-      }
-      setRewards(await adminService.listRewards(orgId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al asignar recompensa');
-    } finally {
-      setSavingReward(false);
-    }
-  };
+      return false;
+    });
 
   const openCreateDialog = () => {
     setEditingStep(null);
@@ -1038,7 +989,7 @@ export default function JourneyEditorPage() {
           </div>
         )}
 
-        {/* Recompensas del Journey — sidebar card */}
+        {/* Recompensas del Journey — sidebar card (read-only) */}
         {canEdit && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <button
@@ -1066,61 +1017,57 @@ export default function JourneyEditorPage() {
             {rewardsExpanded && (
               <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
                 <p className="text-xs text-slate-400 pt-2">
-                  Badges o puntos al completar steps o el journey.
+                  Recompensas vinculadas a este journey. Gestionalas desde Gamificacion.
                 </p>
                 {rewardsLoading ? (
                   <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
                   </div>
-                ) : rewards.length === 0 ? (
+                ) : linkedRewardsCount === 0 ? (
                   <p className="text-xs text-slate-400 py-1">
-                    Sin recompensas en el catálogo.{' '}
-                    <span className="text-slate-500">Créalas en <strong>Gamificación → Recompensas</strong>.</span>
+                    Sin recompensas vinculadas a este journey.
                   </p>
                 ) : (
                   <>
-                    {/* Journey completion reward */}
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
-                        Al completar el Journey
-                      </p>
-                      <Select
-                        value={getJourneyCompletionReward()?.id ?? '__none__'}
-                        onValueChange={(val) =>
-                          handleLinkRewardToJourney(val === '__none__' ? null : val)
-                        }
-                        disabled={savingReward}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Sin recompensa" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Sin recompensa</SelectItem>
-                          {rewards.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.name}
-                              {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Journey completion rewards */}
+                    {getJourneyCompletionRewards().length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                          <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                          Al completar el Journey
+                        </p>
+                        {getJourneyCompletionRewards().map((r) => (
+                          <div key={r.id} className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
+                            <span className="text-xs font-medium text-amber-800">
+                              {r.name}{r.points > 0 ? ` (+${r.points} pts)` : ''}
+                            </span>
+                            <button
+                              type="button"
+                              className="text-amber-600 hover:text-amber-800 transition-colors"
+                              onClick={() => router.push('/admin/gamification')}
+                              title="Ver en Gamificacion"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                    <div className="h-px bg-slate-100" />
+                    {getJourneyCompletionRewards().length > 0 && steps.some((s) => getStepRewards(s.id).length > 0) && (
+                      <div className="h-px bg-slate-100" />
+                    )}
 
                     {/* Per-step rewards */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                        <Star className="h-3.5 w-3.5 text-slate-400" />
-                        Por step completado
-                      </p>
-                      {steps.length === 0 ? (
-                        <p className="text-xs text-slate-400">
-                          Agrega steps para asignar recompensas.
+                    {steps.some((s) => getStepRewards(s.id).length > 0) && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                          <Star className="h-3.5 w-3.5 text-slate-400" />
+                          Por step completado
                         </p>
-                      ) : (
-                        steps.map((step) => {
+                        {steps.map((step) => {
+                          const stepRewards = getStepRewards(step.id);
+                          if (stepRewards.length === 0) return null;
                           const Icon = getStepIcon(step.type, step.config);
                           return (
                             <div key={step.id} className="space-y-1">
@@ -1132,33 +1079,39 @@ export default function JourneyEditorPage() {
                                   {step.title}
                                 </span>
                               </div>
-                              <Select
-                                value={getStepReward(step.id)?.id ?? '__none__'}
-                                onValueChange={(val) =>
-                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
-                                }
-                                disabled={savingReward}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Sin recompensa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
-                                  {rewards.map((r) => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                      {r.name}
-                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              {stepRewards.map((r) => (
+                                <div key={r.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ml-7">
+                                  <span className="text-xs font-medium text-slate-700">
+                                    {r.name}{r.points > 0 ? ` (+${r.points} pts)` : ''}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                                    onClick={() => router.push('/admin/gamification')}
+                                    title="Ver en Gamificacion"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </>
                 )}
+
+                {/* Action: create reward or go to gamification */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs gap-1.5"
+                  onClick={() => router.push(`/admin/gamification?journey_id=${journey?.id}`)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {linkedRewardsCount === 0 ? 'Crear recompensa para este journey' : 'Gestionar en Gamificacion'}
+                </Button>
               </div>
             )}
           </div>
@@ -1265,30 +1218,30 @@ export default function JourneyEditorPage() {
           ) : (
             <div className="relative">
               {/* Visual Roadmap — mobile: horizontal scroll strip */}
-              <div className="sm:hidden overflow-x-auto pb-2 -mx-1">
-                <div className="flex items-center gap-2 px-1" style={{ minWidth: `${Math.max(steps.length * 80, 200)}px` }}>
+              <div className="sm:hidden -mx-4 px-4 overflow-x-auto scrollbar-thin">
+                <div className="inline-flex items-start gap-0 py-2" style={{ paddingRight: 16 }}>
                   {steps.map((step, index) => {
                     const Icon = getStepIcon(step.type, step.config);
                     return (
-                      <div key={step.id} className="flex items-center gap-2">
+                      <div key={step.id} className="inline-flex items-start shrink-0">
                         <div
-                          className={cn('flex flex-col items-center gap-1.5 shrink-0', canEdit && 'cursor-pointer')}
+                          className={cn('flex flex-col items-center w-14', canEdit && 'cursor-pointer active:opacity-70')}
                           onClick={canEdit ? () => openEditDialog(step) : undefined}
                         >
                           <div className="relative">
-                            <div className="w-11 h-11 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
-                              <Icon className="h-4 w-4 text-slate-600" />
+                            <div className="w-9 h-9 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
+                              <Icon className="h-3.5 w-3.5 text-slate-600" />
                             </div>
-                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold leading-none">
                               {index + 1}
                             </div>
                           </div>
-                          <span className="text-[10px] font-medium text-slate-600 text-center w-16 truncate">
+                          <span className="text-[10px] leading-tight font-medium text-slate-600 text-center w-full mt-1 line-clamp-2">
                             {step.title}
                           </span>
                         </div>
                         {index < steps.length - 1 && (
-                          <div className="w-6 h-0.5 bg-slate-300 rounded-full shrink-0 -mt-4" />
+                          <div className="w-4 h-0.5 bg-slate-300 rounded-full shrink-0 mt-[18px]" />
                         )}
                       </div>
                     );

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { gamificationService } from '@/services/gamification.service';
 import { journeyService } from '@/services/journey.service';
@@ -46,6 +47,7 @@ import {
   X,
   Zap,
   Building2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -189,12 +191,13 @@ function ConditionRow({
             <SelectValue placeholder="Selecciona un journey..." />
           </SelectTrigger>
           <SelectContent>
-            {journeys.length === 0 && (
-              <SelectItem value="" disabled>Sin journeys disponibles</SelectItem>
+            {journeys.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-slate-400">Sin journeys disponibles</p>
+            ) : (
+              journeys.map((j) => (
+                <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+              ))
             )}
-            {journeys.map((j) => (
-              <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
-            ))}
           </SelectContent>
         </Select>
       )}
@@ -212,12 +215,13 @@ function ConditionRow({
               <SelectValue placeholder="1. Selecciona un journey..." />
             </SelectTrigger>
             <SelectContent>
-              {journeys.length === 0 && (
-                <SelectItem value="" disabled>Sin journeys disponibles</SelectItem>
+              {journeys.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-slate-400">Sin journeys disponibles</p>
+              ) : (
+                journeys.map((j) => (
+                  <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+                ))
               )}
-              {journeys.map((j) => (
-                <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
-              ))}
             </SelectContent>
           </Select>
 
@@ -234,16 +238,17 @@ function ConditionRow({
                 }
               </SelectTrigger>
               <SelectContent>
-                {steps.length === 0 && !loadingSteps && (
-                  <SelectItem value="" disabled>Sin steps disponibles</SelectItem>
+                {steps.length === 0 && !loadingSteps ? (
+                  <p className="px-3 py-2 text-xs text-slate-400">Sin steps disponibles</p>
+                ) : (
+                  steps
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.order_index + 1}. {s.title}
+                      </SelectItem>
+                    ))
                 )}
-                {steps
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.order_index + 1}. {s.title}
-                    </SelectItem>
-                  ))}
               </SelectContent>
             </Select>
           )}
@@ -295,8 +300,11 @@ function ConditionPills({
 export default function GamificationAdminPage() {
   const { user } = useAuthStore();
   const orgId = user?.organizationId;
+  const searchParams = useSearchParams();
+  const prefilledJourneyId = searchParams.get('journey_id');
+  const didPrefill = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<Tab>('levels');
+  const [activeTab, setActiveTab] = useState<Tab>(prefilledJourneyId ? 'rewards' : 'levels');
 
   // Journeys para los selects del builder de condiciones
   const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
@@ -413,6 +421,9 @@ export default function GamificationAdminPage() {
     catch { /* silencioso */ }
   };
 
+  // Recalculate points state
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
   useEffect(() => {
     fetchLevels();
     fetchRewards();
@@ -421,6 +432,36 @@ export default function GamificationAdminPage() {
     fetchAllOrgs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
+
+  // Pre-fill reward form when arriving with ?journey_id
+  useEffect(() => {
+    if (!prefilledJourneyId || didPrefill.current || isLoadingRewards) return;
+    didPrefill.current = true;
+    setActiveTab('rewards');
+    setEditingReward(null);
+    setRewardForm({
+      ...EMPTY_REWARD_FORM,
+      conditions: [{ type: 'journey_completed', journey_id: prefilledJourneyId }],
+    });
+    setAssignedOrgIds(new Set(orgId ? [orgId] : []));
+    setPointsAutoCalculated(false);
+    setRewardDialogOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefilledJourneyId, isLoadingRewards]);
+
+  // Recalculate points handler
+  const handleRecalculatePoints = async () => {
+    if (!orgId || !confirm('¿Recalcular puntos de todos los step completions con los base_points actuales?')) return;
+    setIsRecalculating(true);
+    try {
+      const resp = await gamificationService.recalculatePoints(orgId);
+      alert(resp.message || `${resp.updated} registros actualizados.`);
+    } catch {
+      alert('Error al recalcular puntos.');
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   // --- Level CRUD ---
   const openCreateLevel = () => {
@@ -796,12 +837,26 @@ export default function GamificationAdminPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t">
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={handleRecalculatePoints}
+                    disabled={isRecalculating}
+                    className="gap-2 text-sm"
+                  >
+                    {isRecalculating
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RefreshCw className="h-4 w-4" />}
+                    Recalcular puntos
+                  </Button>
                   <Button onClick={handleSaveConfig} disabled={isSaving}>
                     {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Guardar Configuración
                   </Button>
                 </div>
+                <p className="text-xs text-slate-400">
+                  Recalcular puntos actualiza los puntos ya otorgados usando los base_points actuales de cada step y el multiplicador vigente.
+                </p>
               </div>
             )}
           </CardContent>
