@@ -132,6 +132,13 @@ class GamificationService {
   async updateConfig(orgId: string, data: ApiGamificationConfigUpdate): Promise<ApiGamificationConfigRead> {
     return apiClient.patch<ApiGamificationConfigRead>(`/gamification/${orgId}/admin/config`, data);
   }
+
+  // --- Admin: Recalculate Points ---
+
+  async recalculatePoints(orgId: string, journeyId?: string): Promise<{ updated: number; message: string }> {
+    const params = journeyId ? `?journey_id=${journeyId}` : '';
+    return apiClient.post<{ updated: number; message: string }>(`/gamification/${orgId}/admin/recalculate-points${params}`, {});
+  }
 }
 
 export const gamificationService = new GamificationService();

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { gamificationService } from '@/services/gamification.service';
 import { journeyService } from '@/services/journey.service';
@@ -46,6 +47,7 @@ import {
   X,
   Zap,
   Building2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -298,8 +300,11 @@ function ConditionPills({
 export default function GamificationAdminPage() {
   const { user } = useAuthStore();
   const orgId = user?.organizationId;
+  const searchParams = useSearchParams();
+  const prefilledJourneyId = searchParams.get('journey_id');
+  const didPrefill = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<Tab>('levels');
+  const [activeTab, setActiveTab] = useState<Tab>(prefilledJourneyId ? 'rewards' : 'levels');
 
   // Journeys para los selects del builder de condiciones
   const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
@@ -416,6 +421,9 @@ export default function GamificationAdminPage() {
     catch { /* silencioso */ }
   };
 
+  // Recalculate points state
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
   useEffect(() => {
     fetchLevels();
     fetchRewards();
@@ -424,6 +432,36 @@ export default function GamificationAdminPage() {
     fetchAllOrgs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
+
+  // Pre-fill reward form when arriving with ?journey_id
+  useEffect(() => {
+    if (!prefilledJourneyId || didPrefill.current || isLoadingRewards) return;
+    didPrefill.current = true;
+    setActiveTab('rewards');
+    setEditingReward(null);
+    setRewardForm({
+      ...EMPTY_REWARD_FORM,
+      conditions: [{ type: 'journey_completed', journey_id: prefilledJourneyId }],
+    });
+    setAssignedOrgIds(new Set(orgId ? [orgId] : []));
+    setPointsAutoCalculated(false);
+    setRewardDialogOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefilledJourneyId, isLoadingRewards]);
+
+  // Recalculate points handler
+  const handleRecalculatePoints = async () => {
+    if (!orgId || !confirm('¿Recalcular puntos de todos los step completions con los base_points actuales?')) return;
+    setIsRecalculating(true);
+    try {
+      const resp = await gamificationService.recalculatePoints(orgId);
+      alert(resp.message || `${resp.updated} registros actualizados.`);
+    } catch {
+      alert('Error al recalcular puntos.');
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   // --- Level CRUD ---
   const openCreateLevel = () => {
@@ -799,12 +837,26 @@ export default function GamificationAdminPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t">
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={handleRecalculatePoints}
+                    disabled={isRecalculating}
+                    className="gap-2 text-sm"
+                  >
+                    {isRecalculating
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RefreshCw className="h-4 w-4" />}
+                    Recalcular puntos
+                  </Button>
                   <Button onClick={handleSaveConfig} disabled={isSaving}>
                     {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Guardar Configuración
                   </Button>
                 </div>
+                <p className="text-xs text-slate-400">
+                  Recalcular puntos actualiza los puntos ya otorgados usando los base_points actuales de cada step y el multiplicador vigente.
+                </p>
               </div>
             )}
           </CardContent>
