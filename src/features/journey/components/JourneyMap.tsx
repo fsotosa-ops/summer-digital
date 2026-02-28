@@ -85,7 +85,7 @@ export function JourneyMap() {
     setTypeformSubmitted(false);
 
     // Trigger XP pop animation
-    const points = node.points || 10;
+    const points = node.points ?? 10;
     setXpPop({ amount: points, visible: true });
     setTimeout(() => setXpPop({ amount: 0, visible: false }), 1600);
 

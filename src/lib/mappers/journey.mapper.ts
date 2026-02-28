@@ -156,6 +156,7 @@ export function mapAdminDataToPreviewJourney(
     const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
+    const basePoints = (step.gamification_rules?.base_points as number) || 0;
     const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
     const stepIcon = (config.icon as string) || undefined;
 
@@ -171,6 +172,7 @@ export function mapAdminDataToPreviewJourney(
       externalUrl,
       videoUrl,
       embedUrl,
+      points: basePoints || undefined,
       fieldNames,
       stepIcon,
     };
@@ -206,6 +208,7 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     const embedUrl = extractEmbedUrl(config);
     const externalUrl = (config.url as string) || (config.form_url as string) || undefined;
     const videoUrl = (config.video_url as string) || undefined;
+    const basePoints = (step.gamification_rules?.base_points as number) || 0;
     const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
     const stepIcon = (config.icon as string) || undefined;
 
@@ -221,6 +224,7 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
       externalUrl,
       videoUrl,
       embedUrl,
+      points: basePoints || undefined,
       fieldNames,
       stepIcon,
     };
