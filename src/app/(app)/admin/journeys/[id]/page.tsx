@@ -1265,30 +1265,30 @@ export default function JourneyEditorPage() {
           ) : (
             <div className="relative">
               {/* Visual Roadmap — mobile: horizontal scroll strip */}
-              <div className="sm:hidden overflow-x-auto pb-2 -mx-1">
-                <div className="flex items-center gap-2 px-1" style={{ minWidth: `${Math.max(steps.length * 80, 200)}px` }}>
+              <div className="sm:hidden -mx-4 px-4 overflow-x-auto scrollbar-thin">
+                <div className="inline-flex items-start gap-0 py-2" style={{ paddingRight: 16 }}>
                   {steps.map((step, index) => {
                     const Icon = getStepIcon(step.type, step.config);
                     return (
-                      <div key={step.id} className="flex items-center gap-2">
+                      <div key={step.id} className="inline-flex items-start shrink-0">
                         <div
-                          className={cn('flex flex-col items-center gap-1.5 shrink-0', canEdit && 'cursor-pointer')}
+                          className={cn('flex flex-col items-center w-14', canEdit && 'cursor-pointer active:opacity-70')}
                           onClick={canEdit ? () => openEditDialog(step) : undefined}
                         >
                           <div className="relative">
-                            <div className="w-11 h-11 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
-                              <Icon className="h-4 w-4 text-slate-600" />
+                            <div className="w-9 h-9 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-sm">
+                              <Icon className="h-3.5 w-3.5 text-slate-600" />
                             </div>
-                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold leading-none">
                               {index + 1}
                             </div>
                           </div>
-                          <span className="text-[10px] font-medium text-slate-600 text-center w-16 truncate">
+                          <span className="text-[10px] leading-tight font-medium text-slate-600 text-center w-full mt-1 line-clamp-2">
                             {step.title}
                           </span>
                         </div>
                         {index < steps.length - 1 && (
-                          <div className="w-6 h-0.5 bg-slate-300 rounded-full shrink-0 -mt-4" />
+                          <div className="w-4 h-0.5 bg-slate-300 rounded-full shrink-0 mt-[18px]" />
                         )}
                       </div>
                     );
