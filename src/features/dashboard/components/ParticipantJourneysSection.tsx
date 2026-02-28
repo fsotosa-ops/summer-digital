@@ -1,21 +1,56 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Map, ArrowRight } from 'lucide-react';
+import { Map, ArrowRight, Compass, Plus, Loader2 } from 'lucide-react';
 import { useJourneyStore } from '@/store/useJourneyStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { journeyService } from '@/services/journey.service';
+import { organizationService } from '@/services/organization.service';
+import { ApiJourneyRead } from '@/types/api.types';
 import { JourneyCardCompact } from '@/features/journey/components/JourneyCard';
+import { categoryGradient } from '@/features/journey/components/JourneyCard';
 
 /* ─── Section ────────────────────────────────────────── */
 export function ParticipantJourneysSection() {
   const { journeys, isLoading, fetchJourneys } = useJourneyStore();
+  const { user } = useAuthStore();
   const router = useRouter();
+  const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (journeys.length === 0) fetchJourneys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load available journeys once enrolled journeys are known
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const load = async () => {
+      try {
+        const orgs = await organizationService.listMyOrganizations();
+        if (orgs.length === 0) return;
+        const orgIds = orgs.map(o => o.id);
+        const all = await journeyService.listAvailableJourneysMultiOrg(orgIds);
+        const enrolledIds = new Set(journeys.map(j => j.id));
+        setAvailableJourneys(all.filter(j => !enrolledIds.has(j.id) && j.is_active).slice(0, 3));
+      } catch { /* silent */ }
+    };
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, journeys.length, user?.id]);
+
+  const handleEnroll = async (journeyId: string) => {
+    setEnrollingId(journeyId);
+    try {
+      await journeyService.enrollInJourney(journeyId);
+      router.push('/journey/' + journeyId);
+    } catch {
+      setEnrollingId(null);
+    }
+  };
 
   const activeJourneys  = journeys.filter(j => j.status !== 'completed');
   const hasActive       = activeJourneys.length > 0;
@@ -115,6 +150,51 @@ export function ParticipantJourneysSection() {
                 </div>
               </Link>
             )}
+          </div>
+        )}
+
+        {/* ── Disponibles para ti ──────────────────────── */}
+        {!isLoading && availableJourneys.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                <Compass size={12} className="text-amber-500" /> Disponibles para ti
+              </p>
+              <Link href="/journey" className="text-[10px] text-sky-500 hover:underline">
+                Ver todos
+              </Link>
+            </div>
+            {availableJourneys.map(j => {
+              const gradient = categoryGradient(j.category ?? undefined);
+              return (
+                <div key={j.id}
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100
+                             bg-slate-50/60 hover:bg-white hover:border-slate-200 transition-all">
+                  <div className={`bg-gradient-to-br ${gradient} h-9 w-9 rounded-lg shrink-0
+                                  flex items-center justify-center`}>
+                    <Map size={14} className="text-white/80" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{j.title}</p>
+                    {j.category && (
+                      <p className="text-[10px] text-slate-400 truncate">{j.category}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleEnroll(j.id)}
+                    disabled={enrollingId === j.id}
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold
+                               bg-gradient-to-r from-amber-400 to-orange-500 text-white
+                               hover:opacity-90 transition-opacity disabled:opacity-60"
+                  >
+                    {enrollingId === j.id
+                      ? <Loader2 size={10} className="animate-spin" />
+                      : <><Plus size={10} /> Unirme</>
+                    }
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

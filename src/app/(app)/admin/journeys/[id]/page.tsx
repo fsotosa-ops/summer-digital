@@ -815,11 +815,24 @@ export default function JourneyEditorPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Header card ────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
 
-        <div className="p-4 sm:p-6">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* ── Two-column layout: sidebar + roadmap ───────── */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* LEFT SIDEBAR */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6">
+
+        {/* Identity card */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+
+          <div className="p-4">
           {/* Back + thumbnail + title row */}
           <div className="flex items-start gap-3">
             {/* Back button */}
@@ -917,9 +930,9 @@ export default function JourneyEditorPage() {
 
           {/* Thumbnail URL inline edit */}
           {isEditingThumbnail && canEdit && (
-            <div className="mt-3 ml-[132px] flex items-center gap-2 flex-wrap">
+            <div className="mt-3 space-y-2">
               {editThumbnailUrl && (
-                <div className="h-12 w-20 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                <div className="w-full h-24 rounded-lg overflow-hidden border border-slate-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={editThumbnailUrl} alt="" className="w-full h-full object-cover" />
                 </div>
@@ -928,19 +941,21 @@ export default function JourneyEditorPage() {
                 value={editThumbnailUrl}
                 onChange={e => setEditThumbnailUrl(e.target.value)}
                 placeholder="https://... (URL de imagen 16:9)"
-                className="flex-1 text-sm min-w-48"
+                className="w-full text-sm"
                 autoFocus
               />
-              <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
-                className="h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
-                           font-semibold flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
-                {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                Guardar
-              </button>
-              <button onClick={() => setIsEditingThumbnail(false)}
-                className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors">
-                <X size={14} />
-              </button>
+              <div className="flex gap-2">
+                <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
+                  className="flex-1 h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
+                             font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
+                  {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  Guardar
+                </button>
+                <button onClick={() => setIsEditingThumbnail(false)}
+                  className="h-9 w-9 rounded-lg border border-slate-200 text-slate-400 flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -977,37 +992,97 @@ export default function JourneyEditorPage() {
                   {journey?.is_active ? 'Archivar' : 'Publicar'}
                 </button>
 
-                <button
-                  onClick={openCreateDialog}
-                  className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold
-                             bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
-                >
-                  <Plus size={14} /> Agregar Step
-                </button>
               </>
             )}
           </div>
+          </div>
         </div>
-      </div>
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">
-          {error}
-        </div>
-      )}
+        {/* Config card — always visible in sidebar */}
+        {canEdit && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Descripción</Label>
+              <Textarea
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                placeholder="Describe el objetivo del journey..."
+                rows={2}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Categoría</Label>
+              <Select value={editCategory || ''} onValueChange={setEditCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar categoría..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Onboarding">Onboarding</SelectItem>
+                  <SelectItem value="Talleres">Talleres</SelectItem>
+                  <SelectItem value="Habilidades">Habilidades</SelectItem>
+                  <SelectItem value="Networking">Networking</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700">Onboarding</p>
+                <p className="text-xs text-slate-400 mt-0.5 leading-tight">
+                  Proceso de bienvenida principal de la org.
+                </p>
+                {isOnboardingJourney && (
+                  <p className="text-xs text-sky-500 mt-1">
+                    Al guardar se agregarán steps de perfil CRM.
+                  </p>
+                )}
+              </div>
+              <Switch
+                checked={isOnboardingJourney}
+                onCheckedChange={setIsOnboardingJourney}
+                disabled={!orgId || savingConfig}
+              />
+            </div>
+            <Button
+              onClick={handleSaveConfig}
+              disabled={savingConfig || !orgId}
+              className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {savingConfig
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
+                : 'Guardar configuración'}
+            </Button>
+          </div>
+        )}
 
-      {/* Roadmap Visual */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        </div>{/* end left sidebar */}
+
+        {/* RIGHT MAIN */}
+        <div className="flex-1 min-w-0">
+
+        {/* Roadmap Visual */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <h2 className="text-sm font-semibold text-slate-700">Roadmap del Journey</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              {canEdit ? 'Arrastra para reordenar. Click en un nodo para editar.' : 'Vista de los steps del journey.'}
+              {canEdit ? 'Arrastra para reordenar. Click para editar.' : 'Vista de los steps del journey.'}
             </p>
           </div>
-          <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-            {steps.length} step{steps.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+              {steps.length} step{steps.length !== 1 ? 's' : ''}
+            </span>
+            {canEdit && (
+              <button
+                onClick={openCreateDialog}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+              >
+                <Plus size={12} /> Agregar Step
+              </button>
+            )}
+          </div>
         </div>
         <div className="p-4 sm:p-6">
           {steps.length === 0 ? (
@@ -1023,8 +1098,8 @@ export default function JourneyEditorPage() {
             </div>
           ) : (
             <div className="relative">
-              {/* Visual Roadmap */}
-              <div className="relative bg-slate-50 rounded-xl p-8 min-h-[400px] overflow-hidden border border-slate-200">
+              {/* Visual Roadmap — hidden on mobile */}
+              <div className="hidden sm:block relative bg-slate-50 rounded-xl p-6 min-h-[320px] overflow-hidden border border-slate-200">
                 {/* Grid Background */}
                 <div
                   className="absolute inset-0 opacity-5"
@@ -1132,106 +1207,11 @@ export default function JourneyEditorPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </div>{/* end p-4 sm:p-6 content */}
+        </div>{/* end roadmap card */}
+        </div>{/* end right main */}
 
-      {/* Configuración del Journey */}
-      {canEdit && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
-                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
-            onClick={() => setConfigExpanded(v => !v)}
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-slate-400" />
-              <span className="text-sm font-semibold text-slate-700">Configuración</span>
-              {isOnboardingJourney && (
-                <span className="text-xs bg-sky-100 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-full">
-                  Journey de Onboarding
-                </span>
-              )}
-            </div>
-            {configExpanded
-              ? <ChevronUp className="h-4 w-4 text-slate-400" />
-              : <ChevronDown className="h-4 w-4 text-slate-400" />}
-          </button>
-
-          {configExpanded && (
-            <div className="px-6 py-5 space-y-4">
-              {/* Descripción */}
-              <div className="space-y-2">
-                <Label>Descripción</Label>
-                <Textarea
-                  value={editDescription}
-                  onChange={e => setEditDescription(e.target.value)}
-                  placeholder="Describe el objetivo del journey..."
-                  rows={3}
-                />
-              </div>
-
-              {/* Categoría */}
-              <div className="space-y-2">
-                <Label>Categoría</Label>
-                <Select value={editCategory || ''} onValueChange={setEditCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Onboarding">Onboarding</SelectItem>
-                    <SelectItem value="Talleres">Talleres</SelectItem>
-                    <SelectItem value="Habilidades">Habilidades</SelectItem>
-                    <SelectItem value="Networking">Networking</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Onboarding toggle */}
-              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-sky-800">Journey de Onboarding</p>
-                    <p className="text-xs text-sky-600 mt-0.5">
-                      Marca este journey como el proceso de bienvenida principal de la organización.
-                      Los steps de perfil CRM se completan automáticamente al guardar el perfil.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={isOnboardingJourney}
-                    onCheckedChange={setIsOnboardingJourney}
-                    disabled={!orgId || savingConfig}
-                  />
-                </div>
-
-                {/* Info — visible when toggle is on */}
-                {isOnboardingJourney && (
-                  <div className="border-t border-sky-200 pt-3">
-                    <p className="text-xs text-sky-500">
-                      Al guardar, se agregarán automáticamente los steps de perfil CRM si aún no existen.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Save */}
-              <div className="flex justify-end pt-1">
-                <Button
-                  onClick={handleSaveConfig}
-                  disabled={savingConfig || !orgId}
-                  className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingConfig
-                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
-                    : 'Guardar configuración'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      </div>{/* end two-column layout */}
 
       {/* Recompensas del Journey */}
       {canEdit && (
@@ -1257,12 +1237,12 @@ export default function JourneyEditorPage() {
               <ChevronDown className="h-4 w-4 text-slate-400" />
             )}
           </button>
-          <p className="px-6 pb-3 text-xs text-slate-400 -mt-1">
-            Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
-          </p>
 
           {rewardsExpanded && (
             <div className="px-6 pb-6 space-y-5">
+              <p className="text-xs text-slate-400 pt-1">
+                Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
+              </p>
               {rewardsLoading ? (
                 <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" /> Cargando recompensas...

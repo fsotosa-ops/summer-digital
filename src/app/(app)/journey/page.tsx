@@ -31,6 +31,65 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+/* ─── Available journey cards (reused in 2 places) ───── */
+function AvailableJourneyCards({
+  journeys,
+  enrollingId,
+  onEnroll,
+}: {
+  journeys: ApiJourneyRead[];
+  enrollingId: string | null;
+  onEnroll: (id: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {journeys.map(journey => {
+        const gradient = categoryGradient(journey.category ?? undefined);
+        return (
+          <div
+            key={journey.id}
+            className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className={`bg-gradient-to-r ${gradient} h-20 relative flex items-end p-4`}>
+              {journey.category && (
+                <span className="bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold
+                                 uppercase tracking-widest px-2.5 py-1 rounded-full">
+                  {journey.category}
+                </span>
+              )}
+              <span className="absolute top-3 right-3 text-white/80 text-[10px]">
+                {journey.total_steps} pasos
+              </span>
+            </div>
+            <div className="p-4 flex flex-col flex-1 gap-3">
+              <h3 className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">
+                {journey.title}
+              </h3>
+              {journey.description && (
+                <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
+                  {journey.description}
+                </p>
+              )}
+              <button
+                onClick={() => onEnroll(journey.id)}
+                disabled={enrollingId === journey.id}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                           bg-gradient-to-r from-amber-400 to-orange-500 text-white
+                           text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+              >
+                {enrollingId === journey.id
+                  ? <><Loader2 size={12} className="animate-spin" /> Inscribiendo...</>
+                  : <><Plus size={12} /> Inscribirme</>
+                }
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Empty state helper ──────────────────────────────── */
 function EmptySection({
   icon,
@@ -138,13 +197,10 @@ export default function JourneyPage() {
     setEnrollError(null);
     try {
       await journeyService.enrollInJourney(journeyId);
-      await fetchJourneys(orgId);
-      setAvailableJourneys(prev => prev.filter(j => j.id !== journeyId));
-      setActiveTab('progress');
+      router.push('/journey/' + journeyId);
     } catch (err) {
       console.error('Error enrolling:', err);
       setEnrollError('No se pudo inscribir. Verifica que seas miembro de la organizacion.');
-    } finally {
       setEnrollingId(null);
     }
   };
@@ -414,7 +470,7 @@ export default function JourneyPage() {
         </section>
       )}
 
-      {/* Disponibles para inscripción */}
+      {/* Disponibles para inscripción — tab explícito */}
       {activeTab === 'available' && !isAdminMode && (
         <section>
           <motion.div
@@ -437,51 +493,11 @@ export default function JourneyPage() {
                 ))}
               </div>
             ) : availableJourneys.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {availableJourneys.map(journey => {
-                  const gradient = categoryGradient(journey.category ?? undefined);
-                  return (
-                    <div
-                      key={journey.id}
-                      className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className={`bg-gradient-to-r ${gradient} h-20 relative flex items-end p-4`}>
-                        {journey.category && (
-                          <span className="bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold
-                                           uppercase tracking-widest px-2.5 py-1 rounded-full">
-                            {journey.category}
-                          </span>
-                        )}
-                        <span className="absolute top-3 right-3 text-white/80 text-[10px]">
-                          {journey.total_steps} pasos
-                        </span>
-                      </div>
-                      <div className="p-4 flex flex-col flex-1 gap-3">
-                        <h3 className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">
-                          {journey.title}
-                        </h3>
-                        {journey.description && (
-                          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
-                            {journey.description}
-                          </p>
-                        )}
-                        <button
-                          onClick={() => handleEnroll(journey.id)}
-                          disabled={enrollingId === journey.id}
-                          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
-                                     bg-gradient-to-r from-amber-400 to-orange-500 text-white
-                                     text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-                        >
-                          {enrollingId === journey.id
-                            ? <><Loader2 size={12} className="animate-spin" /> Inscribiendo...</>
-                            : <><Plus size={12} /> Inscribirme</>
-                          }
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <AvailableJourneyCards
+                journeys={availableJourneys}
+                enrollingId={enrollingId}
+                onEnroll={handleEnroll}
+              />
             ) : (
               <EmptySection
                 icon={<Compass size={36} />}
@@ -489,6 +505,32 @@ export default function JourneyPage() {
                 description="No hay más journeys disponibles en este momento."
               />
             )}
+          </motion.div>
+        </section>
+      )}
+
+      {/* Disponibles para ti — descubrimiento inline (tab progreso) */}
+      {activeTab === 'progress' && !isAdminMode && availableJourneys.length > 0 && (
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-sm font-semibold text-slate-500 whitespace-nowrap">
+              Disponibles para ti
+            </h2>
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-xs text-slate-400 whitespace-nowrap">
+              {availableJourneys.length} journey{availableJourneys.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+          >
+            <AvailableJourneyCards
+              journeys={availableJourneys}
+              enrollingId={enrollingId}
+              onEnroll={handleEnroll}
+            />
           </motion.div>
         </section>
       )}
