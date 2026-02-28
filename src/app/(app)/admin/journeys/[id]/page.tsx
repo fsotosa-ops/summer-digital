@@ -55,7 +55,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { Switch } from '@/components/ui/switch';
 import { detectAndResolveUrl, getResourceLabel, type DetectedResource } from '@/lib/url-detection';
 import {
   DndContext,
@@ -381,8 +380,6 @@ export default function JourneyEditorPage() {
   const [configExpanded, setConfigExpanded] = useState(false);
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [isOnboardingJourney, setIsOnboardingJourney] = useState(false);
-  const [initialIsOnboardingJourney, setInitialIsOnboardingJourney] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Org assignment management (SuperAdmin only)
@@ -507,20 +504,11 @@ export default function JourneyEditorPage() {
     }
   };
 
-  // Load gamification config to detect onboarding status + initialize config form
+  // Initialize config form fields from journey data
   useEffect(() => {
     if (!journey || !orgId) return;
     setEditDescription(journey.description || '');
     setEditCategory(journey.category || '');
-    const load = async () => {
-      try {
-        const config = await adminService.getGamificationConfig(orgId);
-        const isOnboarding = config?.profile_completion_journey_id === journey.id;
-        setIsOnboardingJourney(isOnboarding as boolean);
-        setInitialIsOnboardingJourney(isOnboarding as boolean);
-      } catch { /* silencioso */ }
-    };
-    load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
@@ -773,7 +761,11 @@ export default function JourneyEditorPage() {
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
-      if (isOnboardingJourney !== initialIsOnboardingJourney) updates.is_onboarding = isOnboardingJourney;
+
+      // Derive onboarding flag from category
+      const isNowOnboarding = editCategory === 'Onboarding';
+      const wasOnboarding = journey.category === 'Onboarding';
+      if (isNowOnboarding !== wasOnboarding) updates.is_onboarding = isNowOnboarding;
 
       if (Object.keys(updates).length === 0) {
         toast.success('Sin cambios que guardar');
@@ -783,12 +775,11 @@ export default function JourneyEditorPage() {
       const updated = await adminService.updateJourney(orgId, journeyId, updates);
       setJourney(j => j ? { ...j, ...updates, ...updated } : j);
 
-      // If toggle ON, reload steps (backend added template steps)
+      // If category changed to Onboarding, reload steps (backend adds template profile steps)
       if (updates.is_onboarding === true) {
         setSteps(await adminService.listSteps(orgId, journeyId));
       }
 
-      setInitialIsOnboardingJourney(isOnboardingJourney);
       toast.success('Configuración guardada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar configuración');
@@ -826,7 +817,7 @@ export default function JourneyEditorPage() {
       <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* LEFT SIDEBAR */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6">
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:scrollbar-thin">
 
         {/* Identity card */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -915,7 +906,7 @@ export default function JourneyEditorPage() {
                   )}>
                     {journey?.is_active ? 'Activo' : 'Borrador'}
                   </Badge>
-                  {isOnboardingJourney && (
+                  {journey?.category === 'Onboarding' && (
                     <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
                       Onboarding
                     </Badge>
@@ -1024,24 +1015,11 @@ export default function JourneyEditorPage() {
                   <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700">Onboarding</p>
-                <p className="text-xs text-slate-400 mt-0.5 leading-tight">
-                  Proceso de bienvenida principal de la org.
+              {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
+                <p className="text-xs text-sky-500 mt-1">
+                  Al guardar se agregarán steps de perfil CRM.
                 </p>
-                {isOnboardingJourney && (
-                  <p className="text-xs text-sky-500 mt-1">
-                    Al guardar se agregarán steps de perfil CRM.
-                  </p>
-                )}
-              </div>
-              <Switch
-                checked={isOnboardingJourney}
-                onCheckedChange={setIsOnboardingJourney}
-                disabled={!orgId || savingConfig}
-              />
+              )}
             </div>
             <Button
               onClick={handleSaveConfig}
@@ -1052,6 +1030,194 @@ export default function JourneyEditorPage() {
                 ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
                 : 'Guardar configuración'}
             </Button>
+          </div>
+        )}
+
+        {/* Recompensas del Journey — sidebar card */}
+        {canEdit && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-3
+                         hover:bg-slate-50 transition-colors cursor-pointer select-none"
+              onClick={() => setRewardsExpanded((v) => !v)}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
+                <span className="text-sm font-semibold text-slate-700 truncate">Recompensas</span>
+                {linkedRewardsCount > 0 && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">
+                    {linkedRewardsCount}
+                  </span>
+                )}
+              </div>
+              {rewardsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+              )}
+            </button>
+
+            {rewardsExpanded && (
+              <div className="px-4 pb-4 space-y-4 border-t border-slate-100">
+                <p className="text-xs text-slate-400 pt-2">
+                  Badges o puntos al completar steps o el journey.
+                </p>
+                {rewardsLoading ? (
+                  <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                  </div>
+                ) : rewards.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-1">
+                    Sin recompensas en el catálogo.{' '}
+                    <span className="text-slate-500">Créalas en <strong>Gamificación → Recompensas</strong>.</span>
+                  </p>
+                ) : (
+                  <>
+                    {/* Journey completion reward */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                        Al completar el Journey
+                      </p>
+                      <Select
+                        value={getJourneyCompletionReward()?.id ?? '__none__'}
+                        onValueChange={(val) =>
+                          handleLinkRewardToJourney(val === '__none__' ? null : val)
+                        }
+                        disabled={savingReward}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Sin recompensa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sin recompensa</SelectItem>
+                          {rewards.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                              {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="h-px bg-slate-100" />
+
+                    {/* Per-step rewards */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-slate-400" />
+                        Por step completado
+                      </p>
+                      {steps.length === 0 ? (
+                        <p className="text-xs text-slate-400">
+                          Agrega steps para asignar recompensas.
+                        </p>
+                      ) : (
+                        steps.map((step) => {
+                          const Icon = getStepIcon(step.type, step.config);
+                          return (
+                            <div key={step.id} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                  <Icon className="h-3 w-3 text-slate-500" />
+                                </div>
+                                <span className="text-xs text-slate-700 truncate">
+                                  {step.title}
+                                </span>
+                              </div>
+                              <Select
+                                value={getStepReward(step.id)?.id ?? '__none__'}
+                                onValueChange={(val) =>
+                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
+                                }
+                                disabled={savingReward}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Sin recompensa" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
+                                  {rewards.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.name}
+                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Organizaciones habilitadas — sidebar card, solo SuperAdmin */}
+        {isSuperAdmin && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 className="h-4 w-4 text-fuchsia-500" />
+                <span className="text-sm font-semibold text-slate-700">Organizaciones</span>
+                {assignedOrgIds.length > 0 && (
+                  <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full">
+                    {assignedOrgIds.length}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">
+                Organizaciones con acceso a este journey.
+              </p>
+            </div>
+
+            <div className="px-4 pb-4 space-y-3">
+              {loadingOrgAssign ? (
+                <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+                </div>
+              ) : allOrgs.length === 0 ? (
+                <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
+              ) : (
+                <>
+                  <MultiSelect
+                    options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
+                    selected={assignedOrgIds}
+                    onChange={setAssignedOrgIds}
+                    placeholder="Buscar organizaciones..."
+                  />
+
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-400">
+                      {assignedOrgIds.length === 0
+                        ? 'Sin selección = abierto para todas.'
+                        : `${assignedOrgIds.length} org(s) seleccionada(s).`}
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveOrgs}
+                      disabled={savingOrgs || !orgsDirty}
+                      className="w-full"
+                    >
+                      {savingOrgs ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        'Guardar organizaciones'
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -1212,194 +1378,6 @@ export default function JourneyEditorPage() {
         </div>{/* end right main */}
 
       </div>{/* end two-column layout */}
-
-      {/* Recompensas del Journey */}
-      {canEdit && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100
-                       hover:bg-slate-50 transition-colors cursor-pointer select-none"
-            onClick={() => setRewardsExpanded((v) => !v)}
-          >
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              <span className="text-sm font-semibold text-slate-700">Recompensas del Journey</span>
-              {linkedRewardsCount > 0 && (
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                  {linkedRewardsCount} asignada{linkedRewardsCount !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            {rewardsExpanded ? (
-              <ChevronUp className="h-4 w-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            )}
-          </button>
-
-          {rewardsExpanded && (
-            <div className="px-6 pb-6 space-y-5">
-              <p className="text-xs text-slate-400 pt-1">
-                Asigna badges o puntos extra que se otorgan al completar un step o el journey completo.
-              </p>
-              {rewardsLoading ? (
-                <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando recompensas...
-                </div>
-              ) : rewards.length === 0 ? (
-                <p className="text-sm text-slate-400 py-2">
-                  No hay recompensas en el catálogo de esta organización.{' '}
-                  <span className="text-slate-500">Créalas primero en <strong>Gamificación → Recompensas</strong>.</span>
-                </p>
-              ) : (
-                <>
-                  {/* Journey completion reward */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                      <Trophy className="h-4 w-4 text-amber-500" />
-                      Al completar el Journey
-                    </p>
-                    <Select
-                      value={getJourneyCompletionReward()?.id ?? '__none__'}
-                      onValueChange={(val) =>
-                        handleLinkRewardToJourney(val === '__none__' ? null : val)
-                      }
-                      disabled={savingReward}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sin recompensa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Sin recompensa</SelectItem>
-                        {rewards.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.name}
-                            {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="h-px bg-slate-100" />
-
-                  {/* Per-step rewards */}
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                      <Star className="h-4 w-4 text-slate-400" />
-                      Por step completado
-                    </p>
-                    {steps.length === 0 ? (
-                      <p className="text-xs text-slate-400">
-                        Agrega steps al journey para asignarles recompensas.
-                      </p>
-                    ) : (
-                      steps.map((step) => {
-                        const Icon = getStepIcon(step.type, step.config);
-                        return (
-                          <div key={step.id} className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                              <Icon className="h-3.5 w-3.5 text-slate-500" />
-                            </div>
-                            <span className="text-sm text-slate-700 flex-1 min-w-0 truncate">
-                              {step.title}
-                            </span>
-                            <div className="w-56 flex-shrink-0">
-                              <Select
-                                value={getStepReward(step.id)?.id ?? '__none__'}
-                                onValueChange={(val) =>
-                                  handleLinkRewardToStep(step.id, val === '__none__' ? null : val)
-                                }
-                                disabled={savingReward}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Sin recompensa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Sin recompensa</SelectItem>
-                                  {rewards.map((r) => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                      {r.name}
-                                      {r.points > 0 ? ` (+${r.points} pts)` : ''}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Organizaciones habilitadas — solo SuperAdmin */}
-      {isSuperAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-5 w-5 text-fuchsia-500" />
-              <span className="text-sm font-semibold text-slate-700">Organizaciones habilitadas</span>
-              {assignedOrgIds.length > 0 && (
-                <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full">
-                  {assignedOrgIds.length}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-400">
-              Selecciona las organizaciones que tienen acceso a este journey.
-            </p>
-          </div>
-
-          <div className="px-6 py-4 space-y-3">
-            {loadingOrgAssign ? (
-              <div className="flex items-center gap-2 py-3 text-slate-400 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
-              </div>
-            ) : allOrgs.length === 0 ? (
-              <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
-            ) : (
-              <>
-                <MultiSelect
-                  options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
-                  selected={assignedOrgIds}
-                  onChange={setAssignedOrgIds}
-                  placeholder="Buscar y seleccionar organizaciones..."
-                />
-
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">
-                    {assignedOrgIds.length === 0
-                      ? 'Sin selección = abierto para todas las organizaciones.'
-                      : `${assignedOrgIds.length} organización(es) seleccionada(s).`}
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveOrgs}
-                    disabled={savingOrgs || !orgsDirty}
-                  >
-                    {savingOrgs ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      'Guardar organizaciones'
-                    )}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
 
       {/* Step Dialog */}
       <Dialog open={stepDialogOpen} onOpenChange={(open) => {
