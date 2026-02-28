@@ -48,6 +48,7 @@ import {
   Zap,
   Building2,
   RefreshCw,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -342,7 +343,9 @@ export default function GamificationAdminPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rewardDialogError, setRewardDialogError] = useState<string | null>(null);
   const [pointsAutoCalculated, setPointsAutoCalculated] = useState(false);
+  const [recalcJourneyId, setRecalcJourneyId] = useState<string>('__all__');
 
   // Auto-calculate reward points from journey/step conditions
   const recalcPoints = async (conditions: ApiUnlockConditionItem[], type: string) => {
@@ -451,10 +454,15 @@ export default function GamificationAdminPage() {
 
   // Recalculate points handler
   const handleRecalculatePoints = async () => {
-    if (!orgId || !confirm('¿Recalcular puntos de todos los step completions con los base_points actuales?')) return;
+    const target = recalcJourneyId === '__all__' ? undefined : recalcJourneyId;
+    const journeyName = target ? journeys.find((j) => j.id === target)?.title : undefined;
+    const msg = target
+      ? `¿Recalcular puntos para el journey "${journeyName}"?`
+      : '¿Recalcular puntos de TODOS los journeys?';
+    if (!orgId || !confirm(msg)) return;
     setIsRecalculating(true);
     try {
-      const resp = await gamificationService.recalculatePoints(orgId);
+      const resp = await gamificationService.recalculatePoints(orgId, target);
       alert(resp.message || `${resp.updated} registros actualizados.`);
     } catch {
       alert('Error al recalcular puntos.');
@@ -512,6 +520,7 @@ export default function GamificationAdminPage() {
     setRewardForm(EMPTY_REWARD_FORM);
     setAssignedOrgIds(new Set(orgId ? [orgId] : []));
     setPointsAutoCalculated(false);
+    setRewardDialogError(null);
     setRewardDialogOpen(true);
   };
 
@@ -520,6 +529,7 @@ export default function GamificationAdminPage() {
     setRewardForm(rewardToForm(reward));
     setAssignedOrgIds(new Set());
     setPointsAutoCalculated(false);
+    setRewardDialogError(null);
     setRewardDialogOpen(true);
     // Cargar orgs asignadas en background
     setLoadingOrgAssign(true);
@@ -563,7 +573,7 @@ export default function GamificationAdminPage() {
   const handleSaveReward = async () => {
     if (!orgId) return;
     setIsSaving(true);
-    setError(null);
+    setRewardDialogError(null);
     try {
       const payload = formToPayload(rewardForm);
       let savedRewardId: string;
@@ -586,20 +596,28 @@ export default function GamificationAdminPage() {
 
       // Sincronizar asignación de orgs (solo SuperAdmin puede ver todas las orgs)
       if (user?.role === 'SuperAdmin' && allOrgs.length > 0) {
-        const currentResp = await gamificationService.getRewardOrganizations(savedRewardId).catch(() => null);
-        const currentIds = new Set(currentResp?.organizations.map((o) => o.organization_id) ?? []);
+        try {
+          const currentResp = await gamificationService.getRewardOrganizations(savedRewardId).catch(() => null);
+          const currentIds = new Set(currentResp?.organizations.map((o) => o.organization_id) ?? []);
 
-        const toAssign = [...assignedOrgIds].filter((id) => !currentIds.has(id));
-        const toUnassign = [...currentIds].filter((id) => !assignedOrgIds.has(id));
+          const toAssign = [...assignedOrgIds].filter((id) => !currentIds.has(id));
+          const toUnassign = [...currentIds].filter((id) => !assignedOrgIds.has(id));
 
-        if (toAssign.length > 0) await gamificationService.assignRewardOrgs(savedRewardId, toAssign);
-        if (toUnassign.length > 0) await gamificationService.unassignRewardOrgs(savedRewardId, toUnassign);
+          if (toAssign.length > 0) await gamificationService.assignRewardOrgs(savedRewardId, toAssign);
+          if (toUnassign.length > 0) await gamificationService.unassignRewardOrgs(savedRewardId, toUnassign);
+        } catch (orgErr) {
+          // Reward was saved but org assignment failed — close dialog and show warning
+          setRewardDialogOpen(false);
+          await fetchRewards();
+          setError('Recompensa guardada, pero hubo un error al asignar organizaciones. Intenta editarla de nuevo.');
+          return;
+        }
       }
 
       setRewardDialogOpen(false);
       await fetchRewards();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar recompensa');
+      setRewardDialogError(err instanceof Error ? err.message : 'Error al guardar recompensa');
     } finally {
       setIsSaving(false);
     }
@@ -780,87 +798,154 @@ export default function GamificationAdminPage() {
 
       {/* ---- Config Tab ---- */}
       {activeTab === 'config' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración de Gamificación</CardTitle>
-            <CardDescription>Ajusta las opciones de gamificación para tu organización.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingConfig ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
-            ) : (
-              <div className="space-y-6 max-w-lg">
-                <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Modulos activos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Modulos activos</CardTitle>
+              <CardDescription>Elige que sistemas de gamificacion estan disponibles para los usuarios de tu organizacion.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingConfig ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+              ) : (
+                <div className="space-y-3">
                   {([
-                    { key: 'points_enabled',  label: 'Puntos',      desc: 'Habilitar sistema de puntos' },
-                    { key: 'levels_enabled',  label: 'Niveles',     desc: 'Habilitar sistema de niveles' },
-                    { key: 'rewards_enabled', label: 'Recompensas', desc: 'Habilitar sistema de recompensas' },
-                  ] as const).map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900">{label}</p>
-                        <p className="text-sm text-slate-500">{desc}</p>
+                    { key: 'points_enabled',  label: 'Puntos',      desc: 'Los usuarios acumulan puntos al completar steps y journeys', icon: <Zap className="h-4 w-4 text-fuchsia-500" /> },
+                    { key: 'levels_enabled',  label: 'Niveles',     desc: 'Los usuarios suben de nivel al alcanzar ciertos puntos (ej: Semilla → Brote → Arbol)', icon: <TrendingUp className="h-4 w-4 text-teal-500" /> },
+                    { key: 'rewards_enabled', label: 'Recompensas', desc: 'Badges e insignias al cumplir condiciones (completar perfil, journey, step)', icon: <Award className="h-4 w-4 text-amber-500" /> },
+                  ] as const).map(({ key, label, desc, icon }) => (
+                    <div key={key} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+                      <div className="mt-0.5">{icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 text-sm">{label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
                       </div>
                       <button
                         type="button"
                         role="switch"
                         aria-checked={!!configForm[key]}
                         onClick={() => setConfigForm({ ...configForm, [key]: !configForm[key] })}
-                        className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', configForm[key] ? 'bg-teal-500' : 'bg-slate-200')}
+                        className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0', configForm[key] ? 'bg-teal-500' : 'bg-slate-200')}
                       >
                         <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', configForm[key] ? 'translate-x-6' : 'translate-x-1')} />
                       </button>
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Multiplicador de puntos</Label>
-                    <Input type="number" min="0.01" max="99.99" step="0.01" value={configForm.points_multiplier}
-                      onChange={(e) => setConfigForm({ ...configForm, points_multiplier: parseFloat(e.target.value) || 1 })} />
-                    <p className="text-xs text-slate-400">1.0 = normal · 1.5 = 50% bonus · 2.0 = doble puntos</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Puntos por defecto por step</Label>
-                    <Input type="number" min="0" value={configForm.default_step_points}
-                      onChange={(e) => setConfigForm({ ...configForm, default_step_points: parseInt(e.target.value) || 0 })} />
-                    <p className="text-xs text-slate-400">Se usa cuando un step no tiene puntos configurados.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Puntos por completar perfil (fallback)</Label>
-                    <Input type="number" min="0" value={configForm.profile_completion_points ?? 0}
-                      onChange={(e) => setConfigForm({ ...configForm, profile_completion_points: parseInt(e.target.value) || 0 })} />
-                    <p className="text-xs text-slate-400">
-                      Solo aplica si no hay recompensa con condición "Completar perfil" configurada.
-                    </p>
-                  </div>
+          {/* Configuracion de puntos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Puntos</CardTitle>
+              <CardDescription>Controla cuantos puntos ganan los usuarios al avanzar en los journeys.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-5 max-w-lg">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Puntos base por step</Label>
+                  <Input type="number" min="0" value={configForm.default_step_points}
+                    onChange={(e) => setConfigForm({ ...configForm, default_step_points: parseInt(e.target.value) || 0 })} />
+                  <p className="text-xs text-slate-500 flex items-start gap-1.5">
+                    <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                    Cada step otorga esta cantidad de puntos por defecto. Puedes sobrescribirlo en cada step individual editando sus &quot;base_points&quot;.
+                  </p>
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={handleRecalculatePoints}
-                    disabled={isRecalculating}
-                    className="gap-2 text-sm"
-                  >
-                    {isRecalculating
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <RefreshCw className="h-4 w-4" />}
-                    Recalcular puntos
-                  </Button>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Multiplicador</Label>
+                  <div className="flex items-center gap-3">
+                    <Input type="number" min="0.01" max="99.99" step="0.01" value={configForm.points_multiplier}
+                      onChange={(e) => setConfigForm({ ...configForm, points_multiplier: parseFloat(e.target.value) || 1 })}
+                      className="max-w-32" />
+                    <span className="text-sm text-slate-500">x</span>
+                    <div className="flex gap-1.5">
+                      {[1, 1.5, 2].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setConfigForm({ ...configForm, points_multiplier: val })}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                            configForm.points_multiplier === val
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                          )}
+                        >
+                          {val === 1 ? 'Normal' : val === 1.5 ? '+50%' : 'Doble'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 flex items-start gap-1.5">
+                    <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                    Multiplica los puntos base de cada step. Util para campanas temporales o eventos especiales.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Puntos por completar perfil</Label>
+                  <Input type="number" min="0" value={configForm.profile_completion_points ?? 0}
+                    onChange={(e) => setConfigForm({ ...configForm, profile_completion_points: parseInt(e.target.value) || 0 })}
+                    className="max-w-40" />
+                  <p className="text-xs text-slate-500 flex items-start gap-1.5">
+                    <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                    Se otorga cuando el usuario completa su perfil. Solo aplica si no hay una recompensa con condicion &quot;Completar perfil&quot;.
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t">
                   <Button onClick={handleSaveConfig} disabled={isSaving}>
                     {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Guardar Configuración
+                    Guardar configuracion
                   </Button>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Recalcular puntos actualiza los puntos ya otorgados usando los base_points actuales de cada step y el multiplicador vigente.
-                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Recalcular puntos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Recalcular puntos</CardTitle>
+              <CardDescription>
+                Si cambiaste los puntos base de los steps o el multiplicador, usa esta herramienta para actualizar los puntos ya otorgados a los usuarios.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-w-lg">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Alcance</Label>
+                  <Select value={recalcJourneyId} onValueChange={setRecalcJourneyId}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todos los journeys</SelectItem>
+                      {journeys.map((j) => (
+                        <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleRecalculatePoints}
+                  disabled={isRecalculating}
+                  className="gap-2"
+                >
+                  {isRecalculating
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <RefreshCw className="h-4 w-4" />}
+                  {recalcJourneyId === '__all__' ? 'Recalcular todos' : 'Recalcular journey seleccionado'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* ---- Level Dialog ---- */}
@@ -1055,6 +1140,12 @@ export default function GamificationAdminPage() {
                 <p className="text-xs text-slate-400">
                   La recompensa solo será visible y otorgable en las organizaciones seleccionadas.
                 </p>
+              </div>
+            )}
+
+            {rewardDialogError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {rewardDialogError}
               </div>
             )}
 
