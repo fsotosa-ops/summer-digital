@@ -344,6 +344,7 @@ export function JourneyWizard({
       if (isPreviewMode) { simCompleteNode(node); return; }
       triggerStepSuccess();
       await completeActivity(node.id);
+      await fetchJourneys(user?.organizationId ?? undefined);
       showXp(node.points ?? 10);
       checkJourneyComplete();
     } catch (err) {

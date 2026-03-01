@@ -117,9 +117,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     journeyService.checkOnboarding().then(res => {
       if (res.should_show && res.journey_id) {
         setOnboardingJourneyId(res.journey_id);
-      } else {
-        sessionStorage.setItem('onboarding_checked', 'true');
       }
+      // else: should_show=false → no hacer nada, re-check en el próximo fresh load
     }).catch(() => {
       sessionStorage.setItem('onboarding_checked', 'true');
     });
@@ -176,7 +175,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return (
       <OnboardingGate
         journeyId={onboardingJourneyId}
-        onComplete={() => setOnboardingJourneyId(null)}
+        onComplete={() => {
+          setOnboardingJourneyId(null);
+          router.push('/dashboard');
+        }}
       />
     );
   }

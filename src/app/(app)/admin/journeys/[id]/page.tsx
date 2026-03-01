@@ -704,10 +704,9 @@ export default function JourneyEditorPage() {
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
 
-      // Derive onboarding flag from category
+      // Derive onboarding flag from category — always include so backend upsert runs (idempotent)
       const isNowOnboarding = editCategory === 'Onboarding';
-      const wasOnboarding = journey.category === 'Onboarding';
-      if (isNowOnboarding !== wasOnboarding) updates.is_onboarding = isNowOnboarding;
+      updates.is_onboarding = isNowOnboarding;
 
       if (Object.keys(updates).length > 0) {
         promises.push(
