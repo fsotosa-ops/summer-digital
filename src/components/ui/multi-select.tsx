@@ -134,6 +134,7 @@ export function MultiSelect({
       {open && pos && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
+          data-multiselect-dropdown=""
           style={{
             position: 'fixed',
             top: pos.top,

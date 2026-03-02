@@ -320,7 +320,20 @@ export default function AdminJourneysPage() {
                   <Sparkles size={12} className="opacity-70" />
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+              <DialogContent
+                className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto"
+                onPointerDownOutside={(e) => {
+                  // Prevent dialog from closing when clicking the portaled MultiSelect dropdown
+                  if ((e.target as HTMLElement).closest?.('[data-multiselect-dropdown]')) {
+                    e.preventDefault();
+                  }
+                }}
+                onInteractOutside={(e) => {
+                  if ((e.target as HTMLElement).closest?.('[data-multiselect-dropdown]')) {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 <DialogHeader>
                   <DialogTitle>Crear nuevo Journey</DialogTitle>
                   <DialogDescription>
