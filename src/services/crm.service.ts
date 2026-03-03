@@ -16,6 +16,7 @@ import {
   ApiUserPointsSummary,
   ApiCrmOrgProfile,
   ApiCrmOrgProfileUpdate,
+  ApiContactEventParticipation,
 } from '@/types/api.types';
 
 class CrmService {
@@ -177,6 +178,12 @@ class CrmService {
 
   async updateOrgProfile(orgId: string, data: ApiCrmOrgProfileUpdate): Promise<ApiCrmOrgProfile> {
     return apiClient.patch<ApiCrmOrgProfile>(`/crm/org-profiles/${orgId}`, data);
+  }
+
+  // --- Contact Event Participation ---
+
+  async getContactEvents(userId: string): Promise<ApiContactEventParticipation[]> {
+    return apiClient.get<ApiContactEventParticipation[]>(`/crm/contacts/${userId}/events`);
   }
 }
 

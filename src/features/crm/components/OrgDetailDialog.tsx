@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { organizationService } from '@/services/organization.service';
 import { crmService } from '@/services/crm.service';
+import { adminService } from '@/services/admin.service';
 import {
   ApiOrganization,
   ApiCrmOrgProfile,
@@ -12,7 +13,9 @@ import {
   ApiMemberRole,
   ApiMembershipStatus,
   ApiBulkMemberResultItem,
+  ApiJourneyAdminRead,
 } from '@/types/api.types';
+import { EventsTab } from '@/features/crm/tabs/EventsTab';
 import { ORG_TYPES } from '@/lib/constants/crm-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +66,8 @@ import {
   Pencil,
   Check,
   X,
+  Calendar,
+  Route,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -293,6 +298,14 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResults, setBulkResults] = useState<ApiBulkMemberResultItem[] | null>(null);
 
+  // Events tab lazy-load
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+
+  // Journeys tab
+  const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
+  const [journeysLoading, setJourneysLoading] = useState(false);
+  const [journeysLoaded, setJourneysLoaded] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // Load CRM profile + members when org changes
@@ -300,6 +313,9 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
     if (!org) {
       setCrmProfile(null);
       setMembers([]);
+      setEventsLoaded(false);
+      setJourneys([]);
+      setJourneysLoaded(false);
       return;
     }
     setProfileLoading(true);
@@ -308,6 +324,18 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       .catch(() => setCrmProfile(null))
       .finally(() => setProfileLoading(false));
   }, [org]);
+
+  const loadJourneys = useCallback(async (orgId: string) => {
+    setJourneysLoading(true);
+    try {
+      const list = await adminService.listJourneys(orgId);
+      setJourneys(list);
+    } catch {
+      // non-critical
+    } finally {
+      setJourneysLoading(false);
+    }
+  }, []);
 
   const loadMembers = useCallback(async (orgId: string) => {
     setMembersLoading(true);
@@ -488,6 +516,11 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
             className="flex-1 flex flex-col overflow-hidden"
             onValueChange={(v) => {
               if (v === 'miembros' && members.length === 0) loadMembers(org.id);
+              if (v === 'eventos' && !eventsLoaded) setEventsLoaded(true);
+              if (v === 'journeys' && !journeysLoaded) {
+                setJourneysLoaded(true);
+                loadJourneys(org.id);
+              }
             }}
           >
             <TabsList className="mx-6 mt-3 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
@@ -510,6 +543,26 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               >
                 <Users className="h-3.5 w-3.5" />
                 Miembros {members.length > 0 && `(${members.length})`}
+              </TabsTrigger>
+              <TabsTrigger
+                value="eventos"
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Eventos
+              </TabsTrigger>
+              <TabsTrigger
+                value="journeys"
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
+              >
+                <Route className="h-3.5 w-3.5" />
+                Journeys
               </TabsTrigger>
             </TabsList>
 
@@ -788,6 +841,67 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                         </div>
                       )}
                     </div>
+                  </TabsContent>
+
+                  {/* ───── Tab: Eventos ───── */}
+                  <TabsContent value="eventos" className="mt-0">
+                    {eventsLoaded ? (
+                      <EventsTab orgId={org.id} orgSlug={org.slug} />
+                    ) : (
+                      <div className="flex justify-center py-12">
+                        <p className="text-sm text-slate-400">Haz clic en la pestaña para cargar eventos</p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* ───── Tab: Journeys ───── */}
+                  <TabsContent value="journeys" className="mt-0">
+                    {journeysLoading ? (
+                      <div className="flex justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                      </div>
+                    ) : journeys.length === 0 ? (
+                      <div className="text-center py-12 text-slate-500 text-sm">
+                        <Route className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                        No hay journeys asignados a esta organización
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/60">
+                              <TableHead>Título</TableHead>
+                              <TableHead>Estado</TableHead>
+                              <TableHead>Inscritos</TableHead>
+                              <TableHead>Completado</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {journeys.map((j) => (
+                              <TableRow key={j.id}>
+                                <TableCell className="font-medium">{j.title}</TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={j.is_active
+                                      ? 'bg-green-100 text-green-700 border-green-200'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200'}
+                                  >
+                                    {j.is_active ? 'Activo' : 'Inactivo'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-slate-600">
+                                  {j.total_enrollments}
+                                </TableCell>
+                                <TableCell className="text-slate-600">
+                                  {`${Math.round(j.completion_rate * 100)}%`}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </TabsContent>
 
                 </div>

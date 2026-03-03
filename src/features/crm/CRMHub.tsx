@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building2, Activity, Settings2, Calendar } from 'lucide-react';
+import { Users, Building2, Settings2, LayoutDashboard } from 'lucide-react';
 import { ContactsTab } from './tabs/ContactsTab';
 import { OrganizationsTab } from './tabs/OrganizationsTab';
 import { ActivityTab } from './tabs/ActivityTab';
 import { FieldOptionsTab } from './tabs/FieldOptionsTab';
-import { EventsTab } from './tabs/EventsTab';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -20,7 +19,7 @@ const TAB_TRIGGER =
 export function CRMHub() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
-  const [activeTab, setActiveTab] = useState('contacts');
+  const [activeTab, setActiveTab] = useState('overview');
 
   return (
     <div className="space-y-6">
@@ -33,6 +32,10 @@ export function CRMHub() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto">
+          <TabsTrigger value="overview" className={TAB_TRIGGER}>
+            <LayoutDashboard className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
           <TabsTrigger value="contacts" className={TAB_TRIGGER}>
             <Users className="h-4 w-4" />
             Contactos
@@ -40,14 +43,6 @@ export function CRMHub() {
           <TabsTrigger value="organizations" className={TAB_TRIGGER}>
             <Building2 className="h-4 w-4" />
             Organizaciones
-          </TabsTrigger>
-          <TabsTrigger value="events" className={TAB_TRIGGER}>
-            <Calendar className="h-4 w-4" />
-            Eventos
-          </TabsTrigger>
-          <TabsTrigger value="activity" className={TAB_TRIGGER}>
-            <Activity className="h-4 w-4" />
-            Actividad
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="field-options" className={TAB_TRIGGER}>
@@ -57,20 +52,16 @@ export function CRMHub() {
           )}
         </TabsList>
 
+        <TabsContent value="overview">
+          <ActivityTab />
+        </TabsContent>
+
         <TabsContent value="contacts">
           <ContactsTab />
         </TabsContent>
 
         <TabsContent value="organizations">
           <OrganizationsTab />
-        </TabsContent>
-
-        <TabsContent value="events">
-          <EventsTab />
-        </TabsContent>
-
-        <TabsContent value="activity">
-          <ActivityTab />
         </TabsContent>
 
         {isAdmin && (

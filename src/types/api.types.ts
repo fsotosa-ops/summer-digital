@@ -782,6 +782,23 @@ export interface ApiCrmStats {
   total_notes: number;
 }
 
+// --- Contact Event Participation ---
+
+export interface ApiContactEventParticipation {
+  enrollment_id: string;
+  enrollment_status: string;
+  enrolled_at: string;
+  event_id: string;
+  event_name: string;
+  event_slug: string;
+  event_status: ApiEventStatus;
+  event_start_date?: string;
+  event_location?: string;
+  org_id: string;
+  org_name: string;
+  org_slug: string;
+}
+
 // --- Resource DTOs ---
 
 export type ApiResourceType = 'video' | 'podcast' | 'pdf' | 'capsula' | 'actividad';

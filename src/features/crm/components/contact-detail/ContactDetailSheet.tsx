@@ -49,6 +49,7 @@ import {
   User,
   StickyNote,
   Activity,
+  Calendar,
 } from 'lucide-react';
 
 import { STATUS_OPTIONS, STATUS_COLORS, getInitials } from './constants';
@@ -56,6 +57,7 @@ import { ProfileTab } from './ProfileTab';
 import { OrganizationsTab } from './OrganizationsTab';
 import { NotesTasksTab } from './NotesTasksTab';
 import { ActivityTab } from './ActivityTab';
+import { EventsParticipationTab } from './EventsParticipationTab';
 
 interface Props {
   user: ApiUser | null;
@@ -113,6 +115,9 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
   const [activityLoading, setActivityLoading] = useState(false);
   const [expandedEnrollment, setExpandedEnrollment] = useState<string | null>(null);
 
+  // Events participation tab (lazy load)
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // Load CRM contact + field options when user changes
@@ -123,6 +128,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       setTasks([]);
       setEnrollmentDetails([]);
       setGamification(null);
+      setEventsLoaded(false);
       return;
     }
     setCrmLoading(true);
@@ -447,6 +453,17 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 <Activity className="h-3.5 w-3.5" />
                 Actividad
               </TabsTrigger>
+              <TabsTrigger
+                value="events"
+                onClick={() => setEventsLoaded(true)}
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
+                  text-slate-500 hover:text-slate-700"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Eventos
+              </TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-hidden">
@@ -520,6 +537,16 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                         setExpandedEnrollment(expandedEnrollment === id ? null : id)
                       }
                     />
+                  </TabsContent>
+
+                  <TabsContent value="events" className="mt-0">
+                    {eventsLoaded ? (
+                      <EventsParticipationTab userId={user.id} />
+                    ) : (
+                      <div className="flex justify-center py-12">
+                        <p className="text-sm text-slate-400">Haz clic en la pestaña para cargar eventos</p>
+                      </div>
+                    )}
                   </TabsContent>
 
                 </div>

@@ -9,7 +9,6 @@ import {
   ApiEventStatus,
   ApiJourneyAdminRead,
 } from '@/types/api.types';
-import { useAuthStore } from '@/store/useAuthStore';
 import { generateSlug } from '@/lib/utils';
 import { EVENT_STATUS_CONFIG } from '@/lib/constants/crm-data';
 import { Card, CardContent } from '@/components/ui/card';
@@ -67,9 +66,12 @@ const defaultForm: ApiEventCreate = {
   },
 };
 
-export function EventsTab() {
-  const { user } = useAuthStore();
-  const orgId = user?.organizationId || '';
+interface EventsTabProps {
+  orgId: string;
+  orgSlug: string;
+}
+
+export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
@@ -154,7 +156,6 @@ export function EventsTab() {
   };
 
   const getQrUrl = (event: ApiEvent) => {
-    const orgSlug = user?.organizationSlug || '';
     return orgSlug ? `/j/${orgSlug}/${event.slug}` : null;
   };
 
