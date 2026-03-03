@@ -355,204 +355,266 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
     }
   };
 
+  const statusDot: Record<string, string> = {
+    active: 'bg-emerald-500',
+    suspended: 'bg-red-500',
+    pending_verification: 'bg-amber-400',
+    deleted: 'bg-slate-400',
+  };
+
+  const statusLabel = STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo';
+  const userStatus = user.status || 'active';
+
+  const tabTrigger =
+    'rounded-lg gap-1.5 px-3 py-1.5 text-sm ' +
+    'data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600 ' +
+    'data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium ' +
+    'text-slate-500 hover:text-slate-700';
+
   return (
     <>
-      {/* ===== FULL-SCREEN DIALOG ===== */}
+      {/* ===== FULL-SCREEN DIALOG — HubSpot 2-column ===== */}
       <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
         <DialogContent
-          className="!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100vh-3rem)] !max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
+          className="!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100vh-3rem)] !max-h-[calc(100vh-3rem)] p-0 flex flex-row overflow-hidden"
           showCloseButton={true}
         >
           <DialogTitle className="sr-only">
             Perfil de {user.full_name || user.email}
           </DialogTitle>
-          {/* Header */}
-          <div className="shrink-0 bg-gradient-to-r from-sky-50 via-purple-50 to-amber-50 border-b border-purple-100/50">
-            <div className="flex items-center gap-4 px-6 pt-5 pb-4">
-              <Avatar className="h-14 w-14 shrink-0 ring-2 ring-white shadow-sm">
-                <AvatarImage src={user.avatar_url || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white text-lg font-semibold">
-                  {getInitials(user)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-semibold text-slate-800 truncate">
-                  {user.full_name || 'Sin nombre'}
-                </h2>
-                <p className="text-sm text-slate-500 flex items-center gap-1 mt-0.5">
-                  <Mail className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{user.email}</span>
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap shrink-0">
-                <Badge
-                  variant="outline"
-                  className={STATUS_COLORS[user.status || 'active']}
-                >
-                  {STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo'}
-                </Badge>
-                {user.is_platform_admin && (
-                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Platform Admin
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2 mx-6">
-              {error}
-            </p>
-          )}
+          {/* ── LEFT SIDEBAR ── */}
+          <aside className="w-[320px] shrink-0 border-r border-slate-200 bg-gradient-to-b from-slate-50 to-white flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="p-5 space-y-5">
 
-          {/* Content with Tabs */}
-          <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-3 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
-              <TabsTrigger
-                value="profile"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
-                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
-                  text-slate-500 hover:text-slate-700"
-              >
-                <User className="h-3.5 w-3.5" />
-                Perfil
-              </TabsTrigger>
-              <TabsTrigger
-                value="orgs"
-                onClick={() => loadAvailableOrgs()}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
-                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
-                  text-slate-500 hover:text-slate-700"
-              >
-                <Building2 className="h-3.5 w-3.5" />
-                Orgs ({user.organizations.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="notes"
-                onClick={() => loadNotesAndTasks(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
-                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
-                  text-slate-500 hover:text-slate-700"
-              >
-                <StickyNote className="h-3.5 w-3.5" />
-                Notas & Tareas
-              </TabsTrigger>
-              <TabsTrigger
-                value="activity"
-                onClick={() => loadActivity(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
-                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
-                  text-slate-500 hover:text-slate-700"
-              >
-                <Activity className="h-3.5 w-3.5" />
-                Actividad
-              </TabsTrigger>
-              <TabsTrigger
-                value="events"
-                onClick={() => setEventsLoaded(true)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
-                  data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
-                  text-slate-500 hover:text-slate-700"
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                Eventos
-              </TabsTrigger>
-            </TabsList>
+                {/* Avatar + name + status */}
+                <div className="text-center">
+                  <div className="relative inline-block">
+                    <Avatar className="h-20 w-20 ring-4 ring-white shadow-md mx-auto">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white text-2xl font-semibold">
+                        {getInitials(user)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-[3px] border-white ${statusDot[userStatus]}`} />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-800 mt-3 truncate px-2">
+                    {user.full_name || 'Sin nombre'}
+                  </h2>
+                  <p className="text-sm text-slate-500 flex items-center justify-center gap-1 mt-0.5">
+                    <Mail className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{user.email}</span>
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[userStatus]}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${statusDot[userStatus]}`} />
+                      {statusLabel}
+                    </span>
+                    {user.is_platform_admin && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        <Shield className="h-3 w-3" />
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="px-6 py-4">
-
-                  <TabsContent value="profile" className="mt-0">
-                    <ProfileTab
-                      user={user}
-                      currentUser={currentUser}
-                      isSuperAdmin={isSuperAdmin}
-                      crmContact={crmContact}
-                      crmLoading={crmLoading}
-                      fieldOptions={fieldOptions}
-                      onContactUpdated={setCrmContact}
-                      togglingAdmin={togglingAdmin}
-                      onOpenEdit={handleOpenEdit}
-                      onToggleAdmin={handleToggleAdmin}
-                      onOpenDelete={() => setDeleteOpen(true)}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="orgs" className="mt-0">
-                    <OrganizationsTab
-                      user={user}
-                      isSuperAdmin={isSuperAdmin}
-                      availableOrgs={availableOrgs}
-                      showAddOrg={showAddOrg}
-                      selectedOrgId={selectedOrgId}
-                      selectedRole={selectedRole}
-                      addingOrg={addingOrg}
-                      removingOrgId={removingOrgId}
-                      onShowAddOrg={setShowAddOrg}
-                      onSelectedOrgIdChange={setSelectedOrgId}
-                      onSelectedRoleChange={setSelectedRole}
-                      onAddToOrg={handleAddToOrg}
-                      onRemoveFromOrg={handleRemoveFromOrg}
-                      onLoadAvailableOrgs={loadAvailableOrgs}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="notes" className="mt-0">
-                    <NotesTasksTab
-                      notes={notes}
-                      tasks={tasks}
-                      notesLoading={notesLoading}
-                      newNoteContent={newNoteContent}
-                      savingNote={savingNote}
-                      newTaskTitle={newTaskTitle}
-                      newTaskPriority={newTaskPriority}
-                      savingTask={savingTask}
-                      onNewNoteContentChange={setNewNoteContent}
-                      onCreateNote={handleCreateNote}
-                      onDeleteNote={handleDeleteNote}
-                      onNewTaskTitleChange={setNewTaskTitle}
-                      onNewTaskPriorityChange={setNewTaskPriority}
-                      onCreateTask={handleCreateTask}
-                      onUpdateTaskStatus={handleUpdateTaskStatus}
-                      onDeleteTask={handleDeleteTask}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="activity" className="mt-0">
-                    <ActivityTab
-                      crmContact={crmContact}
-                      enrollmentDetails={enrollmentDetails}
-                      gamification={gamification}
-                      activityLoading={activityLoading}
-                      expandedEnrollment={expandedEnrollment}
-                      onToggleExpanded={(id) =>
-                        setExpandedEnrollment(expandedEnrollment === id ? null : id)
-                      }
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="events" className="mt-0">
-                    {eventsLoaded ? (
-                      <EventsParticipationTab userId={user.id} />
-                    ) : (
-                      <div className="flex justify-center py-12">
-                        <p className="text-sm text-slate-400">Haz clic en la pestaña para cargar eventos</p>
+                {/* ── Key properties ── */}
+                <div className="space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Propiedades</p>
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+                    <SidebarRow label="Empresa" value={crmContact?.company} />
+                    <SidebarRow label="Teléfono" value={crmContact?.phone} />
+                    <SidebarRow label="País" value={crmContact?.country} />
+                    <SidebarRow label="Ciudad" value={crmContact?.city} />
+                    <SidebarRow label="Género" value={crmContact?.gender} />
+                    <SidebarRow label="Educación" value={crmContact?.education_level} />
+                    <SidebarRow label="Ocupación" value={crmContact?.occupation} />
+                    {crmContact?.last_seen_at && (
+                      <div className="px-3 py-2 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">Última conexión</span>
+                        <span className="text-[11px] font-medium text-slate-600">
+                          {new Date(crmContact.last_seen_at).toLocaleDateString('es-MX', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
                     )}
-                  </TabsContent>
-
+                  </div>
                 </div>
-              </ScrollArea>
-            </div>
-          </Tabs>
+
+                {/* ── Organizations ── */}
+                <div className="space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Organizaciones ({user.organizations.length})
+                  </p>
+                  {user.organizations.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {user.organizations.map((org) => (
+                        <div
+                          key={org.id}
+                          className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm"
+                        >
+                          <div className="h-6 w-6 rounded-md bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shrink-0">
+                            <Building2 className="h-3 w-3 text-white" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-slate-700 truncate">
+                              {org.organization_name || org.organization_slug}
+                            </p>
+                            <p className="text-[10px] text-slate-400 capitalize">{org.role}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">Sin organizaciones</p>
+                  )}
+                </div>
+
+                {/* ── Metadata ── */}
+                <div className="space-y-0.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Metadata</p>
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+                    <SidebarRow
+                      label="Creado"
+                      value={user.created_at ? new Date(user.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : null}
+                    />
+                    <SidebarRow
+                      label="Actualizado"
+                      value={user.updated_at ? new Date(user.updated_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : null}
+                    />
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          </aside>
+
+          {/* ── RIGHT MAIN AREA ── */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 mx-5 mt-4">
+                {error}
+              </p>
+            )}
+
+            <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
+              <TabsList className="mx-5 mt-4 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
+                <TabsTrigger value="profile" className={tabTrigger}>
+                  <User className="h-3.5 w-3.5" />
+                  Perfil
+                </TabsTrigger>
+                <TabsTrigger value="orgs" onClick={() => loadAvailableOrgs()} className={tabTrigger}>
+                  <Building2 className="h-3.5 w-3.5" />
+                  Orgs
+                </TabsTrigger>
+                <TabsTrigger value="notes" onClick={() => loadNotesAndTasks(user.id)} className={tabTrigger}>
+                  <StickyNote className="h-3.5 w-3.5" />
+                  Notas & Tareas
+                </TabsTrigger>
+                <TabsTrigger value="activity" onClick={() => loadActivity(user.id)} className={tabTrigger}>
+                  <Activity className="h-3.5 w-3.5" />
+                  Actividad
+                </TabsTrigger>
+                <TabsTrigger value="events" onClick={() => setEventsLoaded(true)} className={tabTrigger}>
+                  <Calendar className="h-3.5 w-3.5" />
+                  Eventos
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="px-5 py-4">
+
+                    <TabsContent value="profile" className="mt-0">
+                      <ProfileTab
+                        user={user}
+                        currentUser={currentUser}
+                        isSuperAdmin={isSuperAdmin}
+                        crmContact={crmContact}
+                        crmLoading={crmLoading}
+                        fieldOptions={fieldOptions}
+                        onContactUpdated={setCrmContact}
+                        togglingAdmin={togglingAdmin}
+                        onOpenEdit={handleOpenEdit}
+                        onToggleAdmin={handleToggleAdmin}
+                        onOpenDelete={() => setDeleteOpen(true)}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="orgs" className="mt-0">
+                      <OrganizationsTab
+                        user={user}
+                        isSuperAdmin={isSuperAdmin}
+                        availableOrgs={availableOrgs}
+                        showAddOrg={showAddOrg}
+                        selectedOrgId={selectedOrgId}
+                        selectedRole={selectedRole}
+                        addingOrg={addingOrg}
+                        removingOrgId={removingOrgId}
+                        onShowAddOrg={setShowAddOrg}
+                        onSelectedOrgIdChange={setSelectedOrgId}
+                        onSelectedRoleChange={setSelectedRole}
+                        onAddToOrg={handleAddToOrg}
+                        onRemoveFromOrg={handleRemoveFromOrg}
+                        onLoadAvailableOrgs={loadAvailableOrgs}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="notes" className="mt-0">
+                      <NotesTasksTab
+                        notes={notes}
+                        tasks={tasks}
+                        notesLoading={notesLoading}
+                        newNoteContent={newNoteContent}
+                        savingNote={savingNote}
+                        newTaskTitle={newTaskTitle}
+                        newTaskPriority={newTaskPriority}
+                        savingTask={savingTask}
+                        onNewNoteContentChange={setNewNoteContent}
+                        onCreateNote={handleCreateNote}
+                        onDeleteNote={handleDeleteNote}
+                        onNewTaskTitleChange={setNewTaskTitle}
+                        onNewTaskPriorityChange={setNewTaskPriority}
+                        onCreateTask={handleCreateTask}
+                        onUpdateTaskStatus={handleUpdateTaskStatus}
+                        onDeleteTask={handleDeleteTask}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="activity" className="mt-0">
+                      <ActivityTab
+                        crmContact={crmContact}
+                        enrollmentDetails={enrollmentDetails}
+                        gamification={gamification}
+                        activityLoading={activityLoading}
+                        expandedEnrollment={expandedEnrollment}
+                        onToggleExpanded={(id) =>
+                          setExpandedEnrollment(expandedEnrollment === id ? null : id)
+                        }
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="events" className="mt-0">
+                      {eventsLoaded ? (
+                        <EventsParticipationTab userId={user.id} />
+                      ) : (
+                        <div className="flex justify-center py-12">
+                          <p className="text-sm text-slate-400">Haz clic en la pestaña para cargar eventos</p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                  </div>
+                </ScrollArea>
+              </div>
+            </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -629,5 +691,17 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/* ── Sidebar property row ── */
+function SidebarRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="px-3 py-2 flex items-center justify-between">
+      <span className="text-[11px] text-slate-400">{label}</span>
+      <span className={`text-[11px] font-medium truncate max-w-[150px] ${value ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+        {value || '—'}
+      </span>
+    </div>
   );
 }

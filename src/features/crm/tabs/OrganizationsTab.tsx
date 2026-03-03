@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +45,18 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+
+const ORG_TYPE_STYLES: Record<string, string> = {
+  community: 'bg-blue-100 text-blue-700 border-blue-200',
+  provider: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  sponsor: 'bg-amber-100 text-amber-700 border-amber-200',
+};
+
+const ORG_TYPE_DOT: Record<string, string> = {
+  community: 'bg-blue-500',
+  provider: 'bg-emerald-500',
+  sponsor: 'bg-amber-500',
+};
 
 export function OrganizationsTab() {
   const [organizations, setOrganizations] = useState<ApiOrganization[]>([]);
@@ -132,11 +143,15 @@ export function OrganizationsTab() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-        <div className="text-sm text-slate-500">{organizations.length} organización(es)</div>
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Building2 className="h-4 w-4 text-slate-400" />
+          <span className="font-medium">{organizations.length}</span>
+          <span>organización{organizations.length !== 1 ? 'es' : ''}</span>
+        </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm">
+            <Button className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm rounded-xl">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
             </Button>
@@ -223,7 +238,7 @@ export function OrganizationsTab() {
       </div>
 
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 rounded-2xl">
           <CardContent className="pt-4">
             <p className="text-red-600 text-sm">{error}</p>
           </CardContent>
@@ -236,14 +251,16 @@ export function OrganizationsTab() {
           <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
         </div>
       ) : organizations.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Building2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-600 mb-2">No hay organizaciones</h3>
-            <p className="text-slate-500 mb-4">Crea tu primera organización para comenzar</p>
+        <Card className="rounded-2xl">
+          <CardContent className="py-16 text-center">
+            <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center mb-4">
+              <Building2 className="h-8 w-8 text-teal-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-600 mb-1">No hay organizaciones</h3>
+            <p className="text-sm text-slate-500 mb-4">Crea tu primera organización para comenzar</p>
             <Button
               onClick={() => setCreateDialogOpen(true)}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm"
+              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm rounded-xl"
             >
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
@@ -251,55 +268,73 @@ export function OrganizationsTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-md border bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                <TableHead>Nombre</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Creada</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+              <TableRow className="bg-slate-50/60 hover:bg-slate-50/60 border-b border-slate-100">
+                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Organización</TableHead>
+                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Slug</TableHead>
+                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Tipo</TableHead>
+                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Creada</TableHead>
+                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {organizations.map((org) => (
                 <TableRow
                   key={org.id}
-                  className="cursor-pointer hover:bg-slate-50/80"
+                  className="cursor-pointer hover:bg-fuchsia-50/30 transition-colors group"
                   onClick={() => setSelectedOrg(org)}
                 >
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
                       {org.logo_url ? (
                         <img
                           src={org.logo_url}
                           alt={org.name}
-                          className="h-6 w-6 rounded object-cover shrink-0"
+                          className="h-9 w-9 rounded-xl object-cover ring-2 ring-white shadow-sm shrink-0"
                         />
                       ) : (
-                        <div className="h-6 w-6 rounded bg-teal-100 flex items-center justify-center shrink-0">
-                          <Building2 className="h-3.5 w-3.5 text-teal-600" />
+                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center ring-2 ring-white shadow-sm shrink-0">
+                          <Building2 className="h-4 w-4 text-white" />
                         </div>
                       )}
-                      {org.name}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate group-hover:text-fuchsia-700 transition-colors">
+                          {org.name}
+                        </p>
+                        {org.description && (
+                          <p className="text-xs text-slate-400 truncate max-w-[200px]">{org.description}</p>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-500">{org.slug}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {ORG_TYPES.find((t) => t.value === org.type)?.label || org.type}
-                    </Badge>
+                    <code className="text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-md font-mono">
+                      {org.slug}
+                    </code>
                   </TableCell>
-                  <TableCell className="text-slate-500 text-sm">
-                    {org.created_at ? new Date(org.created_at).toLocaleDateString() : '-'}
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${ORG_TYPE_STYLES[org.type] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${ORG_TYPE_DOT[org.type] || 'bg-slate-400'}`} />
+                      {ORG_TYPES.find((t) => t.value === org.type)?.label || org.type}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-slate-500 text-xs">
+                    {org.created_at
+                      ? new Date(org.created_at).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '—'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-7 w-7 p-0 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => handleDelete(org.id)}
                         disabled={deletingId === org.id}
                       >
