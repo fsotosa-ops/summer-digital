@@ -168,45 +168,32 @@ export default function PresentPage() {
           </div>
         </motion.div>
 
-        {/* Right: QR Code with glow effect */}
+        {/* Right: QR Code */}
         {showQr && qrJoinUrl && (
           <motion.div
-            className="flex flex-col items-center gap-8"
+            className="flex flex-col items-center gap-6"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
           >
-            {/* QR container with glow */}
+            {/* QR container with soft glow */}
             <div className="relative">
-              {/* Animated glow ring */}
+              {/* Subtle ambient glow behind white card */}
               <motion.div
-                className="absolute -inset-4 rounded-[2rem] blur-xl"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}80)` }}
-                animate={{ opacity: [0.4, 0.7, 0.4] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              {/* Outer ambient glow */}
-              <motion.div
-                className="absolute -inset-8 rounded-[2.5rem] blur-2xl"
+                className="absolute -inset-6 rounded-[2.5rem] blur-2xl"
                 style={{ background: primaryColor }}
-                animate={{ opacity: [0.15, 0.35, 0.15] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                animate={{ opacity: [0.12, 0.25, 0.12] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               />
 
-              {/* QR card */}
-              <div
-                className="relative p-8 rounded-3xl shadow-2xl backdrop-blur-sm"
-                style={{
-                  backgroundColor: `${primaryColor}15`,
-                  border: `2px solid ${primaryColor}40`,
-                }}
-              >
-                <div className="w-64 h-64 lg:w-80 lg:h-80 flex items-center justify-center">
+              {/* Clean white QR card — no colored frame */}
+              <div className="relative p-8 lg:p-10 rounded-3xl shadow-2xl bg-white">
+                <div className="w-72 h-72 sm:w-80 sm:h-80 lg:w-[420px] lg:h-[420px] flex items-center justify-center">
                   <QRCode
                     value={qrJoinUrl}
-                    size={380}
-                    bgColor="transparent"
-                    fgColor={primaryColor}
+                    size={512}
+                    bgColor="#FFFFFF"
+                    fgColor="#000000"
                     style={{ width: '100%', height: '100%' }}
                   />
                 </div>

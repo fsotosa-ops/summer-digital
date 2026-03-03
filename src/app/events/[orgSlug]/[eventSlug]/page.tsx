@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import QRCode from 'react-qr-code';
+
 import { eventService } from '@/services/event.service';
 import { journeyService } from '@/services/journey.service';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -56,12 +56,6 @@ export default function QRLandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [joinMessage, setJoinMessage] = useState<string | null>(null);
-  const [currentUrl, setCurrentUrl] = useState('');
-
-  useEffect(() => {
-    setCurrentUrl(window.location.href);
-  }, []);
-
   useEffect(() => {
     const fetchEvent = async () => {
       try {
@@ -163,14 +157,19 @@ export default function QRLandingPage() {
       className="min-h-screen flex flex-col relative overflow-hidden"
       style={buildBackground(config)}
     >
-      {/* Ambient orbs */}
+      {/* Ambient orbs — strong enough to be visible */}
       <div
-        className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full blur-3xl pointer-events-none"
-        style={{ background: primaryColor, opacity: 0.08 }}
+        className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-3xl pointer-events-none"
+        style={{ background: primaryColor, opacity: 0.18 }}
       />
       <div
-        className="absolute bottom-[-15%] left-[-10%] w-[40%] h-[40%] rounded-full blur-3xl pointer-events-none"
-        style={{ background: primaryColor, opacity: 0.06 }}
+        className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-3xl pointer-events-none"
+        style={{ background: primaryColor, opacity: 0.12 }}
+      />
+      {/* Center accent glow behind hero */}
+      <div
+        className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[80%] h-[40%] rounded-full blur-3xl pointer-events-none"
+        style={{ background: `linear-gradient(135deg, ${primaryColor}40, transparent)` }}
       />
 
       {/* Logo */}
@@ -220,8 +219,8 @@ export default function QRLandingPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <h1
-              className="text-3xl sm:text-4xl font-bold leading-tight"
-              style={{ color: textColor }}
+              className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight"
+              style={{ color: textColor, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}
             >
               {config.title || event.name}
             </h1>
@@ -240,7 +239,7 @@ export default function QRLandingPage() {
 
           {/* Event meta info card */}
           <motion.div
-            className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-5 mb-8 space-y-3"
+            className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-5 mb-8 space-y-3 shadow-lg"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -320,7 +319,7 @@ export default function QRLandingPage() {
                 {event.journey_summaries.map((journey, index) => (
                   <motion.div
                     key={journey.id}
-                    className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-5 hover:bg-white/10 transition-colors duration-200"
+                    className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-5 hover:bg-white/15 transition-colors duration-200 shadow-lg"
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
@@ -368,16 +367,21 @@ export default function QRLandingPage() {
           ) : (
             /* Single journey — hero CTA */
             <motion.div
-              className="space-y-3"
+              className="space-y-3 relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
+              {/* Glow behind button */}
+              <div
+                className="absolute -inset-2 rounded-3xl blur-xl opacity-30 pointer-events-none"
+                style={{ background: primaryColor }}
+              />
               <motion.button
-                className="w-full py-4 px-6 rounded-2xl text-lg font-bold text-white shadow-lg flex items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
+                className="relative w-full py-5 px-6 rounded-2xl text-lg font-bold text-white shadow-xl flex items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
                 style={{
-                  background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
-                  boxShadow: `0 8px 32px ${primaryColor}40`,
+                  background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+                  boxShadow: `0 8px 40px ${primaryColor}50`,
                 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -409,26 +413,16 @@ export default function QRLandingPage() {
             </motion.div>
           )}
 
-          {/* Mini share QR */}
-          {config.show_qr !== false && currentUrl && (
-            <motion.div
-              className="mt-10 flex flex-col items-center gap-2"
-              style={{ opacity: 0.5 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              transition={{ delay: 1 }}
-            >
-              <p className="text-xs" style={{ color: textColor }}>Comparte este evento</p>
-              <div className="bg-white p-2 rounded-xl">
-                <QRCode
-                  value={currentUrl}
-                  size={64}
-                  fgColor={config.background_color || '#0F172A'}
-                  bgColor="#FFFFFF"
-                />
-              </div>
-            </motion.div>
-          )}
+          {/* Branding footer */}
+          <motion.p
+            className="mt-12 text-center text-xs tracking-wider uppercase"
+            style={{ color: textColor, opacity: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.2 }}
+            transition={{ delay: 1 }}
+          >
+            Powered by Oasis
+          </motion.p>
         </div>
       </div>
     </div>
