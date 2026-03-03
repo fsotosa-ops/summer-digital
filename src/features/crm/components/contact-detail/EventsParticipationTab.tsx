@@ -70,7 +70,7 @@ export function EventsParticipationTab({ userId }: Props) {
         <TableBody>
           {events.map((e) => {
             const statusCfg = EVENT_STATUS_CONFIG[e.event_status as ApiEventStatus];
-            const qrUrl = e.org_slug && e.event_slug ? `/j/${e.org_slug}/${e.event_slug}` : null;
+            const qrUrl = e.org_slug && e.event_slug ? `/events/${e.org_slug}/${e.event_slug}` : null;
             return (
               <TableRow key={e.enrollment_id}>
                 <TableCell className="font-medium">{e.event_name}</TableCell>

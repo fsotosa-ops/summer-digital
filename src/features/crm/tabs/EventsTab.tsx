@@ -334,7 +334,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const handleCopyUrl = async (event: ApiEvent) => {
-    const qrPath = `/j/${orgSlug}/${event.slug}`;
+    const qrPath = `/events/${orgSlug}/${event.slug}`;
     const fullUrl = `${window.location.origin}${qrPath}`;
     await navigator.clipboard.writeText(fullUrl);
     setCopiedId(event.id);
@@ -353,7 +353,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const getQrUrl = (event: ApiEvent) => {
-    return orgSlug ? `/j/${orgSlug}/${event.slug}` : null;
+    return orgSlug ? `/events/${orgSlug}/${event.slug}` : null;
   };
 
   const journeyMap = useMemo(
@@ -796,7 +796,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                         {qrUrl && (
                           <Button variant="ghost" size="sm" asChild
                             className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50"
-                            title="Ver landing del evento (lo que escanean los participantes)">
+                            title="Ver landing de convocatoria">
                             <a href={qrUrl} target="_blank" rel="noopener noreferrer">
                               <Globe className="h-4 w-4" />
                             </a>
