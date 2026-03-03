@@ -62,8 +62,7 @@ export default function QRLandingPage() {
   const currentPath = `/events/${orgSlug}/${eventSlug}`;
 
   useEffect(() => {
-    const loginWithReturn = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-    setQrUrl(`${window.location.origin}${loginWithReturn}`);
+    setQrUrl(`${window.location.origin}/login`);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
