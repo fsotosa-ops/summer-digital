@@ -76,7 +76,7 @@ export default function QRLandingPage() {
     fetchEvent();
   }, [orgSlug, eventSlug]);
 
-  const currentPath = `/j/${orgSlug}/${eventSlug}`;
+  const currentPath = `/events/${orgSlug}/${eventSlug}`;
 
   const handleJoin = async (journeyId: string) => {
     if (!user) {

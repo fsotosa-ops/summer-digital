@@ -334,7 +334,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const handleCopyUrl = async (event: ApiEvent) => {
-    const qrPath = `/j/${orgSlug}/${event.slug}`;
+    const qrPath = `/events/${orgSlug}/${event.slug}`;
     const fullUrl = `${window.location.origin}${qrPath}`;
     await navigator.clipboard.writeText(fullUrl);
     setCopiedId(event.id);
@@ -353,7 +353,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const getQrUrl = (event: ApiEvent) => {
-    return orgSlug ? `/j/${orgSlug}/${event.slug}` : null;
+    return orgSlug ? `/events/${orgSlug}/${event.slug}` : null;
   };
 
   const journeyMap = useMemo(
