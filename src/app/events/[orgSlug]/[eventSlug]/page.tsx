@@ -46,7 +46,9 @@ export default function QRLandingPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  
   const { user } = useAuthStore();
+  const [hydrated, setHydrated] = useState(false); // Estado para saber si ya leímos la memoria
 
   const orgSlug = params.orgSlug as string;
   const eventSlug = params.eventSlug as string;
@@ -66,12 +68,22 @@ export default function QRLandingPage() {
   
   const autoJoinedRef = useRef(false);
   const currentPath = `/events/${orgSlug}/${eventSlug}`;
-  
-  // LA CLAVE DE LA OPCIÓN 1: La URL base siempre incluye la orden de unirse
   const fallbackJoinPath = `${currentPath}?action=join`;
+
+  // 0. Esperar a que Zustand hidrate (lea el localStorage) para evitar bucles
+  useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    return unsub;
+  }, []);
 
   // 1. Carga de Datos Paralela
   useEffect(() => {
+    if (!hydrated) return; // ¡CLAVE! No hacemos nada hasta que la memoria esté lista
+
     let isMounted = true;
 
     const fetchAllData = async () => {
@@ -103,16 +115,16 @@ export default function QRLandingPage() {
 
     fetchAllData();
     return () => { isMounted = false; };
-  }, [orgSlug, eventSlug, user]);
+  }, [orgSlug, eventSlug, user, hydrated]);
 
-  // 2. Generar código QR y URL compartida (ambos apuntan al flujo inmersivo)
+  // 2. Generar código QR
   useEffect(() => {
     setQrUrl(`${window.location.origin}${fallbackJoinPath}`);
   }, [fallbackJoinPath]);
 
   // 3. Evaluar Auto-Join
   useEffect(() => {
-    if (loading || !event || !userDataLoaded || autoJoinedRef.current) return;
+    if (!hydrated || loading || !event || !userDataLoaded || autoJoinedRef.current) return;
 
     const action = searchParams.get('action');
     if (action !== 'join') return;
@@ -141,7 +153,7 @@ export default function QRLandingPage() {
     }
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, event, userDataLoaded, searchParams, user]); 
+  }, [hydrated, loading, event, userDataLoaded, searchParams, user]); 
 
   // 4. Lógica de Inscripción
   const handleJoin = async (journeyId: string) => {
@@ -208,8 +220,8 @@ export default function QRLandingPage() {
   const isMultiJourney = event ? event.journey_ids.length > 1 : false;
   const needsToChoose = user && isMultiJourney && !searchParams.get('journeyId');
 
-  // PANTALLA DE CARGA INMERSIVA
-  if (loading || (isAutoJoinIntent && !needsToChoose && !error && !joinMessage)) {
+  // PANTALLA DE CARGA INMERSIVA (Muestra el loader mientras hidrata también)
+  if (!hydrated || loading || (isAutoJoinIntent && !needsToChoose && !error && !joinMessage)) {
     const bgColor = event?.landing_config?.background_color || '#0F172A';
     const primaryColor = event?.landing_config?.primary_color || '#3B82F6';
     const textColor = event?.landing_config?.text_color || '#FFFFFF';
@@ -316,7 +328,6 @@ export default function QRLandingPage() {
             <p className="text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>Escanea para unirte al evento</p>
             <button
               onClick={() => {
-                // OPCIÓN 1: Quien recibe el enlace copiado también es forzado al flujo inmersivo
                 navigator.clipboard.writeText(qrUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
