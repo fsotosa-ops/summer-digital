@@ -323,7 +323,7 @@ export default function QRLandingPage() {
             <p className="text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>Escanea para unirte al evento</p>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}${fallbackJoinPath}`);
+                navigator.clipboard.writeText(qrUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}

@@ -68,9 +68,7 @@ function LoginContent() {
     e.preventDefault();
     try {
       await login(loginEmail, loginPassword);
-      if (returnUrl) {
-         sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
-      }
+      sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
       router.push(returnUrl || '/dashboard');
     } catch {
       // Error handled by store

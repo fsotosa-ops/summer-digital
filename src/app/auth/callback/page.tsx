@@ -29,6 +29,7 @@ function AuthCallbackContent() {
         // Recuperar si el usuario venía de un evento / QR
         const qrReturn = sessionStorage.getItem(SESSION_KEYS.QR_RETURN_URL);
         if (qrReturn) {
+          sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
           router.push(qrReturn);
         } else {
           router.push('/dashboard');

@@ -23,7 +23,8 @@ export default function PresentPage() {
       try {
         const data = await eventService.getPublicEvent(orgSlug, eventSlug);
         setEvent(data);
-        setQrJoinUrl(`${window.location.origin}/j/${orgSlug}/${eventSlug}`);
+        const eventPath = `/events/${orgSlug}/${eventSlug}?action=join`;
+        setQrJoinUrl(`${window.location.origin}/login?returnUrl=${encodeURIComponent(eventPath)}`);
       } catch {
         setError('Evento no encontrado o no disponible.');
       } finally {
