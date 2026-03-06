@@ -6,6 +6,7 @@ import { authService } from '@/services/auth.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SESSION_KEYS } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -67,6 +68,9 @@ function LoginContent() {
     e.preventDefault();
     try {
       await login(loginEmail, loginPassword);
+      if (returnUrl) {
+         sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
+      }
       router.push(returnUrl || '/dashboard');
     } catch {
       // Error handled by store

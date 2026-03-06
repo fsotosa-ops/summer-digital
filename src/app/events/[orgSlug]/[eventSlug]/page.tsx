@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'react-qr-code';
 
@@ -12,8 +12,7 @@ import { ApiLandingConfig, ApiPublicEvent } from '@/types/api.types';
 import { EVENT_STATUS_CONFIG } from '@/lib/constants/crm-data';
 import { SESSION_KEYS } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MapPin, Calendar, ArrowRight, Sparkles, Check, Link2 } from 'lucide-react';
-import React from 'react';
+import { Loader2, MapPin, Calendar, ArrowRight, Sparkles, Check, Link2, PlayCircle } from 'lucide-react';
 
 // Dark-mode variants for the public QR landing page
 const STATUS_DARK_COLORS: Record<string, string> = {
@@ -47,94 +46,165 @@ function buildBackground(config: ApiLandingConfig): React.CSSProperties {
 export default function QRLandingPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
 
   const orgSlug = params.orgSlug as string;
   const eventSlug = params.eventSlug as string;
 
+  // Estados de la vista y del evento
   const [event, setEvent] = useState<ApiPublicEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estados sincronizados del usuario
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [userDataLoaded, setUserDataLoaded] = useState(false);
+
+  // Estados de interacción
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [joinMessage, setJoinMessage] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState('');
-  const [autoJoin, setAutoJoin] = useState(false);
   const [copied, setCopied] = useState(false);
+  
   const autoJoinedRef = useRef(false);
-
   const currentPath = `/events/${orgSlug}/${eventSlug}`;
-  const joinPath = `${currentPath}?action=join`;
+  const fallbackJoinPath = `${currentPath}?action=join`;
 
+  // 1. Efecto inicial: Carga de Datos Paralela (Evento + Perfil del Usuario)
   useEffect(() => {
-    setQrUrl(`${window.location.origin}/login?returnUrl=${encodeURIComponent(joinPath)}`);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    let isMounted = true;
 
-  useEffect(() => {
-    setAutoJoin(new URLSearchParams(window.location.search).get('action') === 'join');
-  }, []);
-
-  useEffect(() => {
-    if (!autoJoin || !user || !event || loading || autoJoinedRef.current) return;
-    if (event.journey_ids.length === 1) {
-      autoJoinedRef.current = true;
-      handleJoin(event.journey_ids[0]);
-    }
-    // Multi-journey: el usuario elige — se renderiza el selector normal
-  }, [autoJoin, user, event, loading]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchAllData = async () => {
+      setLoading(true);
       try {
-        const data = await eventService.getPublicEvent(orgSlug, eventSlug);
-        setEvent(data);
+        // Obtenemos los datos del evento
+        const eventData = await eventService.getPublicEvent(orgSlug, eventSlug);
+        if (!isMounted) return;
+        setEvent(eventData);
+
+        // Si hay un usuario, sincronizamos su estado actual con la DB para evitar inscripciones ciegas
+        if (user) {
+          const [enrollmentsData, onboardingCheck] = await Promise.all([
+            journeyService.getMyEnrollments().catch(() => []),
+            journeyService.checkOnboarding().catch(() => ({ should_show: false }))
+          ]);
+          
+          if (!isMounted) return;
+          setEnrollments(enrollmentsData);
+          setNeedsOnboarding(onboardingCheck.should_show);
+          setUserDataLoaded(true);
+        } else {
+          setUserDataLoaded(true); // Está listo, simplemente no está logueado
+        }
       } catch {
-        setError('Evento no encontrado o no disponible.');
+        if (isMounted) setError('Evento no encontrado o no disponible.');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    fetchEvent();
-  }, [orgSlug, eventSlug]);
 
-  const handleJoin = async (journeyId: string) => {
+    fetchAllData();
+    return () => { isMounted = false; };
+  }, [orgSlug, eventSlug, user]);
+
+  // 2. Generar el código QR
+  useEffect(() => {
+    setQrUrl(`${window.location.origin}/login?returnUrl=${encodeURIComponent(fallbackJoinPath)}`);
+  }, [fallbackJoinPath]);
+
+  // 3. Evaluar el Auto-Join cuando los datos estén listos
+  useEffect(() => {
+    // Solo procedemos si ya cargó todo y no hemos disparado el autoJoin antes
+    if (loading || !event || !userDataLoaded || autoJoinedRef.current) return;
+
+    const action = searchParams.get('action');
+    if (action !== 'join') return;
+
+    const targetJourneyId = searchParams.get('journeyId');
+
+    // CASO A: Es un invitado (no logueado) y la URL dice que se quiere unir.
+    // Lo mandamos obligatoriamente a iniciar sesión de inmediato.
     if (!user) {
+      autoJoinedRef.current = true; // Previene bucles
+      const joinPath = targetJourneyId 
+        ? `${currentPath}?action=join&journeyId=${targetJourneyId}`
+        : fallbackJoinPath;
+      
       sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, joinPath);
       router.push(`/login?returnUrl=${encodeURIComponent(joinPath)}`);
       return;
     }
 
+    // CASO B: Ya inició sesión. Procedemos a auto-inscribirlo si hay un ID claro.
+    if (targetJourneyId) {
+      autoJoinedRef.current = true;
+      handleJoin(targetJourneyId);
+    } else if (event.journey_ids.length === 1) {
+      autoJoinedRef.current = true;
+      handleJoin(event.journey_ids[0]);
+    }
+    // Si tiene múltiples journeys y no hay ID en la URL, se queda en la pantalla
+    // para que el usuario elija manualmente a cuál quiere unirse.
+    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, event, userDataLoaded, searchParams, user]); 
+
+  // 4. Lógica central de Inscripción
+  const handleJoin = async (journeyId: string) => {
+    const specificJoinPath = `${currentPath}?action=join&journeyId=${journeyId}`;
+
+    // A. El usuario no está logueado
+    if (!user) {
+      sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, specificJoinPath);
+      router.push(`/login?returnUrl=${encodeURIComponent(specificJoinPath)}`);
+      return;
+    }
+
+    // B. Verificación de Onboarding Proactiva
+    if (needsOnboarding) {
+      sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, specificJoinPath);
+      router.push('/dashboard');
+      return;
+    }
+
+    // C. Verificación de Inscripción Existente (Fast-path)
+    const existingEnrollment = enrollments.find(e => e.journey_id === journeyId);
+    if (existingEnrollment) {
+      sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL); // Limpiamos caché zombie
+      router.push(`/journey/${existingEnrollment.id}`);
+      return;
+    }
+
+    // D. Mutación Segura en el Backend
     setJoiningId(journeyId);
     setJoinMessage(null);
-    try {
-      const onboardingCheck = await journeyService.checkOnboarding();
-      if (onboardingCheck.should_show) {
-        sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, joinPath);
-        router.push('/dashboard');
-        return;
-      }
+    let isRedirecting = false; // Bandera para no perder el estado de carga si navegamos
 
-      const enrollment = await journeyService.enrollInJourneyWithEvent(
-        journeyId,
-        event!.id,
-      );
+    try {
+      const enrollment = await journeyService.enrollInJourneyWithEvent(journeyId, event!.id);
+      
+      sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
+      isRedirecting = true;
       router.push(`/journey/${enrollment.id}`);
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
+      
+      // Manejo del Race Condition (intentó inscribirse pero justo acababa de hacerlo en otra sesión)
       if (e?.status === 409 || (e?.message && e.message.includes('activa'))) {
+        try { await journeyService.updateEnrollmentEvent(journeyId, event!.id); } catch { /* Best-effort */ }
+        
+        sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
+        setJoinMessage('Ya estás inscrito. Abriendo tu progreso...');
+        isRedirecting = true;
+        
         try {
-          await journeyService.updateEnrollmentEvent(journeyId, event!.id);
-        } catch {
-          // Best-effort
-        }
-        setJoinMessage('Ya estás inscrito en este journey. Redirigiendo a tu progreso...');
-        try {
-          const enrollments = await journeyService.getMyEnrollments();
-          const existing = enrollments.find((en) => en.journey_id === journeyId);
-          if (existing) {
-            setTimeout(() => router.push(`/journey/${existing.id}`), 1500);
-          } else {
-            router.push('/journey');
-          }
+          const freshEnrollments = await journeyService.getMyEnrollments();
+          const current = freshEnrollments.find((en) => en.journey_id === journeyId);
+          setTimeout(() => {
+            current ? router.push(`/journey/${current.id}`) : router.push('/journey');
+          }, 800);
         } catch {
           router.push('/journey');
         }
@@ -142,7 +212,9 @@ export default function QRLandingPage() {
         setJoinMessage(e?.message || 'Error al inscribirse. Intenta de nuevo.');
       }
     } finally {
-      setJoiningId(null);
+      if (!isRedirecting) {
+        setJoiningId(null);
+      }
     }
   };
 
@@ -176,112 +248,82 @@ export default function QRLandingPage() {
   const hasJourneys = event.journey_ids.length > 0;
   const multiJourney = event.journey_ids.length > 1;
 
-  return (
-    <div
-      className="min-h-screen flex flex-col relative overflow-hidden"
-      style={buildBackground(config)}
-    >
-      {/* Ambient orbs — strong enough to be visible */}
-      <div
-        className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-3xl pointer-events-none"
-        style={{ background: primaryColor, opacity: 0.18 }}
-      />
-      <div
-        className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-3xl pointer-events-none"
-        style={{ background: primaryColor, opacity: 0.12 }}
-      />
-      {/* Center accent glow behind hero */}
-      <div
-        className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[80%] h-[40%] rounded-full blur-3xl pointer-events-none"
-        style={{ background: `linear-gradient(135deg, ${primaryColor}40, transparent)` }}
-      />
+  // Componente Reusable para los Botones dependiendo del estado del usuario
+  const renderJoinButton = (journeyId: string, classNameStr: string, isSingle: boolean) => {
+    const isEnrolled = enrollments.some(e => e.journey_id === journeyId);
+    const isLoading = joiningId === journeyId;
 
-      {/* Logo */}
+    return (
+      <motion.button
+        className={classNameStr}
+        style={{
+          background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+          boxShadow: isSingle ? `0 8px 40px ${primaryColor}50` : `0 4px 16px ${primaryColor}30`,
+        }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => handleJoin(journeyId)}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <><Loader2 className="h-5 w-5 animate-spin" /> {isSingle ? 'Procesando...' : ''}</>
+        ) : isEnrolled ? (
+          <><PlayCircle className="h-5 w-5" /> Ir al programa <ArrowRight className="h-5 w-5" /></>
+        ) : user ? (
+          <><Sparkles className="h-5 w-5" /> Unirme <ArrowRight className="h-5 w-5" /></>
+        ) : (
+          isSingle ? <>Iniciar sesión para unirme <ArrowRight className="h-5 w-5" /></> : 'Iniciar sesión'
+        )}
+      </motion.button>
+    );
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={buildBackground(config)}>
+      {/* Background Orbs */}
+      <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.18 }} />
+      <div className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.12 }} />
+      <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[80%] h-[40%] rounded-full blur-3xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${primaryColor}40, transparent)` }} />
+
       {config.custom_logo_url && (
-        <motion.div
-          className="flex justify-center pt-8"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <motion.div className="flex justify-center pt-8" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={config.custom_logo_url}
-            alt="Logo"
-            className="h-12 object-contain"
-          />
+          <img src={config.custom_logo_url} alt="Logo" className="h-12 object-contain" />
         </motion.div>
       )}
 
-      {/* Main content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-lg">
-
-          {/* Event hero — badge + título */}
-          <motion.div
-            className="text-center mb-8 space-y-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          {/* Header */}
+          <motion.div className="text-center mb-8 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
             <div className="flex justify-center mb-3">
-              <Badge
-                variant="outline"
-                className={`${STATUS_DARK_COLORS[event.status] ?? ''} border text-xs`}
-              >
+              <Badge variant="outline" className={`${STATUS_DARK_COLORS[event.status] ?? ''} border text-xs`}>
                 {EVENT_STATUS_CONFIG[event.status]?.label ?? event.status}
               </Badge>
             </div>
-
-            <h1
-              className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight"
-              style={{ color: textColor, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}
-            >
+            <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight" style={{ color: textColor, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
               {config.title || event.name}
             </h1>
-
-            {config.welcome_message && (
-              <p className="text-base sm:text-lg leading-relaxed" style={{ color: textColor, opacity: 0.8 }}>
-                {config.welcome_message}
-              </p>
-            )}
-            {event.description && !config.welcome_message && (
-              <p className="text-sm leading-relaxed" style={{ color: textColor, opacity: 0.7 }}>
-                {event.description}
-              </p>
-            )}
+            {config.welcome_message && <p className="text-base sm:text-lg leading-relaxed" style={{ color: textColor, opacity: 0.8 }}>{config.welcome_message}</p>}
+            {event.description && !config.welcome_message && <p className="text-sm leading-relaxed" style={{ color: textColor, opacity: 0.7 }}>{event.description}</p>}
           </motion.div>
 
-          {/* QR Hero — centrado, grande, con glow */}
-          <motion.div
-            className="flex justify-center mb-4"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
+          {/* QR */}
+          <motion.div className="flex justify-center mb-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }}>
             <div className="relative">
-              <div
-                className="absolute -inset-8 rounded-[2.5rem] blur-3xl pointer-events-none"
-                style={{ background: primaryColor, opacity: 0.28 }}
-              />
+              <div className="absolute -inset-8 rounded-[2.5rem] blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.28 }} />
               <div className="relative bg-white p-6 rounded-3xl shadow-2xl">
-                {qrUrl ? (
-                  <QRCode value={qrUrl} size={260} fgColor={primaryColor} bgColor="#FFFFFF" />
-                ) : (
-                  <div className="w-[260px] h-[260px] bg-slate-100 rounded-2xl animate-pulse" />
-                )}
+                {qrUrl ? <QRCode value={qrUrl} size={260} fgColor={primaryColor} bgColor="#FFFFFF" /> : <div className="w-[260px] h-[260px] bg-slate-100 rounded-2xl animate-pulse" />}
               </div>
             </div>
           </motion.div>
 
-          {/* Instrucción de escaneo + botón copiar enlace */}
+          {/* Utils */}
           <div className="flex flex-col items-center gap-2 mb-6">
-            <p className="text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>
-              Escanea para unirte al evento
-            </p>
+            <p className="text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>Escanea para unirte al evento</p>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}${joinPath}`);
+                navigator.clipboard.writeText(`${window.location.origin}${fallbackJoinPath}`);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
@@ -289,26 +331,17 @@ export default function QRLandingPage() {
               style={{ color: textColor }}
             >
               {copied ? <Check className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
-              {copied ? 'Copiado' : 'Copiar enlace de invitación'}
+              {copied ? 'Copiado' : 'Copiar enlace'}
             </button>
           </div>
 
-          {/* Meta info — solo si hay datos; sin card wrapper vacía */}
+          {/* Meta Info */}
           {(event.start_date || event.location) && (
-            <motion.div
-              className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs mb-8"
-              style={{ color: textColor, opacity: 0.6 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              transition={{ delay: 0.3 }}
-            >
+            <motion.div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs mb-8" style={{ color: textColor, opacity: 0.6 }} initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ delay: 0.3 }}>
               {event.start_date && (
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 shrink-0" style={{ color: primaryColor }} />
-                  {new Date(event.start_date).toLocaleDateString('es-MX', {
-                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit',
-                  })}
+                  {new Date(event.start_date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
               {event.location && (
@@ -320,140 +353,42 @@ export default function QRLandingPage() {
             </motion.div>
           )}
 
-          {/* Feedback message */}
+          {/* Errors/Messages */}
           <AnimatePresence>
             {joinMessage && (
-              <motion.p
-                className="text-center text-sm mb-4 font-medium"
-                style={{ color: primaryColor }}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
+              <motion.p className="text-center text-sm mb-4 font-medium" style={{ color: primaryColor }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {joinMessage}
               </motion.p>
             )}
           </AnimatePresence>
 
-          {/* CTA section — solo cuando hay journeys */}
+          {/* CTAs */}
           {hasJourneys && (multiJourney ? (
-            /* Multiple journeys — stacked cards */
-            <motion.div
-              className="space-y-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <p className="text-center text-sm font-semibold" style={{ color: textColor, opacity: 0.8 }}>
-                Elige tu programa:
-              </p>
-
+            <motion.div className="space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
+              <p className="text-center text-sm font-semibold" style={{ color: textColor, opacity: 0.8 }}>Elige tu programa:</p>
               <div className="space-y-3">
                 {event.journey_summaries.map((journey, index) => (
-                  <motion.div
-                    key={journey.id}
-                    className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-5 hover:bg-white/15 transition-colors duration-200 shadow-lg"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
-                  >
-                    {/* Accent bar */}
-                    <div
-                      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-                      style={{ backgroundColor: primaryColor }}
-                    />
-
+                  <motion.div key={journey.id} className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md p-5 hover:bg-white/15 transition-colors duration-200 shadow-lg" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ backgroundColor: primaryColor }} />
                     <div className="flex items-center justify-between gap-4 pl-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base leading-snug" style={{ color: textColor }}>
-                          {journey.title}
-                        </p>
+                        <p className="font-semibold text-base leading-snug" style={{ color: textColor }}>{journey.title}</p>
                       </div>
-
-                      <motion.button
-                        className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all duration-200 cursor-pointer"
-                        style={{
-                          background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
-                          boxShadow: `0 4px 16px ${primaryColor}30`,
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleJoin(journey.id)}
-                        disabled={joiningId === journey.id}
-                      >
-                        {joiningId === journey.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : user ? (
-                          <>
-                            Unirme
-                            <ArrowRight className="h-4 w-4" />
-                          </>
-                        ) : (
-                          'Iniciar sesión'
-                        )}
-                      </motion.button>
+                      {renderJoinButton(journey.id, "shrink-0 px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all duration-200 cursor-pointer", false)}
                     </div>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
           ) : (
-            /* Single journey — hero CTA */
-            <motion.div
-              className="space-y-3 relative"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              {/* Glow behind button */}
-              <div
-                className="absolute -inset-2 rounded-3xl blur-xl opacity-30 pointer-events-none"
-                style={{ background: primaryColor }}
-              />
-              <motion.button
-                className="relative w-full py-5 px-6 rounded-2xl text-lg font-bold text-white shadow-xl flex items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
-                  boxShadow: `0 8px 40px ${primaryColor}50`,
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleJoin(event.journey_ids[0])}
-                disabled={joiningId === event.journey_ids[0]}
-              >
-                {joiningId === event.journey_ids[0] ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Procesando...
-                  </>
-                ) : user ? (
-                  <>
-                    <Sparkles className="h-5 w-5" />
-                    Unirme al evento
-                    <ArrowRight className="h-5 w-5" />
-                  </>
-                ) : (
-                  <>
-                    Iniciar sesión para unirme
-                    <ArrowRight className="h-5 w-5" />
-                  </>
-                )}
-              </motion.button>
-
-              <p className="text-center text-xs" style={{ color: textColor, opacity: 0.4 }}>
-                Gratis y sin compromiso
-              </p>
+            <motion.div className="space-y-3 relative" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
+              <div className="absolute -inset-2 rounded-3xl blur-xl opacity-30 pointer-events-none" style={{ background: primaryColor }} />
+              {renderJoinButton(event.journey_ids[0], "relative w-full py-5 px-6 rounded-2xl text-lg font-bold text-white shadow-xl flex items-center justify-center gap-3 transition-all duration-200 cursor-pointer", true)}
+              <p className="text-center text-xs" style={{ color: textColor, opacity: 0.4 }}>Gratis y sin compromiso</p>
             </motion.div>
           ))}
 
-          {/* Branding footer */}
-          <motion.p
-            className="mt-12 text-center text-xs tracking-wider uppercase"
-            style={{ color: textColor, opacity: 0.2 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.2 }}
-            transition={{ delay: 1 }}
-          >
+          <motion.p className="mt-12 text-center text-xs tracking-wider uppercase" style={{ color: textColor, opacity: 0.2 }} initial={{ opacity: 0 }} animate={{ opacity: 0.2 }} transition={{ delay: 1 }}>
             Powered by Oasis
           </motion.p>
         </div>

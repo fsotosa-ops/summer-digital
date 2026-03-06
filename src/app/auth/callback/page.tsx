@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
+import { SESSION_KEYS } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 function AuthCallbackContent() {
@@ -25,7 +25,14 @@ function AuthCallbackContent() {
       try {
         const user = await authService.handleOAuthCallback(code);
         setUser(user);
-        router.push('/dashboard');
+
+        // Recuperar si el usuario venía de un evento / QR
+        const qrReturn = sessionStorage.getItem(SESSION_KEYS.QR_RETURN_URL);
+        if (qrReturn) {
+          router.push(qrReturn);
+        } else {
+          router.push('/dashboard');
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al procesar autenticación');
       }
