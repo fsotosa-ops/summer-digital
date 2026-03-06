@@ -14,7 +14,6 @@ import { SESSION_KEYS } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, MapPin, Calendar, ArrowRight, Sparkles, Check, Link2, PlayCircle } from 'lucide-react';
 
-// Dark-mode variants for the public QR landing page
 const STATUS_DARK_COLORS: Record<string, string> = {
   upcoming: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   live:     'bg-green-500/20 text-green-300 border-green-500/30',
@@ -52,17 +51,14 @@ export default function QRLandingPage() {
   const orgSlug = params.orgSlug as string;
   const eventSlug = params.eventSlug as string;
 
-  // Estados de la vista y del evento
   const [event, setEvent] = useState<ApiPublicEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Estados sincronizados del usuario
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [userDataLoaded, setUserDataLoaded] = useState(false);
 
-  // Estados de interacción
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [joinMessage, setJoinMessage] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState('');
@@ -70,21 +66,21 @@ export default function QRLandingPage() {
   
   const autoJoinedRef = useRef(false);
   const currentPath = `/events/${orgSlug}/${eventSlug}`;
+  
+  // LA CLAVE DE LA OPCIÓN 1: La URL base siempre incluye la orden de unirse
   const fallbackJoinPath = `${currentPath}?action=join`;
 
-  // 1. Efecto inicial: Carga de Datos Paralela (Evento + Perfil del Usuario)
+  // 1. Carga de Datos Paralela
   useEffect(() => {
     let isMounted = true;
 
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        // Obtenemos los datos del evento
         const eventData = await eventService.getPublicEvent(orgSlug, eventSlug);
         if (!isMounted) return;
         setEvent(eventData);
 
-        // Si hay un usuario, sincronizamos su estado actual con la DB para evitar inscripciones ciegas
         if (user) {
           const [enrollmentsData, onboardingCheck] = await Promise.all([
             journeyService.getMyEnrollments().catch(() => []),
@@ -96,7 +92,7 @@ export default function QRLandingPage() {
           setNeedsOnboarding(onboardingCheck.should_show);
           setUserDataLoaded(true);
         } else {
-          setUserDataLoaded(true); // Está listo, simplemente no está logueado
+          setUserDataLoaded(true);
         }
       } catch {
         if (isMounted) setError('Evento no encontrado o no disponible.');
@@ -109,14 +105,13 @@ export default function QRLandingPage() {
     return () => { isMounted = false; };
   }, [orgSlug, eventSlug, user]);
 
-  // 2. Generar el código QR
+  // 2. Generar código QR y URL compartida (ambos apuntan al flujo inmersivo)
   useEffect(() => {
-    setQrUrl(`${window.location.origin}/login?returnUrl=${encodeURIComponent(fallbackJoinPath)}`);
+    setQrUrl(`${window.location.origin}${fallbackJoinPath}`);
   }, [fallbackJoinPath]);
 
-  // 3. Evaluar el Auto-Join cuando los datos estén listos
+  // 3. Evaluar Auto-Join
   useEffect(() => {
-    // Solo procedemos si ya cargó todo y no hemos disparado el autoJoin antes
     if (loading || !event || !userDataLoaded || autoJoinedRef.current) return;
 
     const action = searchParams.get('action');
@@ -124,10 +119,9 @@ export default function QRLandingPage() {
 
     const targetJourneyId = searchParams.get('journeyId');
 
-    // CASO A: Es un invitado (no logueado) y la URL dice que se quiere unir.
-    // Lo mandamos obligatoriamente a iniciar sesión de inmediato.
+    // CASO A: Invitado
     if (!user) {
-      autoJoinedRef.current = true; // Previene bucles
+      autoJoinedRef.current = true;
       const joinPath = targetJourneyId 
         ? `${currentPath}?action=join&journeyId=${targetJourneyId}`
         : fallbackJoinPath;
@@ -137,7 +131,7 @@ export default function QRLandingPage() {
       return;
     }
 
-    // CASO B: Ya inició sesión. Procedemos a auto-inscribirlo si hay un ID claro.
+    // CASO B: Logueado
     if (targetJourneyId) {
       autoJoinedRef.current = true;
       handleJoin(targetJourneyId);
@@ -145,55 +139,47 @@ export default function QRLandingPage() {
       autoJoinedRef.current = true;
       handleJoin(event.journey_ids[0]);
     }
-    // Si tiene múltiples journeys y no hay ID en la URL, se queda en la pantalla
-    // para que el usuario elija manualmente a cuál quiere unirse.
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, event, userDataLoaded, searchParams, user]); 
 
-  // 4. Lógica central de Inscripción
+  // 4. Lógica de Inscripción
   const handleJoin = async (journeyId: string) => {
     const specificJoinPath = `${currentPath}?action=join&journeyId=${journeyId}`;
 
-    // A. El usuario no está logueado
     if (!user) {
       sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, specificJoinPath);
       router.push(`/login?returnUrl=${encodeURIComponent(specificJoinPath)}`);
       return;
     }
 
-    // B. Verificación de Onboarding Proactiva
     if (needsOnboarding) {
       sessionStorage.setItem(SESSION_KEYS.QR_RETURN_URL, specificJoinPath);
       router.push('/dashboard');
       return;
     }
 
-    // C. Verificación de Inscripción Existente (Fast-path)
     const existingEnrollment = enrollments.find(e => e.journey_id === journeyId);
     if (existingEnrollment) {
-      sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL); // Limpiamos caché zombie
+      sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
       router.push(`/journey/${existingEnrollment.id}`);
       return;
     }
 
-    // D. Mutación Segura en el Backend
     setJoiningId(journeyId);
     setJoinMessage(null);
-    let isRedirecting = false; // Bandera para no perder el estado de carga si navegamos
+    let isRedirecting = false;
 
     try {
       const enrollment = await journeyService.enrollInJourneyWithEvent(journeyId, event!.id);
-      
       sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
       isRedirecting = true;
       router.push(`/journey/${enrollment.id}`);
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
       
-      // Manejo del Race Condition (intentó inscribirse pero justo acababa de hacerlo en otra sesión)
       if (e?.status === 409 || (e?.message && e.message.includes('activa'))) {
-        try { await journeyService.updateEnrollmentEvent(journeyId, event!.id); } catch { /* Best-effort */ }
+        try { await journeyService.updateEnrollmentEvent(journeyId, event!.id); } catch { }
         
         sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
         setJoinMessage('Ya estás inscrito. Abriendo tu progreso...');
@@ -218,10 +204,22 @@ export default function QRLandingPage() {
     }
   };
 
-  if (loading) {
+  const isAutoJoinIntent = searchParams.get('action') === 'join';
+  const isMultiJourney = event ? event.journey_ids.length > 1 : false;
+  const needsToChoose = user && isMultiJourney && !searchParams.get('journeyId');
+
+  // PANTALLA DE CARGA INMERSIVA
+  if (loading || (isAutoJoinIntent && !needsToChoose && !error && !joinMessage)) {
+    const bgColor = event?.landing_config?.background_color || '#0F172A';
+    const primaryColor = event?.landing_config?.primary_color || '#3B82F6';
+    const textColor = event?.landing_config?.text_color || '#FFFFFF';
+
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      <div className="min-h-screen flex flex-col items-center justify-center transition-colors duration-500" style={{ backgroundColor: bgColor }}>
+        <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: primaryColor }} />
+        <p className="text-sm font-medium animate-pulse" style={{ color: textColor, opacity: 0.7 }}>
+          Preparando tu experiencia...
+        </p>
       </div>
     );
   }
@@ -248,7 +246,6 @@ export default function QRLandingPage() {
   const hasJourneys = event.journey_ids.length > 0;
   const multiJourney = event.journey_ids.length > 1;
 
-  // Componente Reusable para los Botones dependiendo del estado del usuario
   const renderJoinButton = (journeyId: string, classNameStr: string, isSingle: boolean) => {
     const isEnrolled = enrollments.some(e => e.journey_id === journeyId);
     const isLoading = joiningId === journeyId;
@@ -280,7 +277,6 @@ export default function QRLandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden" style={buildBackground(config)}>
-      {/* Background Orbs */}
       <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.18 }} />
       <div className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.12 }} />
       <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[80%] h-[40%] rounded-full blur-3xl pointer-events-none" style={{ background: `linear-gradient(135deg, ${primaryColor}40, transparent)` }} />
@@ -294,7 +290,6 @@ export default function QRLandingPage() {
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-lg">
-          {/* Header */}
           <motion.div className="text-center mb-8 space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
             <div className="flex justify-center mb-3">
               <Badge variant="outline" className={`${STATUS_DARK_COLORS[event.status] ?? ''} border text-xs`}>
@@ -308,7 +303,6 @@ export default function QRLandingPage() {
             {event.description && !config.welcome_message && <p className="text-sm leading-relaxed" style={{ color: textColor, opacity: 0.7 }}>{event.description}</p>}
           </motion.div>
 
-          {/* QR */}
           <motion.div className="flex justify-center mb-4" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }}>
             <div className="relative">
               <div className="absolute -inset-8 rounded-[2.5rem] blur-3xl pointer-events-none" style={{ background: primaryColor, opacity: 0.28 }} />
@@ -318,11 +312,11 @@ export default function QRLandingPage() {
             </div>
           </motion.div>
 
-          {/* Utils */}
           <div className="flex flex-col items-center gap-2 mb-6">
             <p className="text-center text-xs" style={{ color: textColor, opacity: 0.45 }}>Escanea para unirte al evento</p>
             <button
               onClick={() => {
+                // OPCIÓN 1: Quien recibe el enlace copiado también es forzado al flujo inmersivo
                 navigator.clipboard.writeText(qrUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
@@ -335,7 +329,6 @@ export default function QRLandingPage() {
             </button>
           </div>
 
-          {/* Meta Info */}
           {(event.start_date || event.location) && (
             <motion.div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs mb-8" style={{ color: textColor, opacity: 0.6 }} initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ delay: 0.3 }}>
               {event.start_date && (
@@ -353,7 +346,6 @@ export default function QRLandingPage() {
             </motion.div>
           )}
 
-          {/* Errors/Messages */}
           <AnimatePresence>
             {joinMessage && (
               <motion.p className="text-center text-sm mb-4 font-medium" style={{ color: primaryColor }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
@@ -362,7 +354,6 @@ export default function QRLandingPage() {
             )}
           </AnimatePresence>
 
-          {/* CTAs */}
           {hasJourneys && (multiJourney ? (
             <motion.div className="space-y-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
               <p className="text-center text-sm font-semibold" style={{ color: textColor, opacity: 0.8 }}>Elige tu programa:</p>
