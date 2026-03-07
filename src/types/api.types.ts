@@ -388,8 +388,8 @@ export interface ApiEventCounterpartDetails {
   entity_logo_url?: string | null;
   counterpart_details?: string | null;
   activity_schedule?: string | null;
-  expected_ages?: string | null;
-  expected_roles?: string | null;
+  expected_ages?: string[] | null;
+  expected_roles?: string[] | null;
   activity_modality?: string | null;
   specific_activity?: string | null;
 }

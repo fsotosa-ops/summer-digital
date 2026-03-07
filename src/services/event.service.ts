@@ -21,6 +21,11 @@ class EventService {
   async deleteEvent(orgId: string, eventId: string): Promise<void> {
     await apiClient.delete(`/auth/organizations/${orgId}/events/${eventId}`);
   }
+
+  /** Obtiene un evento por ID sin necesitar orgId — usado por el gateway del evento. */
+  async getEventById(eventId: string): Promise<ApiEvent> {
+    return apiClient.get<ApiEvent>(`/auth/events/${eventId}`);
+  }
 }
 
 export const eventService = new EventService();

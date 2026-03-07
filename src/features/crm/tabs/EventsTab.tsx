@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { eventService } from '@/services/event.service';
 import { adminService } from '@/services/admin.service';
+import { crmService } from '@/services/crm.service';
 import {
   ApiEvent,
   ApiEventCreate,
@@ -110,6 +111,8 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
+  const [ageOptions, setAgeOptions] = useState<MultiSelectOption[]>([]);
+  const [roleOptions, setRoleOptions] = useState<MultiSelectOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -140,12 +143,16 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     if (!orgId) return;
     setLoading(true);
     try {
-      const [evts, journeyList] = await Promise.all([
+      const [evts, journeyList, ages, roles] = await Promise.all([
         eventService.listOrgEvents(orgId),
         adminService.listJourneys(orgId).catch(() => [] as ApiJourneyAdminRead[]),
+        crmService.listFieldOptions('event_expected_ages'),
+        crmService.listFieldOptions('event_expected_roles'),
       ]);
       setEvents(evts);
       setJourneys(journeyList);
+      setAgeOptions(ages.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
+      setRoleOptions(roles.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al cargar eventos');
     } finally {
@@ -259,8 +266,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const handleCopyUrl = async (event: ApiEvent) => {
-    const path = `/events/${orgSlug}/${event.slug}`;
-    const fullUrl = `${window.location.origin}${path}`;
+    const fullUrl = `${window.location.origin}/login?join=${encodeURIComponent(event.id)}`;
     await navigator.clipboard.writeText(fullUrl);
     setCopiedId(event.id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -568,18 +574,20 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Edades esperadas</Label>
-                  <Input
-                    value={formData.counterpart_details?.expected_ages || ''}
-                    onChange={(e) => setCounterpart({ expected_ages: e.target.value || null })}
-                    placeholder="Ej. 15–25 años"
+                  <MultiSelect
+                    options={ageOptions}
+                    selected={formData.counterpart_details?.expected_ages ?? []}
+                    onChange={(vals) => setCounterpart({ expected_ages: vals.length ? vals : null })}
+                    placeholder="Selecciona rangos de edad"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Roles esperados</Label>
-                  <Input
-                    value={formData.counterpart_details?.expected_roles || ''}
-                    onChange={(e) => setCounterpart({ expected_roles: e.target.value || null })}
-                    placeholder="Ej. Estudiantes, docentes"
+                  <MultiSelect
+                    options={roleOptions}
+                    selected={formData.counterpart_details?.expected_roles ?? []}
+                    onChange={(vals) => setCounterpart({ expected_roles: vals.length ? vals : null })}
+                    placeholder="Selecciona roles"
                   />
                 </div>
               </div>

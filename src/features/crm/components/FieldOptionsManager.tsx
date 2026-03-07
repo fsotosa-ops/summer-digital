@@ -25,6 +25,8 @@ const KNOWN_LABELS: Record<string, string> = {
   occupation: 'Ocupación',
   org_industry: 'Industria (Organizaciones)',
   org_company_size: 'Tamaño de Empresa (Organizaciones)',
+  event_expected_ages: 'Edades Esperadas (Eventos)',
+  event_expected_roles: 'Roles Esperados (Eventos)',
 };
 
 interface EditState {
