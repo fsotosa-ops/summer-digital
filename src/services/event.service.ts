@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import { ApiEvent, ApiEventCreate, ApiEventUpdate, ApiPublicEvent } from '@/types/api.types';
+import { ApiEvent, ApiEventCreate, ApiEventUpdate } from '@/types/api.types';
 
 class EventService {
   async listOrgEvents(orgId: string): Promise<ApiEvent[]> {
@@ -20,10 +20,6 @@ class EventService {
 
   async deleteEvent(orgId: string, eventId: string): Promise<void> {
     await apiClient.delete(`/auth/organizations/${orgId}/events/${eventId}`);
-  }
-
-  async getPublicEvent(orgSlug: string, eventSlug: string): Promise<ApiPublicEvent> {
-    return apiClient.get<ApiPublicEvent>(`/public/events/${orgSlug}/${eventSlug}`);
   }
 }
 

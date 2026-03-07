@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calendar, Loader2, ExternalLink } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 
 const ENROLLMENT_STATUS_LABELS: Record<string, string> = {
   active: 'Activo',
@@ -64,13 +64,11 @@ export function EventsParticipationTab({ userId }: Props) {
             <TableHead>Fecha</TableHead>
             <TableHead>Estado evento</TableHead>
             <TableHead>Estado inscripción</TableHead>
-            <TableHead className="text-right">Link</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((e) => {
             const statusCfg = EVENT_STATUS_CONFIG[e.event_status as ApiEventStatus];
-            const qrUrl = e.org_slug && e.event_slug ? `/events/${e.org_slug}/${e.event_slug}` : null;
             return (
               <TableRow key={e.enrollment_id}>
                 <TableCell className="font-medium">{e.event_name}</TableCell>
@@ -97,19 +95,6 @@ export function EventsParticipationTab({ userId }: Props) {
                   <Badge variant="outline" className="text-xs">
                     {ENROLLMENT_STATUS_LABELS[e.enrollment_status] || e.enrollment_status}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  {qrUrl && (
-                    <a
-                      href={qrUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-fuchsia-500 hover:text-fuchsia-700 inline-flex"
-                      title="Abrir landing QR"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
                 </TableCell>
               </TableRow>
             );

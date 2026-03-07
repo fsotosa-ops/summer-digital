@@ -382,22 +382,34 @@ export interface ApiEnrollmentResponse {
 
 export type ApiEventStatus = 'upcoming' | 'live' | 'past' | 'cancelled';
 
-export interface ApiLandingConfig {
-  title?: string | null;
-  welcome_message?: string | null;
-  primary_color: string;
-  background_color: string;
-  background_end_color?: string | null;
-  gradient_direction?: string | null;
-  background_image_url?: string | null;
-  text_color?: string | null;
-  show_qr: boolean;
-  custom_logo_url?: string | null;
+export interface ApiEventCounterpartDetails {
+  address?: string | null;
+  full_entity_name?: string | null;
+  entity_logo_url?: string | null;
+  counterpart_details?: string | null;
+  activity_schedule?: string | null;
+  expected_ages?: string | null;
+  expected_roles?: string | null;
+  activity_modality?: string | null;
+  specific_activity?: string | null;
 }
 
-export interface ApiJourneySummary {
-  id: string;
-  title: string;
+export interface ApiEventVenueDetails {
+  has_internet?: boolean;
+  has_ac?: boolean;
+  has_lighting?: boolean;
+  has_technical_rider?: boolean;
+  notes?: string | null;
+}
+
+export interface ApiEventDiagnosis {
+  objective?: string | null;
+  expectations?: string | null;
+  historical_activities?: string | null;
+  historical_incidents?: string | null;
+  myths_stigmas?: string | null;
+  community_leaders?: string | null;
+  main_obstacles?: string | null;
 }
 
 export interface ApiEvent {
@@ -411,10 +423,12 @@ export interface ApiEvent {
   end_date?: string | null;
   location?: string | null;
   status: ApiEventStatus;
-  landing_config: ApiLandingConfig;
   is_active: boolean;
   notes?: string | null;
   expected_participants?: number | null;
+  counterpart_details?: ApiEventCounterpartDetails;
+  venue_details?: ApiEventVenueDetails;
+  diagnosis?: ApiEventDiagnosis;
   created_at: string;
   updated_at: string;
 }
@@ -428,9 +442,11 @@ export interface ApiEventCreate {
   location?: string | null;
   status?: ApiEventStatus;
   journey_ids?: string[];
-  landing_config?: Partial<ApiLandingConfig>;
   notes?: string | null;
   expected_participants?: number | null;
+  counterpart_details?: ApiEventCounterpartDetails;
+  venue_details?: ApiEventVenueDetails;
+  diagnosis?: ApiEventDiagnosis;
 }
 
 export interface ApiEventUpdate {
@@ -441,27 +457,12 @@ export interface ApiEventUpdate {
   location?: string | null;
   status?: ApiEventStatus | null;
   journey_ids?: string[] | null;
-  landing_config?: Partial<ApiLandingConfig> | null;
   is_active?: boolean | null;
   notes?: string | null;
   expected_participants?: number | null;
-}
-
-export interface ApiPublicEvent {
-  id: string;
-  name: string;
-  slug: string;
-  org_id: string;
-  org_slug: string;
-  org_name: string;
-  description?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  location?: string | null;
-  status: ApiEventStatus;
-  landing_config: ApiLandingConfig;
-  journey_ids: string[];
-  journey_summaries: ApiJourneySummary[];
+  counterpart_details?: ApiEventCounterpartDetails | null;
+  venue_details?: ApiEventVenueDetails | null;
+  diagnosis?: ApiEventDiagnosis | null;
 }
 
 export interface ApiStepProgressRead {

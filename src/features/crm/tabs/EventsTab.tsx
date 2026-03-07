@@ -7,10 +7,12 @@ import { adminService } from '@/services/admin.service';
 import {
   ApiEvent,
   ApiEventCreate,
+  ApiEventCounterpartDetails,
+  ApiEventVenueDetails,
+  ApiEventDiagnosis,
   ApiEventStatus,
   ApiEventUpdate,
   ApiJourneyAdminRead,
-  ApiLandingConfig,
 } from '@/types/api.types';
 import { generateSlug } from '@/lib/utils';
 import { EVENT_STATUS_CONFIG } from '@/lib/constants/crm-data';
@@ -21,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -45,37 +48,41 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Globe, Plus, Loader2, Trash2, Pencil, Copy, Check } from 'lucide-react';
+import { Calendar, Plus, Loader2, Trash2, Pencil, Copy, Check, LayoutList, MapPin, ClipboardList } from 'lucide-react';
+import { Country, State, City } from 'country-state-city';
 
 const EVENT_STATUSES = (Object.entries(EVENT_STATUS_CONFIG) as [ApiEventStatus, { label: string; badgeColor: string }][]).map(
   ([value, { label, badgeColor }]) => ({ value, label, color: badgeColor }),
 );
 
-const GRADIENT_DIRECTIONS = [
-  { value: 'to-b',  label: '↓ Abajo' },
-  { value: 'to-br', label: '↘ Diagonal' },
-  { value: 'to-r',  label: '→ Derecha' },
-  { value: 'to-bl', label: '↙ Diagonal inv.' },
-];
+const defaultCounterpart: ApiEventCounterpartDetails = {
+  address: null,
+  full_entity_name: null,
+  entity_logo_url: null,
+  counterpart_details: null,
+  activity_schedule: null,
+  expected_ages: null,
+  expected_roles: null,
+  activity_modality: null,
+  specific_activity: null,
+};
 
-const COLOR_PRESETS = [
-  { name: 'Noche',     primary: '#3B82F6', bg: '#0F172A', bgEnd: null,      text: '#FFFFFF', dir: 'to-b'  },
-  { name: 'Océano',    primary: '#06B6D4', bg: '#0E4F6E', bgEnd: '#164E63', text: '#F0FFFE', dir: 'to-br' },
-  { name: 'Atardecer', primary: '#F97316', bg: '#7C2D12', bgEnd: '#9333EA', text: '#FFFFFF', dir: 'to-br' },
-  { name: 'Mínimo',    primary: '#6366F1', bg: '#F8FAFC', bgEnd: null,      text: '#1E293B', dir: 'to-b'  },
-] as const;
+const defaultVenue: ApiEventVenueDetails = {
+  has_internet: false,
+  has_ac: false,
+  has_lighting: false,
+  has_technical_rider: false,
+  notes: null,
+};
 
-const defaultLanding: ApiLandingConfig = {
-  title: '',
-  welcome_message: '',
-  primary_color: '#3B82F6',
-  background_color: '#0F172A',
-  background_end_color: null,
-  gradient_direction: 'to-b',
-  background_image_url: null,
-  text_color: '#FFFFFF',
-  show_qr: true,
-  custom_logo_url: null,
+const defaultDiagnosis: ApiEventDiagnosis = {
+  objective: null,
+  expectations: null,
+  historical_activities: null,
+  historical_incidents: null,
+  myths_stigmas: null,
+  community_leaders: null,
+  main_obstacles: null,
 };
 
 const defaultForm: ApiEventCreate = {
@@ -87,115 +94,12 @@ const defaultForm: ApiEventCreate = {
   location: '',
   status: 'upcoming',
   journey_ids: [],
-  landing_config: { ...defaultLanding },
   notes: null,
   expected_participants: null,
+  counterpart_details: { ...defaultCounterpart },
+  venue_details: { ...defaultVenue },
+  diagnosis: { ...defaultDiagnosis },
 };
-
-// --- Inline live preview (not exported) ---
-function buildBackground(config: ApiLandingConfig): React.CSSProperties {
-  if (config.background_image_url) {
-    return {
-      backgroundImage: `url(${config.background_image_url})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    };
-  }
-  if (config.background_end_color) {
-    const dirMap: Record<string, string> = {
-      'to-b': 'to bottom',
-      'to-br': 'to bottom right',
-      'to-r': 'to right',
-      'to-bl': 'to bottom left',
-    };
-    const cssDir = dirMap[config.gradient_direction || 'to-b'] ?? 'to bottom';
-    return { background: `linear-gradient(${cssDir}, ${config.background_color}, ${config.background_end_color})` };
-  }
-  return { backgroundColor: config.background_color };
-}
-
-function LandingPreview({
-  config,
-  eventName,
-  expectedParticipants,
-}: {
-  config: ApiLandingConfig;
-  eventName: string;
-  expectedParticipants?: number | null;
-}) {
-  const textColor = config.text_color || '#FFFFFF';
-  const primaryColor = config.primary_color || '#3B82F6';
-
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <p className="text-xs text-slate-500 font-medium">Vista previa</p>
-      <div
-        className="w-[280px] h-[480px] rounded-xl overflow-hidden flex flex-col relative ring-1 ring-white/20"
-        style={buildBackground(config)}
-      >
-        {/* Logo */}
-        {config.custom_logo_url && (
-          <div className="absolute top-4 left-0 right-0 flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={config.custom_logo_url}
-              alt="logo"
-              className="h-10 object-contain"
-            />
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex flex-col items-center justify-center flex-1 px-4 gap-4 pt-8">
-          {/* Org name */}
-          <p className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: primaryColor }}>
-            Mi Organización
-          </p>
-
-          {/* QR placeholder */}
-          <div className="w-20 h-20 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-            <div className="w-14 h-14 grid grid-cols-3 gap-0.5 opacity-60">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} className={`rounded-[2px] ${[0,2,6,8,4].includes(i) ? 'bg-white' : 'bg-white/30'}`} />
-              ))}
-            </div>
-          </div>
-          <p className="text-[9px] text-white/50">Escanea para compartir</p>
-
-          {/* Title */}
-          <h2
-            className="text-base font-bold text-center leading-tight"
-            style={{ color: textColor }}
-          >
-            {config.title || eventName || 'Título del evento'}
-          </h2>
-
-          {/* Welcome message */}
-          {config.welcome_message && (
-            <p className="text-[11px] text-center opacity-70" style={{ color: textColor }}>
-              {config.welcome_message}
-            </p>
-          )}
-
-          {/* Expected participants */}
-          {expectedParticipants && expectedParticipants > 0 && (
-            <p className="text-[10px] opacity-50" style={{ color: textColor }}>
-              Participantes esperados: {expectedParticipants}
-            </p>
-          )}
-
-          {/* CTA button preview */}
-          <div
-            className="mt-2 px-4 py-2 rounded-lg text-xs font-semibold text-white"
-            style={{ backgroundColor: primaryColor }}
-          >
-            Unirme al evento
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface EventsTabProps {
   orgId: string;
@@ -215,6 +119,22 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Location cascading selects state
+  const [locCountry, setLocCountry] = useState('CL');
+  const [locState, setLocState] = useState('');
+  const [locCity, setLocCity] = useState('');
+  const [locLocality, setLocLocality] = useState('');
+
+  const composeLocation = (country: string, state: string, city: string, locality: string) => {
+    const parts = [
+      locality,
+      city,
+      state ? State.getStatesOfCountry(country).find(s => s.isoCode === state)?.name : '',
+      country ? Country.getAllCountries().find(c => c.isoCode === country)?.name : '',
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
 
   const loadData = useCallback(async () => {
     if (!orgId) return;
@@ -239,12 +159,20 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
   const openCreate = () => {
     setEditingEvent(null);
-    setFormData(defaultForm);
+    setLocCountry('CL');
+    setLocState('');
+    setLocCity('');
+    setLocLocality('');
+    setFormData({ ...defaultForm, location: composeLocation('CL', '', '', '') });
     setDialogOpen(true);
   };
 
   const openEdit = (event: ApiEvent) => {
     setEditingEvent(event);
+    setLocCountry('');
+    setLocState('');
+    setLocCity('');
+    setLocLocality('');
     setFormData({
       name: event.name,
       slug: event.slug,
@@ -254,12 +182,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
       location: event.location ?? '',
       status: event.status,
       journey_ids: event.journey_ids ?? [],
-      landing_config: {
-        ...defaultLanding,
-        ...event.landing_config,
-      },
       notes: event.notes ?? null,
       expected_participants: event.expected_participants ?? null,
+      counterpart_details: { ...defaultCounterpart, ...event.counterpart_details },
+      venue_details: { ...defaultVenue, ...event.venue_details },
+      diagnosis: { ...defaultDiagnosis, ...event.diagnosis },
     });
     setDialogOpen(true);
   };
@@ -272,18 +199,14 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     }
   };
 
-  const setLanding = (patch: Partial<ApiLandingConfig>) =>
-    setFormData((p) => ({ ...p, landing_config: { ...p.landing_config, ...patch } as ApiLandingConfig }));
+  const setCounterpart = (patch: Partial<ApiEventCounterpartDetails>) =>
+    setFormData((p) => ({ ...p, counterpart_details: { ...p.counterpart_details, ...patch } as ApiEventCounterpartDetails }));
 
-  const applyPreset = (preset: typeof COLOR_PRESETS[number]) => {
-    setLanding({
-      primary_color: preset.primary,
-      background_color: preset.bg,
-      background_end_color: preset.bgEnd,
-      text_color: preset.text,
-      gradient_direction: preset.dir,
-    });
-  };
+  const setVenue = (patch: Partial<ApiEventVenueDetails>) =>
+    setFormData((p) => ({ ...p, venue_details: { ...p.venue_details, ...patch } as ApiEventVenueDetails }));
+
+  const setDiagnosis = (patch: Partial<ApiEventDiagnosis>) =>
+    setFormData((p) => ({ ...p, diagnosis: { ...p.diagnosis, ...patch } as ApiEventDiagnosis }));
 
   const handleSave = async () => {
     if (!formData.name || !formData.slug || !orgId) return;
@@ -298,9 +221,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           location: formData.location || null,
           status: formData.status,
           journey_ids: formData.journey_ids ?? [],
-          landing_config: formData.landing_config,
           notes: formData.notes || null,
           expected_participants: formData.expected_participants || null,
+          counterpart_details: formData.counterpart_details,
+          venue_details: formData.venue_details,
+          diagnosis: formData.diagnosis,
         };
         const updated = await eventService.updateEvent(orgId, editingEvent.id, updatePayload);
         setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
@@ -334,8 +259,8 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   };
 
   const handleCopyUrl = async (event: ApiEvent) => {
-    const qrPath = `/events/${orgSlug}/${event.slug}`;
-    const fullUrl = `${window.location.origin}${qrPath}`;
+    const path = `/events/${orgSlug}/${event.slug}`;
+    const fullUrl = `${window.location.origin}${path}`;
     await navigator.clipboard.writeText(fullUrl);
     setCopiedId(event.id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -352,9 +277,8 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     );
   };
 
-  const getQrUrl = (event: ApiEvent) => {
-    return orgSlug ? `/events/${orgSlug}/${event.slug}` : null;
-  };
+  const getEventPath = (event: ApiEvent) =>
+    orgSlug ? `/events/${orgSlug}/${event.slug}` : null;
 
   const journeyMap = useMemo(
     () => new Map(journeys.map((j) => [j.id, j])),
@@ -365,8 +289,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     () => journeys.map((j) => ({ value: j.id, label: j.title })),
     [journeys],
   );
-
-  const gradientEnabled = !!(formData.landing_config?.background_end_color);
 
   return (
     <div className="space-y-4">
@@ -382,7 +304,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
         </Button>
       </div>
 
-      {/* Create / Edit dialog with 2 tabs + live preview */}
+      {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         if (!open) { setEditingEvent(null); setFormData(defaultForm); }
         setDialogOpen(open);
@@ -392,302 +314,431 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             <DialogTitle>{editingEvent ? 'Editar Evento' : 'Crear Evento'}</DialogTitle>
             <DialogDescription>
               {editingEvent
-                ? 'Actualiza los datos del evento. El slug no se puede cambiar (es la URL del QR).'
-                : 'El slug genera la URL permanente del QR. No lo cambies después de imprimir.'}
+                ? 'Actualiza los datos del evento. El slug no se puede cambiar.'
+                : 'Completa los datos del evento. El slug genera la URL de seguimiento.'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid lg:grid-cols-[1fr_280px] gap-6">
-            {/* Left: tabbed form */}
-            <Tabs defaultValue="evento" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="evento">📋 Configuración</TabsTrigger>
-                <TabsTrigger value="landing">🎨 Landing</TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="mb-4 grid grid-cols-3 w-full">
+              <TabsTrigger value="general" className="flex items-center gap-1.5 text-xs">
+                <LayoutList className="h-3.5 w-3.5" /> General
+              </TabsTrigger>
+              <TabsTrigger value="lugar" className="flex items-center gap-1.5 text-xs">
+                <MapPin className="h-3.5 w-3.5" /> Lugar
+              </TabsTrigger>
+              <TabsTrigger value="diagnostico" className="flex items-center gap-1.5 text-xs">
+                <ClipboardList className="h-3.5 w-3.5" /> Diagnóstico
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Tab: Evento */}
-              <TabsContent value="evento" className="space-y-4 mt-0">
-                {/* Name + slug */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nombre *</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="Taller React 2026"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Slug *</Label>
-                    <Input
-                      value={formData.slug}
-                      onChange={(e) => setFormData((p) => ({ ...p, slug: e.target.value }))}
-                      placeholder="taller-react-2026"
-                      disabled={!!editingEvent}
-                    />
-                    <p className="text-xs text-slate-400">
-                      {editingEvent ? 'URL permanente (no editable)' : 'minúsculas, números y guiones'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status */}
+            {/* Tab: General */}
+            <TabsContent value="general" className="space-y-4 mt-0">
+              {/* Name + slug */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(v: ApiEventStatus) => setFormData((p) => ({ ...p, status: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EVENT_STATUSES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Nombre *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="Taller React 2026"
+                  />
                 </div>
-
-                {/* Journeys (multi-select) */}
                 <div className="space-y-2">
-                  <Label>Journeys vinculados</Label>
-                  <MultiSelect
-                    options={journeyOptions}
-                    selected={formData.journey_ids ?? []}
-                    onChange={(ids) => setFormData((p) => ({ ...p, journey_ids: ids }))}
-                    placeholder="Sin journey (solo informativo)"
+                  <Label>Slug *</Label>
+                  <Input
+                    value={formData.slug}
+                    onChange={(e) => setFormData((p) => ({ ...p, slug: e.target.value }))}
+                    placeholder="taller-react-2026"
+                    disabled={!!editingEvent}
                   />
                   <p className="text-xs text-slate-400">
-                    Al escanear el QR, el usuario elegirá un journey para inscribirse.
+                    {editingEvent ? 'URL permanente (no editable)' : 'minúsculas, números y guiones'}
                   </p>
                 </div>
+              </div>
 
-                {/* Dates + Location */}
+              {/* Status */}
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v: ApiEventStatus) => setFormData((p) => ({ ...p, status: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EVENT_STATUSES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Journeys */}
+              <div className="space-y-2">
+                <Label>Journeys vinculados</Label>
+                <MultiSelect
+                  options={journeyOptions}
+                  selected={formData.journey_ids ?? []}
+                  onChange={(ids) => setFormData((p) => ({ ...p, journey_ids: ids }))}
+                  placeholder="Sin journey"
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Fecha inicio</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.start_date?.slice(0, 16) || ''}
+                    onChange={(e) => setFormData((p) => ({ ...p, start_date: e.target.value || null }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha fin</Label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.end_date?.slice(0, 16) || ''}
+                    onChange={(e) => setFormData((p) => ({ ...p, end_date: e.target.value || null }))}
+                  />
+                </div>
+              </div>
+
+              {/* País */}
+              <div className="space-y-2">
+                <Label>País</Label>
+                <Select
+                  value={locCountry}
+                  onValueChange={(v) => {
+                    setLocCountry(v);
+                    setLocState('');
+                    setLocCity('');
+                    setFormData(p => ({ ...p, location: composeLocation(v, '', '', locLocality) }));
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecciona un país" /></SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {Country.getAllCountries().map(c => (
+                      <SelectItem key={c.isoCode} value={c.isoCode}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Región + Ciudad */}
+              {locCountry && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Fecha inicio</Label>
-                    <Input
-                      type="datetime-local"
-                      value={formData.start_date?.slice(0, 16) || ''}
-                      onChange={(e) => setFormData((p) => ({ ...p, start_date: e.target.value || null }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fecha fin</Label>
-                    <Input
-                      type="datetime-local"
-                      value={formData.end_date?.slice(0, 16) || ''}
-                      onChange={(e) => setFormData((p) => ({ ...p, end_date: e.target.value || null }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Lugar</Label>
-                  <Input
-                    value={formData.location || ''}
-                    onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))}
-                    placeholder="Ciudad de México, CDMX"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Descripción</Label>
-                  <Textarea
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Descripción del evento..."
-                    rows={2}
-                  />
-                </div>
-
-                {/* Planning fields */}
-                <div className="space-y-2">
-                  <Label>Notas internas</Label>
-                  <Textarea
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value || null }))}
-                    placeholder="Notas de planning, logística, etc. (no se muestran en la landing)"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Participantes esperados</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={formData.expected_participants ?? ''}
-                    onChange={(e) => setFormData((p) => ({
-                      ...p,
-                      expected_participants: e.target.value ? parseInt(e.target.value, 10) : null,
-                    }))}
-                    placeholder="Ej. 50"
-                  />
-                </div>
-              </TabsContent>
-
-              {/* Tab: Landing */}
-              <TabsContent value="landing" className="space-y-4 mt-0">
-                {/* Color presets */}
-                <div className="space-y-2">
-                  <Label>Presets de color</Label>
-                  <div className="flex gap-2">
-                    {COLOR_PRESETS.map((preset) => {
-                      const presetStyle = preset.bgEnd
-                        ? { background: `linear-gradient(to bottom right, ${preset.bg}, ${preset.bgEnd})` }
-                        : { backgroundColor: preset.bg };
-                      return (
-                        <button
-                          key={preset.name}
-                          type="button"
-                          onClick={() => applyPreset(preset)}
-                          title={preset.name}
-                          className="flex-1 h-9 rounded-lg border-2 border-transparent hover:border-fuchsia-400 transition-all text-[10px] font-semibold text-white/80 shadow-sm"
-                          style={presetStyle}
-                        >
-                          {preset.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Título proyectado</Label>
-                  <Input
-                    value={formData.landing_config?.title || ''}
-                    onChange={(e) => setLanding({ title: e.target.value })}
-                    placeholder="¡Bienvenidos al Taller!"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Mensaje de bienvenida</Label>
-                  <Input
-                    value={formData.landing_config?.welcome_message || ''}
-                    onChange={(e) => setLanding({ welcome_message: e.target.value })}
-                    placeholder="Escanea el QR para unirte"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Logo URL</Label>
-                  <Input
-                    value={formData.landing_config?.custom_logo_url || ''}
-                    onChange={(e) => setLanding({ custom_logo_url: e.target.value || null })}
-                    placeholder="https://ejemplo.com/logo.png"
-                  />
-                </div>
-
-                {/* Colors row 1: primary + text */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Color primario</Label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={formData.landing_config?.primary_color || '#3B82F6'}
-                        onChange={(e) => setLanding({ primary_color: e.target.value })}
-                        className="h-8 w-12 rounded cursor-pointer border border-slate-200"
-                      />
-                      <span className="text-xs text-slate-500">{formData.landing_config?.primary_color}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Color de texto</Label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={formData.landing_config?.text_color || '#FFFFFF'}
-                        onChange={(e) => setLanding({ text_color: e.target.value })}
-                        className="h-8 w-12 rounded cursor-pointer border border-slate-200"
-                      />
-                      <span className="text-xs text-slate-500">{formData.landing_config?.text_color}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Colors row 2: background + gradient toggle */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Color de fondo</Label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={formData.landing_config?.background_color || '#0F172A'}
-                        onChange={(e) => setLanding({ background_color: e.target.value })}
-                        className="h-8 w-12 rounded cursor-pointer border border-slate-200"
-                      />
-                      <span className="text-xs text-slate-500">{formData.landing_config?.background_color}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={gradientEnabled}
-                        onChange={(e) => setLanding({ background_end_color: e.target.checked ? '#9333EA' : null })}
-                        className="rounded"
-                      />
-                      Gradiente (color fin)
-                    </Label>
-                    {gradientEnabled && (
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="color"
-                          value={formData.landing_config?.background_end_color || '#9333EA'}
-                          onChange={(e) => setLanding({ background_end_color: e.target.value })}
-                          className="h-8 w-12 rounded cursor-pointer border border-slate-200"
-                        />
-                        <span className="text-xs text-slate-500">{formData.landing_config?.background_end_color}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Gradient direction (only when gradient enabled) */}
-                {gradientEnabled && (
-                  <div className="space-y-2">
-                    <Label>Dirección del gradiente</Label>
+                    <Label>Región / Provincia</Label>
                     <Select
-                      value={formData.landing_config?.gradient_direction || 'to-b'}
-                      onValueChange={(v) => setLanding({ gradient_direction: v })}
+                      value={locState}
+                      onValueChange={(v) => {
+                        setLocState(v);
+                        setLocCity('');
+                        setFormData(p => ({ ...p, location: composeLocation(locCountry, v, '', locLocality) }));
+                      }}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {GRADIENT_DIRECTIONS.map((d) => (
-                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      <SelectTrigger><SelectValue placeholder="Selecciona un estado" /></SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {State.getStatesOfCountry(locCountry).map(s => (
+                          <SelectItem key={s.isoCode} value={s.isoCode}>{s.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                )}
 
-                {/* Background image URL */}
+                  <div className="space-y-2">
+                    <Label>Ciudad / Municipio</Label>
+                    <Select
+                      value={locCity}
+                      disabled={!locState}
+                      onValueChange={(v) => {
+                        setLocCity(v);
+                        setFormData(p => ({ ...p, location: composeLocation(locCountry, locState, v, locLocality) }));
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder={locState ? 'Selecciona una ciudad' : 'Primero selecciona región'} /></SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {City.getCitiesOfState(locCountry, locState).map(c => (
+                          <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Localidad */}
+              <div className="space-y-2">
+                <Label>Localidad</Label>
+                <Input
+                  value={locLocality}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setLocLocality(v);
+                    setFormData(p => ({ ...p, location: composeLocation(locCountry, locState, locCity, v) }));
+                  }}
+                  placeholder="Colonia, barrio, localidad o referencia adicional"
+                />
+                <p className="text-xs text-slate-400">
+                  {formData.location
+                    ? `Ubicación: ${formData.location}`
+                    : 'Selecciona país, estado y ciudad para componer la ubicación'}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descripción</Label>
+                <Textarea
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Descripción del evento..."
+                  rows={2}
+                />
+                <p className="text-xs text-slate-400">Resumen general del evento (uso público)</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notas internas</Label>
+                <Textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value || null }))}
+                  placeholder="Notas de planning, logística, etc."
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Participantes esperados</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.expected_participants ?? ''}
+                  onChange={(e) => setFormData((p) => ({
+                    ...p,
+                    expected_participants: e.target.value ? parseInt(e.target.value, 10) : null,
+                  }))}
+                  placeholder="Ej. 50"
+                />
+              </div>
+
+              <hr className="border-slate-100" />
+
+              <div className="space-y-2">
+                <Label>Nombre completo de la entidad</Label>
+                <Input
+                  value={formData.counterpart_details?.full_entity_name || ''}
+                  onChange={(e) => setCounterpart({ full_entity_name: e.target.value || null })}
+                  placeholder="Nombre oficial de la organización/escuela/empresa"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>URL del logo de la entidad</Label>
+                <Input
+                  value={formData.counterpart_details?.entity_logo_url || ''}
+                  onChange={(e) => setCounterpart({ entity_logo_url: e.target.value || null })}
+                  placeholder="https://ejemplo.com/logo.png"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Dirección exacta de la sede</Label>
+                <Input
+                  value={formData.counterpart_details?.address || ''}
+                  onChange={(e) => setCounterpart({ address: e.target.value || null })}
+                  placeholder="Calle, número, colonia, ciudad"
+                />
+                <p className="text-xs text-slate-400">Calle, número, colonia y código postal</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Contraparte y persona de respaldo</Label>
+                <Textarea
+                  value={formData.counterpart_details?.counterpart_details || ''}
+                  onChange={(e) => setCounterpart({ counterpart_details: e.target.value || null })}
+                  placeholder="Nombre, cargo y contacto de la contraparte y su persona de respaldo"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Imagen de fondo (URL) — reemplaza colores</Label>
+                  <Label>Edades esperadas</Label>
                   <Input
-                    value={formData.landing_config?.background_image_url || ''}
-                    onChange={(e) => setLanding({ background_image_url: e.target.value || null })}
-                    placeholder="https://ejemplo.com/fondo.jpg"
+                    value={formData.counterpart_details?.expected_ages || ''}
+                    onChange={(e) => setCounterpart({ expected_ages: e.target.value || null })}
+                    placeholder="Ej. 15–25 años"
                   />
                 </div>
-              </TabsContent>
-            </Tabs>
+                <div className="space-y-2">
+                  <Label>Roles esperados</Label>
+                  <Input
+                    value={formData.counterpart_details?.expected_roles || ''}
+                    onChange={(e) => setCounterpart({ expected_roles: e.target.value || null })}
+                    placeholder="Ej. Estudiantes, docentes"
+                  />
+                </div>
+              </div>
 
-            {/* Right: live preview (shared across both tabs) */}
-            <div className="hidden lg:flex flex-col items-center pt-4">
-              <LandingPreview
-                config={formData.landing_config as ApiLandingConfig}
-                eventName={formData.name}
-                expectedParticipants={formData.expected_participants}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label>Actividad específica a realizar</Label>
+                <Textarea
+                  value={formData.counterpart_details?.specific_activity || ''}
+                  onChange={(e) => setCounterpart({ specific_activity: e.target.value || null })}
+                  placeholder="Descripción detallada de la actividad"
+                  rows={3}
+                />
+                <p className="text-xs text-slate-400">Descripción detallada de la dinámica (uso interno)</p>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Lugar */}
+            <TabsContent value="lugar" className="space-y-6 mt-0">
+              <div className="space-y-2">
+                <Label>Modalidad de la actividad</Label>
+                <Select
+                  value={formData.counterpart_details?.activity_modality || ''}
+                  onValueChange={(v) => setCounterpart({ activity_modality: v || null })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecciona la modalidad" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Presencial">Presencial</SelectItem>
+                    <SelectItem value="Virtual">Virtual</SelectItem>
+                    <SelectItem value="Híbrido">Híbrido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-slate-500">Condiciones del lugar donde se realizará la actividad</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="has_internet"
+                      checked={!!formData.venue_details?.has_internet}
+                      onCheckedChange={(checked) => setVenue({ has_internet: !!checked })}
+                    />
+                    <Label htmlFor="has_internet">Internet disponible</Label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="has_ac"
+                      checked={!!formData.venue_details?.has_ac}
+                      onCheckedChange={(checked) => setVenue({ has_ac: !!checked })}
+                    />
+                    <Label htmlFor="has_ac">Aire acondicionado / clima</Label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="has_lighting"
+                      checked={!!formData.venue_details?.has_lighting}
+                      onCheckedChange={(checked) => setVenue({ has_lighting: !!checked })}
+                    />
+                    <Label htmlFor="has_lighting">Iluminación adecuada</Label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="has_technical_rider"
+                      checked={!!formData.venue_details?.has_technical_rider}
+                      onCheckedChange={(checked) => setVenue({ has_technical_rider: !!checked })}
+                    />
+                    <Label htmlFor="has_technical_rider">Rider técnico (para Mac)</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notas adicionales del lugar</Label>
+                <Textarea
+                  value={formData.venue_details?.notes || ''}
+                  onChange={(e) => setVenue({ notes: e.target.value || null })}
+                  placeholder="Observaciones sobre el espacio, acceso, restricciones, etc."
+                  rows={4}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Tab: Diagnóstico */}
+            <TabsContent value="diagnostico" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label>Objetivo de la actividad</Label>
+                <Textarea
+                  value={formData.diagnosis?.objective || ''}
+                  onChange={(e) => setDiagnosis({ objective: e.target.value || null })}
+                  placeholder="¿Qué se quiere lograr con esta actividad?"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Expectativas</Label>
+                <Textarea
+                  value={formData.diagnosis?.expectations || ''}
+                  onChange={(e) => setDiagnosis({ expectations: e.target.value || null })}
+                  placeholder="¿Qué espera la contraparte de la actividad?"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Actividades históricas en la comunidad</Label>
+                <Textarea
+                  value={formData.diagnosis?.historical_activities || ''}
+                  onChange={(e) => setDiagnosis({ historical_activities: e.target.value || null })}
+                  placeholder="Actividades previas de salud mental o bienestar realizadas en esta comunidad"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Incidentes históricos relevantes</Label>
+                <Textarea
+                  value={formData.diagnosis?.historical_incidents || ''}
+                  onChange={(e) => setDiagnosis({ historical_incidents: e.target.value || null })}
+                  placeholder="Fallecimientos, intentos, casos de acoso, incidentes relacionados a salud mental"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mitos, estigmas y sensibilidad del público</Label>
+                <Textarea
+                  value={formData.diagnosis?.myths_stigmas || ''}
+                  onChange={(e) => setDiagnosis({ myths_stigmas: e.target.value || null })}
+                  placeholder="¿Qué creencias o tabúes existen sobre salud mental en esta comunidad?"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Líderes o embajadores en la comunidad</Label>
+                <Textarea
+                  value={formData.diagnosis?.community_leaders || ''}
+                  onChange={(e) => setDiagnosis({ community_leaders: e.target.value || null })}
+                  placeholder="¿Hay personas influyentes que apoyen o puedan apoyar estos temas?"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Principales obstáculos en la comunidad</Label>
+                <Textarea
+                  value={formData.diagnosis?.main_obstacles || ''}
+                  onChange={(e) => setDiagnosis({ main_obstacles: e.target.value || null })}
+                  placeholder="¿Cuáles han sido los mayores obstáculos para lograr los objetivos?"
+                  rows={2}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -720,7 +771,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           <CardContent className="py-12 text-center">
             <Calendar className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-600 mb-2">No hay eventos</h3>
-            <p className="text-slate-500 mb-4">Crea tu primer evento para generar un QR permanente</p>
+            <p className="text-slate-500 mb-4">Crea tu primer evento para comenzar a gestionar actividades</p>
             <Button
               onClick={openCreate}
               className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm"
@@ -736,7 +787,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                 <TableHead>Nombre</TableHead>
-                <TableHead>URL / QR</TableHead>
+                <TableHead>URL</TableHead>
                 <TableHead>Fecha inicio</TableHead>
                 <TableHead>Lugar</TableHead>
                 <TableHead>Estado</TableHead>
@@ -746,7 +797,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             </TableHeader>
             <TableBody>
               {events.map((event) => {
-                const qrUrl = getQrUrl(event);
+                const eventPath = getEventPath(event);
                 const eventJourneys = (event.journey_ids ?? [])
                   .map((jid) => journeyMap.get(jid))
                   .filter(Boolean);
@@ -755,10 +806,10 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                   <TableRow key={event.id} className="hover:bg-slate-50/80">
                     <TableCell className="font-medium">{event.name}</TableCell>
                     <TableCell>
-                      {qrUrl ? (
+                      {eventPath ? (
                         <div className="flex items-center gap-1.5">
                           <code className="text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded max-w-[120px] truncate block">
-                            {qrUrl}
+                            {eventPath}
                           </code>
                           <button
                             onClick={() => handleCopyUrl(event)}
@@ -793,15 +844,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {qrUrl && (
-                          <Button variant="ghost" size="sm" asChild
-                            className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50"
-                            title="Ver landing de convocatoria">
-                            <a href={qrUrl} target="_blank" rel="noopener noreferrer">
-                              <Globe className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
