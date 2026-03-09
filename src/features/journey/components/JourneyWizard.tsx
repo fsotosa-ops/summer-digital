@@ -408,7 +408,7 @@ export function JourneyWizard({
           searchPlaceholder="Buscar país..."
           emptyMessage="País no encontrado."
           className="h-14"
-          popoverContentClassName="z-[200]"
+          popoverContentClassName="z-[10001]"
         />
       );
     }
@@ -426,7 +426,7 @@ export function JourneyWizard({
           searchPlaceholder="Buscar región..."
           emptyMessage="Región no encontrada."
           disabled={!currentCountry}
-          popoverContentClassName="z-[200]"
+          popoverContentClassName="z-[10001]"
         />
       );
     }
@@ -441,7 +441,7 @@ export function JourneyWizard({
           searchPlaceholder="Buscar ciudad..."
           emptyMessage="Ciudad no encontrada."
           disabled={!currentState}
-          popoverContentClassName="z-[200]"
+          popoverContentClassName="z-[10001]"
         />
       );
     }

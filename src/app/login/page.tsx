@@ -73,6 +73,9 @@ function LoginContent() {
       const savedJoinId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
       const targetEventId = savedJoinId || joinEventId;
       
+      // Fresh login → clear stale onboarding flag so MainLayout re-checks
+      sessionStorage.removeItem(SESSION_KEYS.ONBOARDING_CHECKED);
+
       // Si existe una intención de evento, lo enviamos al Gateway del evento
       // Si no, lo enviamos a su dashboard general
       const targetPath = targetEventId ? `/events/${targetEventId}` : '/dashboard';

@@ -26,6 +26,9 @@ function AuthCallbackContent() {
         const user = await authService.handleOAuthCallback(code);
         setUser(user);
 
+        // Fresh login → clear stale onboarding flag so MainLayout re-checks
+        sessionStorage.removeItem(SESSION_KEYS.ONBOARDING_CHECKED);
+
         // Recuperar si el usuario venía de un evento / QR / join intent
         const qrReturn = sessionStorage.getItem(SESSION_KEYS.QR_RETURN_URL);
         const joinEventId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
