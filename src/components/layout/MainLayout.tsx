@@ -38,7 +38,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/types';
 import { Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
-import { OnboardingGate } from './OnboardingGate';
 
 const ROLE_LABELS: Record<string, string> = {
   SuperAdmin: 'Super Administrador',
@@ -84,7 +83,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, logout, initializeSession, viewMode, setViewMode } = useAuthStore();
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
   const [onboardingChecking, setOnboardingChecking] = useState(false);
 
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
@@ -121,7 +119,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setOnboardingChecking(true);
     journeyService.checkOnboarding(user.organizationId ?? undefined).then(res => {
       if (res.should_show && res.journey_id) {
-        setOnboardingJourneyId(res.journey_id);
+        // Redirect to dedicated onboarding page
+        const currentPath = pathname || '/dashboard';
+        router.replace(`/onboarding?journeyId=${res.journey_id}&redirect=${encodeURIComponent(currentPath)}`);
       }
       setOnboardingChecking(false);
     }).catch(() => {
@@ -176,18 +176,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // Onboarding gate: full-screen immersive experience for Participants on first login
-  if (onboardingJourneyId) {
-    return (
-      <OnboardingGate
-        journeyId={onboardingJourneyId}
-        onComplete={() => {
-          setOnboardingJourneyId(null);
-          router.push('/dashboard');
-        }}
-      />
-    );
-  }
 
   // Block dashboard render while onboarding check is in flight
   if (onboardingChecking) {
