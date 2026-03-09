@@ -86,7 +86,10 @@ const defaultDiagnosis: ApiEventDiagnosis = {
   main_obstacles: null,
 };
 
-const defaultForm: ApiEventCreate = {
+/** Local form state extends ApiEventCreate with journey_ids for the MultiSelect UI */
+type EventFormData = ApiEventCreate & { journey_ids: string[] };
+
+const defaultForm: EventFormData = {
   name: '',
   slug: '',
   description: '',
@@ -118,7 +121,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ApiEvent | null>(null);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<ApiEventCreate>(defaultForm);
+  const [formData, setFormData] = useState<EventFormData>(defaultForm);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -227,7 +230,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           end_date: formData.end_date || null,
           location: formData.location || null,
           status: formData.status,
-          journey_ids: formData.journey_ids ?? [],
           notes: formData.notes || null,
           expected_participants: formData.expected_participants || null,
           counterpart_details: formData.counterpart_details,
@@ -238,7 +240,8 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
         setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
         toast.success('Evento actualizado');
       } else {
-        const newEvent = await eventService.createEvent(orgId, formData);
+        const { journey_ids: _jids, ...createPayload } = formData;
+        const newEvent = await eventService.createEvent(orgId, createPayload);
         setEvents((prev) => [newEvent, ...prev]);
         toast.success('Evento creado');
       }
