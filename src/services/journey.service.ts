@@ -8,32 +8,52 @@ interface FetchJourneysResult {
   enrollmentMap: Map<string, string>;
 }
 
+/** Shape returned by GET /journeys/enrollments/me/full */
+interface FullEnrollment {
+  id: string;
+  user_id: string;
+  journey_id: string;
+  organization_id?: string;
+  status: string;
+  current_step_index: number;
+  progress_percentage: number;
+  started_at: string;
+  completed_at?: string;
+  journey: ApiJourney;
+  steps_progress: ApiStepProgress[];
+  completed_steps: number;
+  total_steps: number;
+}
+
 class JourneyService {
-  // For participants: fetch journeys based on their enrollments
+  // For participants: fetch journeys via batch endpoint (1 request instead of N+1)
   async fetchJourneys(fallbackOrgId?: string): Promise<FetchJourneysResult> {
-    const enrollments = await apiClient.get<ApiEnrollment[]>('/journeys/enrollments/me');
+    const fullEnrollments = await apiClient.get<FullEnrollment[]>('/journeys/enrollments/me/full');
 
     const enrollmentMap = new Map<string, string>();
-    const journeyPromises = enrollments.map(async (enrollment) => {
-      // Use org from enrollment (joined from journey), fallback to provided orgId
-      const orgId = enrollment.organization_id || fallbackOrgId;
-      if (!orgId) return null;
+    const allJourneys: Journey[] = [];
 
-      enrollmentMap.set(enrollment.journey_id, enrollment.id);
+    for (const entry of fullEnrollments) {
+      enrollmentMap.set(entry.journey_id, entry.id);
 
-      const [journey, stepsProgress] = await Promise.all([
-        apiClient.get<ApiJourney>(`/journeys/${orgId}/journeys/${enrollment.journey_id}`),
-        apiClient.get<ApiStepProgress[]>(`/journeys/enrollments/${enrollment.id}/progress`),
-      ]);
+      // Build a lightweight enrollment object for the mapper
+      const enrollment: ApiEnrollment = {
+        id: entry.id,
+        user_id: entry.user_id,
+        journey_id: entry.journey_id,
+        organization_id: entry.organization_id,
+        status: entry.status,
+        current_step_index: entry.current_step_index,
+        progress_percentage: entry.progress_percentage,
+        started_at: entry.started_at,
+        completed_at: entry.completed_at,
+      };
 
-      return mapApiToJourney(enrollment, journey, stepsProgress);
-    });
+      const mapped = mapApiToJourney(enrollment, entry.journey, entry.steps_progress);
+      allJourneys.push(mapped);
+    }
 
-    const results = await Promise.all(journeyPromises);
-    const allJourneys = results.filter((j): j is Journey => j !== null);
-
-    // Deduplicate by id — a user enrolled in the same journey from multiple orgs
-    // would get duplicate IDs without this guard
+    // Deduplicate by id
     const seen = new Set<string>();
     const journeys = allJourneys.filter(j => seen.has(j.id) ? false : (seen.add(j.id), true));
 

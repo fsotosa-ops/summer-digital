@@ -7,6 +7,7 @@ interface JourneyState {
   journeys: Journey[];
   selectedJourneyId: string | null;
   isLoading: boolean;
+  lastError: string | null;
   enrollmentMap: Map<string, string>;
   // For SuperAdmin: track which org we're viewing
   viewingOrgId: string | null;
@@ -16,28 +17,33 @@ interface JourneyState {
   selectJourney: (id: string | null) => void;
   completeActivity: (nodeId: string, externalReference?: string) => Promise<void>;
   setViewingOrgId: (orgId: string | null) => void;
+  clearError: () => void;
 }
 
 export const useJourneyStore = create<JourneyState>((set, get) => ({
   journeys: [],
   selectedJourneyId: null,
   isLoading: false,
+  lastError: null,
   enrollmentMap: new Map(),
   viewingOrgId: null,
   isPreviewMode: false,
+
+  clearError: () => set({ lastError: null }),
 
   // For participants: fetch based on enrollments (multi-org aware)
   fetchJourneys: async (fallbackOrgId?: string) => {
     const user = useAuthStore.getState().user;
     const orgId = fallbackOrgId || user?.organizationId;
 
-    set({ isLoading: true, isPreviewMode: false });
+    set({ isLoading: true, isPreviewMode: false, lastError: null });
     try {
       const { journeys, enrollmentMap } = await journeyService.fetchJourneys(orgId);
       set({ journeys, enrollmentMap });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching journeys:', error);
-      set({ journeys: [], enrollmentMap: new Map() });
+      const message = error?.data?.detail || error?.message || 'Error al cargar journeys. Intenta de nuevo.';
+      set({ journeys: [], enrollmentMap: new Map(), lastError: message });
     } finally {
       set({ isLoading: false });
     }
@@ -45,13 +51,14 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
 
   // For SuperAdmin: fetch all journeys from org (preview mode)
   fetchJourneysForAdmin: async (orgId: string) => {
-    set({ isLoading: true, viewingOrgId: orgId, isPreviewMode: true });
+    set({ isLoading: true, viewingOrgId: orgId, isPreviewMode: true, lastError: null });
     try {
       const journeys = await journeyService.fetchJourneysForAdmin(orgId);
       set({ journeys, enrollmentMap: new Map() });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching journeys for admin:', error);
-      set({ journeys: [] });
+      const message = error?.data?.detail || error?.message || 'Error al cargar journeys. Intenta de nuevo.';
+      set({ journeys: [], lastError: message });
     } finally {
       set({ isLoading: false });
     }
