@@ -17,6 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Search,
   Shield,
@@ -24,7 +34,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ContactDetailSheet } from '../components/contact-detail';
 
 const STATUS_OPTIONS: { value: ApiAccountStatus; label: string }[] = [
@@ -58,6 +70,11 @@ export function ContactsTab() {
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [togglingAdmin, setTogglingAdmin] = useState<string | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState(0);
+
   const isSuperAdmin = currentUser?.role === 'SuperAdmin';
 
   const loadUsers = useCallback(async () => {
@@ -89,6 +106,64 @@ export function ContactsTab() {
     }, 400);
     return () => clearTimeout(timeout);
   }, [searchInput]);
+
+  // Clear selection on page/search change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, searchQuery]);
+
+  // Selection computed values
+  const selectableUsers = users.filter((u) => u.id !== currentUser?.id);
+  const allSelectableSelected =
+    selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.id));
+  const isIndeterminate = selectedIds.size > 0 && !allSelectableSelected;
+
+  const handleToggleSelect = (userId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (allSelectableSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableUsers.map((u) => u.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    setBulkDeleteProgress(0);
+    const ids = Array.from(selectedIds);
+    const failedIds: string[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        await userService.deleteUser(ids[i]);
+      } catch {
+        failedIds.push(ids[i]);
+      }
+      setBulkDeleteProgress(Math.round(((i + 1) / ids.length) * 100));
+    }
+    const deletedCount = ids.length - failedIds.length;
+    if (failedIds.length === 0) {
+      toast.success(`${deletedCount} contacto(s) eliminado(s)`);
+      setSelectedIds(new Set());
+    } else {
+      toast.error(`${deletedCount} eliminado(s), ${failedIds.length} fallido(s)`);
+      setSelectedIds(new Set(failedIds));
+    }
+    setUsers((prev) => prev.filter((u) => !ids.includes(u.id) || failedIds.includes(u.id)));
+    setTotalCount((c) => c - deletedCount);
+    setBulkDeleting(false);
+    setBulkDeleteOpen(false);
+  };
 
   const handleToggleAdmin = async (targetUser: ApiUser, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -134,6 +209,32 @@ export function ContactsTab() {
         </span>
       </div>
 
+      {isSuperAdmin && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-3 rounded-lg shadow-sm">
+          <span className="text-sm">
+            {selectedIds.size} contacto(s) seleccionado(s)
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-slate-800"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Eliminar seleccionados
+            </Button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-4">
@@ -161,6 +262,14 @@ export function ContactsTab() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                {isSuperAdmin && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelectableSelected ? true : isIndeterminate ? 'indeterminate' : false}
+                      onCheckedChange={handleToggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Contacto</TableHead>
                 <TableHead>Organizaciones</TableHead>
                 <TableHead>Estado</TableHead>
@@ -176,6 +285,18 @@ export function ContactsTab() {
                   className="cursor-pointer hover:bg-slate-50/80"
                   onClick={() => setSelectedUser(u)}
                 >
+                  {isSuperAdmin && (
+                    <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                      {u.id === currentUser?.id ? (
+                        <div className="h-4 w-4" />
+                      ) : (
+                        <Checkbox
+                          checked={selectedIds.has(u.id)}
+                          onCheckedChange={() => handleToggleSelect(u.id)}
+                        />
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
@@ -305,6 +426,55 @@ export function ContactsTab() {
           setSelectedUser(null);
         }}
       />
+
+      <Dialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!bulkDeleting) setBulkDeleteOpen(open);
+        }}
+      >
+        <DialogContent
+          onPointerDownOutside={(e) => { if (bulkDeleting) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (bulkDeleting) e.preventDefault(); }}
+        >
+          <DialogHeader>
+            <DialogTitle>Eliminar contactos</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar {selectedIds.size} contacto(s)?
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          {bulkDeleting && (
+            <div className="py-2">
+              <Progress value={bulkDeleteProgress} className="h-2" />
+              <p className="text-xs text-slate-500 mt-2 text-center">
+                Eliminando… {bulkDeleteProgress}%
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteOpen(false)}
+              disabled={bulkDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
