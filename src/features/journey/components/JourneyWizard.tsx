@@ -80,29 +80,6 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
 // Fields rendered as pill buttons (no dropdown)
 const SELECT_FIELDS = new Set(['gender', 'education_level', 'occupation']);
 
-// Hardcoded presets — used when the backend has no options configured
-const FIELD_PRESETS: Record<string, { value: string; label: string }[]> = {
-  gender: [
-    { value: 'masculino', label: 'Masculino' },
-    { value: 'femenino', label: 'Femenino' },
-    { value: 'no_binario', label: 'No binario' },
-    { value: 'prefiero_no_decir', label: 'Prefiero no decir' },
-  ],
-  education_level: [
-    { value: 'secundaria', label: 'Secundaria' },
-    { value: 'tecnico', label: 'Técnico / Tecnólogo' },
-    { value: 'universitario', label: 'Universitario' },
-    { value: 'postgrado', label: 'Posgrado' },
-  ],
-  occupation: [
-    { value: 'estudiante', label: 'Estudiante' },
-    { value: 'empleado', label: 'Empleado' },
-    { value: 'independiente', label: 'Independiente' },
-    { value: 'empresario', label: 'Empresario' },
-    { value: 'jubilado', label: 'Jubilado' },
-    { value: 'desempleado', label: 'Desempleado' },
-  ],
-};
 
 const NONE = '__none__';
 
@@ -165,7 +142,10 @@ export function JourneyWizard({
     }
     Promise.all([
       crmService.getMyContact().catch(() => null),
-      crmService.listFieldOptions().catch(() => [] as ApiFieldOption[]),
+      crmService.listFieldOptions().catch(err => {
+        console.error('[JourneyWizard] failed to load field options:', err);
+        return [] as ApiFieldOption[];
+      }),
     ]).then(([c, opts]) => {
       if (c) setContact(c);
       const grouped: Record<string, ApiFieldOption[]> = {};
@@ -462,10 +442,26 @@ export function JourneyWizard({
     }
 
     if (SELECT_FIELDS.has(fieldName)) {
-      const serverOpts = fieldOptions[fieldName] || [];
-      const opts = serverOpts.length > 0
-        ? serverOpts.map(o => ({ value: o.value, label: o.label }))
-        : (FIELD_PRESETS[fieldName] || []);
+      const opts = (fieldOptions[fieldName] || []).map(o => ({ value: o.value, label: o.label }));
+      if (opts.length === 0) {
+        // Graceful degradation: free text input when server options unavailable
+        return (
+          <Input
+            type="text"
+            value={value}
+            placeholder={FIELD_PLACEHOLDERS[fieldName] || ''}
+            onChange={e => handleDraftChange(fieldName, e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && isFieldFilled(fieldName)) {
+                const fields = currentNode?.fieldNames || [];
+                if (fieldIndex < fields.length - 1) handleNextField();
+                else handleCompleteStep();
+              }
+            }}
+            className="h-14 text-base border-slate-200 focus:border-sky-400 focus-visible:ring-sky-400/20"
+          />
+        );
+      }
       return renderPillSelect(fieldName, opts);
     }
 
@@ -579,7 +575,8 @@ export function JourneyWizard({
     const currentField = fields[fieldIndex];
     const isLastField = fieldIndex === fields.length - 1;
     const fieldFilled = isFieldFilled(currentField);
-    const isPillField = SELECT_FIELDS.has(currentField);
+    const hasPillOptions = SELECT_FIELDS.has(currentField) && (fieldOptions[currentField] || []).length > 0;
+    const isPillField = hasPillOptions;
     const FieldIcon = FIELD_ICONS[currentField];
     const question = FIELD_QUESTIONS[currentField] || FIELD_LABELS[currentField] || currentField;
 
