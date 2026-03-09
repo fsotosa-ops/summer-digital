@@ -5,11 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { eventService } from '@/services/event.service';
 import { journeyService } from '@/services/journey.service';
-import { OnboardingGate } from '@/components/layout/OnboardingGate';
 import { Loader2 } from 'lucide-react';
 import { SESSION_KEYS } from '@/lib/utils';
 
-type Phase = 'idle' | 'joining' | 'onboarding' | 'done';
+type Phase = 'idle' | 'joining' | 'done';
 
 export default function EventGatewayPage() {
   const router = useRouter();
@@ -20,7 +19,6 @@ export default function EventGatewayPage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
-  const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
   const isProcessingRef = useRef(false);
 
   // Efecto 1: Hidratación segura
@@ -59,14 +57,21 @@ export default function EventGatewayPage() {
           setUser({ ...user, organizationId: orgId });
         }
 
-        // Inline onboarding check — skip only for admins (catches Participant + Subscriber)
+        // Determine final destination after all gates pass
+        const finalRedirect = result?.journey_enrolled
+          ? `/journey/${result.journey_enrolled}`
+          : '/dashboard';
+
+        // Onboarding check — skip for admins (catches Participant + Subscriber)
         const isAdmin = user.role === 'Admin' || user.role === 'SuperAdmin';
         if (!isAdmin && orgId) {
           try {
             const check = await journeyService.checkOnboarding(orgId);
             if (check.should_show && check.journey_id) {
-              setOnboardingJourneyId(check.journey_id);
-              setPhase('onboarding');
+              // Redirect to dedicated onboarding page with return URL
+              const onboardingUrl = `/onboarding?journeyId=${check.journey_id}&redirect=${encodeURIComponent(finalRedirect)}`;
+              setPhase('done');
+              router.replace(onboardingUrl);
               return;
             }
           } catch (e) {
@@ -74,10 +79,10 @@ export default function EventGatewayPage() {
           }
         }
 
-        // No onboarding needed → go to dashboard
+        // No onboarding needed → go directly to final destination
         sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
         setPhase('done');
-        router.replace('/dashboard');
+        router.replace(finalRedirect);
       } catch (error: any) {
         console.error('[EventGateway] Error:', error);
 
@@ -101,16 +106,6 @@ export default function EventGatewayPage() {
 
     processJoin();
   }, [hydrated, user, router, eventId, logout, setUser, phase]);
-
-  // Render OnboardingGate inline when onboarding is needed
-  if (phase === 'onboarding' && onboardingJourneyId) {
-    return (
-      <OnboardingGate
-        journeyId={onboardingJourneyId}
-        onComplete={() => router.replace('/dashboard')}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4">

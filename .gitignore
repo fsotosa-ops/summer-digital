@@ -48,3 +48,5 @@ rewards_profile.json
 # Referencia para la IA
 _legacy_reference/
 .env.local
+
+onboarding.md
