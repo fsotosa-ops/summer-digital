@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ApiCrmContact,
   ApiEnrollmentDetailResponse,
   ApiUserPointsSummary,
 } from '@/types/api.types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Loader2,
   Clock,
@@ -17,6 +18,7 @@ import {
   CheckCircle2,
   Lock,
   Circle,
+  UserMinus,
 } from 'lucide-react';
 import { STEP_TYPE_LABELS } from './constants';
 
@@ -27,6 +29,7 @@ interface ActivityTabProps {
   activityLoading: boolean;
   expandedEnrollment: string | null;
   onToggleExpanded: (enrollmentId: string) => void;
+  onUnenroll?: (enrollmentId: string) => Promise<void>;
 }
 
 export function ActivityTab({
@@ -36,7 +39,21 @@ export function ActivityTab({
   activityLoading,
   expandedEnrollment,
   onToggleExpanded,
+  onUnenroll,
 }: ActivityTabProps) {
+  const [confirmingUnenroll, setConfirmingUnenroll] = useState<string | null>(null);
+  const [unenrolling, setUnenrolling] = useState(false);
+
+  const handleUnenroll = async (enrollmentId: string) => {
+    if (!onUnenroll) return;
+    setUnenrolling(true);
+    try {
+      await onUnenroll(enrollmentId);
+    } finally {
+      setUnenrolling(false);
+      setConfirmingUnenroll(null);
+    }
+  };
   if (activityLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -206,6 +223,49 @@ export function ActivityTab({
                     )
                   )}
                 </button>
+
+                {/* Unenroll confirmation */}
+                {onUnenroll && confirmingUnenroll === enrollment.id && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border-t border-red-100">
+                    <p className="text-xs text-red-600 flex-1">
+                      Se eliminará la inscripción y todo su progreso. ¿Confirmar?
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => setConfirmingUnenroll(null)}
+                      disabled={unenrolling}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-7 text-xs"
+                      onClick={() => handleUnenroll(enrollment.id)}
+                      disabled={unenrolling}
+                    >
+                      {unenrolling && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                      Eliminar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Unenroll trigger button */}
+                {onUnenroll && confirmingUnenroll !== enrollment.id && (
+                  <div className="flex justify-end px-4 py-1.5 border-t border-slate-100">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setConfirmingUnenroll(enrollment.id)}
+                    >
+                      <UserMinus className="h-3.5 w-3.5 mr-1" />
+                      Desenrolar
+                    </Button>
+                  </div>
+                )}
 
                 {/* Step-by-step progress (expandable) */}
                 {isExpanded && enrollment.steps_progress.length > 0 && (

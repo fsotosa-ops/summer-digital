@@ -320,6 +320,17 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
     }
   };
 
+  // Enrollment unenroll handler
+  const handleUnenroll = async (enrollmentId: string) => {
+    try {
+      await crmService.adminUnenrollUser(enrollmentId);
+      setEnrollmentDetails((prev) => prev.filter((e) => e.id !== enrollmentId));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al desenrolar usuario');
+    }
+  };
+
   // Org management handlers
   const handleAddToOrg = async () => {
     if (!selectedOrgId || !user) return;
@@ -536,6 +547,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                       onToggleExpanded={(id) =>
                         setExpandedEnrollment(expandedEnrollment === id ? null : id)
                       }
+                      onUnenroll={handleUnenroll}
                     />
                   </TabsContent>
 

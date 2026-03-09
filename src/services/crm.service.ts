@@ -164,6 +164,10 @@ class CrmService {
     );
   }
 
+  async adminUnenrollUser(enrollmentId: string): Promise<void> {
+    return apiClient.delete(`/journeys/admin/enrollments/${enrollmentId}`);
+  }
+
   async getAdminUserGamificationSummary(userId: string): Promise<ApiUserPointsSummary> {
     return apiClient.get<ApiUserPointsSummary>(
       `/gamification/admin/progress/user/${userId}/summary`,

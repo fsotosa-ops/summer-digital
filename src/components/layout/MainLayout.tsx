@@ -114,7 +114,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   // Onboarding gate: check once per session for Participants
   useEffect(() => {
-    if (!hydrated || !user || user.role !== 'Participant') return;
+    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+    if (!hydrated || !user || isAdmin) return;
     const checked = sessionStorage.getItem(SESSION_KEYS.ONBOARDING_CHECKED);
     if (checked) return;
     setOnboardingChecking(true);
