@@ -2,7 +2,7 @@ name: Deploy Frontend to Cloud Run (Staging)
 
 on:
   push:
-    branches: [staging]
+    branches: [main]
 
 env:
   GAR_LOCATION: us-central1
