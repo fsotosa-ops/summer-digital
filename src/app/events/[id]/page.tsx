@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { eventService } from '@/services/event.service';
 import { Loader2 } from 'lucide-react';
+import { SESSION_KEYS } from '@/lib/utils';
 
 export default function EventGatewayPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function EventGatewayPage() {
         }
 
         // Force MainLayout to re-run onboarding check
-        sessionStorage.removeItem('onboarding_checked');
+        sessionStorage.removeItem(SESSION_KEYS.ONBOARDING_CHECKED);
 
         setIsRouting(true);
         router.replace('/dashboard');

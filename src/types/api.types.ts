@@ -845,18 +845,28 @@ export interface ApiCrmStats {
 // --- Contact Event Participation ---
 
 export interface ApiContactEventParticipation {
-  enrollment_id: string;
-  enrollment_status: string;
-  enrolled_at: string;
+  // Primary: attendance record
+  attendance_id: string;
+  attendance_status: string;
+  modality?: string;
+  registered_at?: string;
+  checked_in_at?: string;
+  // Event
   event_id: string;
   event_name: string;
   event_slug: string;
   event_status: ApiEventStatus;
   event_start_date?: string;
   event_location?: string;
+  // Org
   org_id: string;
   org_name: string;
   org_slug: string;
+  // Optional: enrollment traceability
+  enrollment_id?: string;
+  enrollment_status?: string;
+  journey_id?: string;
+  enrolled_at?: string;
 }
 
 // --- Resource DTOs ---

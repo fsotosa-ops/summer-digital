@@ -15,6 +15,19 @@ import {
 } from '@/components/ui/table';
 import { Calendar, Loader2 } from 'lucide-react';
 
+const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
+  registered: 'Registrado',
+  attended: 'Asistió',
+  no_show: 'No asistió',
+  cancelled: 'Cancelado',
+};
+
+const MODALITY_LABELS: Record<string, string> = {
+  presencial: 'Presencial',
+  online: 'Online',
+  hibrido: 'Híbrido',
+};
+
 const ENROLLMENT_STATUS_LABELS: Record<string, string> = {
   active: 'Activo',
   completed: 'Completado',
@@ -63,14 +76,16 @@ export function EventsParticipationTab({ userId }: Props) {
             <TableHead>Organización</TableHead>
             <TableHead>Fecha</TableHead>
             <TableHead>Estado evento</TableHead>
-            <TableHead>Estado inscripción</TableHead>
+            <TableHead>Asistencia</TableHead>
+            <TableHead>Modalidad</TableHead>
+            <TableHead>Journey</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((e) => {
             const statusCfg = EVENT_STATUS_CONFIG[e.event_status as ApiEventStatus];
             return (
-              <TableRow key={e.enrollment_id}>
+              <TableRow key={e.attendance_id}>
                 <TableCell className="font-medium">{e.event_name}</TableCell>
                 <TableCell className="text-slate-600 text-sm">{e.org_name}</TableCell>
                 <TableCell className="text-slate-500 text-sm">
@@ -93,8 +108,20 @@ export function EventsParticipationTab({ userId }: Props) {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
-                    {ENROLLMENT_STATUS_LABELS[e.enrollment_status] || e.enrollment_status}
+                    {ATTENDANCE_STATUS_LABELS[e.attendance_status] || e.attendance_status}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-slate-500 text-xs">
+                  {e.modality ? (MODALITY_LABELS[e.modality] || e.modality) : '—'}
+                </TableCell>
+                <TableCell>
+                  {e.enrollment_id ? (
+                    <Badge variant="outline" className="text-xs">
+                      {ENROLLMENT_STATUS_LABELS[e.enrollment_status!] || e.enrollment_status}
+                    </Badge>
+                  ) : (
+                    <span className="text-slate-400 text-xs">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             );

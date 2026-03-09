@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+import { cn, SESSION_KEYS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -113,7 +113,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Onboarding gate: check once per session for Participants
   useEffect(() => {
     if (!hydrated || !user || user.role !== 'Participant') return;
-    const checked = sessionStorage.getItem('onboarding_checked');
+    const checked = sessionStorage.getItem(SESSION_KEYS.ONBOARDING_CHECKED);
     if (checked) return;
     journeyService.checkOnboarding(user.organizationId ?? undefined).then(res => {
       if (res.should_show && res.journey_id) {
@@ -121,10 +121,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
       // else: should_show=false → no hacer nada, re-check en el próximo fresh load
     }).catch(() => {
-      sessionStorage.setItem('onboarding_checked', 'true');
+      sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, user?.id]);
+  }, [hydrated, user?.id, user?.organizationId]);
 
   // Sync admin dropdown with current route
   useEffect(() => {
