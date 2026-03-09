@@ -243,7 +243,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
         const selectedJourneyIds = formData.journey_ids ?? [];
         const toAdd = selectedJourneyIds.filter(id => !currentJourneyIds.includes(id));
         const toRemove = currentJourneyIds.filter(id => !selectedJourneyIds.includes(id));
-        for (const jId of toAdd) await eventService.addJourneyToEvent(orgId, editingEvent.id, jId);
+        for (const jId of toAdd) await eventService.addJourneyToEvent(orgId, editingEvent.id, { journey_id: jId });
         for (const jId of toRemove) await eventService.removeJourneyFromEvent(orgId, editingEvent.id, jId);
         updated.journey_ids = selectedJourneyIds;
 
@@ -255,7 +255,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
         // Assign selected journeys to the new event
         for (const jId of formData.journey_ids) {
-          await eventService.addJourneyToEvent(orgId, newEvent.id, jId);
+          await eventService.addJourneyToEvent(orgId, newEvent.id, { journey_id: jId });
         }
         newEvent.journey_ids = formData.journey_ids;
 
