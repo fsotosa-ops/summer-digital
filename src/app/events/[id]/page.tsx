@@ -11,7 +11,7 @@ export default function EventGatewayPage() {
   const params = useParams();
   const eventId = params.id as string;
 
-  const { user, logout } = useAuthStore();
+  const { user, logout, setUser } = useAuthStore();
 
   const [hydrated, setHydrated] = useState(false);
   const [isRouting, setIsRouting] = useState(false);
@@ -44,7 +44,16 @@ export default function EventGatewayPage() {
       isProcessingRef.current = true;
 
       try {
-        await eventService.joinEvent(eventId);
+        const result = await eventService.joinEvent(eventId);
+
+        // Update org context so onboarding-check targets the event's org
+        if (result?.organization_id && user) {
+          setUser({ ...user, organizationId: result.organization_id });
+        }
+
+        // Force MainLayout to re-run onboarding check
+        sessionStorage.removeItem('onboarding_checked');
+
         setIsRouting(true);
         router.replace('/dashboard');
       } catch (error: any) {
@@ -69,7 +78,7 @@ export default function EventGatewayPage() {
     };
 
     processJoin();
-  }, [hydrated, user, router, eventId, logout, isRouting]);
+  }, [hydrated, user, router, eventId, logout, setUser, isRouting]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4">

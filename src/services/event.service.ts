@@ -41,7 +41,7 @@ class EventService {
   }
 
   /** Unified join flow: org membership + attendance + enrollment. */
-  async joinEvent(eventId: string) {
+  async joinEvent(eventId: string): Promise<{ event_id: string; organization_id: string; org_joined: boolean; attendance_registered: boolean; journey_enrolled: string | null }> {
     return apiClient.post(`/auth/events/${eventId}/join`, {});
   }
 

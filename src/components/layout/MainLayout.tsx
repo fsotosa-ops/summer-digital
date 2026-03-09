@@ -115,7 +115,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!hydrated || !user || user.role !== 'Participant') return;
     const checked = sessionStorage.getItem('onboarding_checked');
     if (checked) return;
-    journeyService.checkOnboarding().then(res => {
+    journeyService.checkOnboarding(user.organizationId ?? undefined).then(res => {
       if (res.should_show && res.journey_id) {
         setOnboardingJourneyId(res.journey_id);
       }

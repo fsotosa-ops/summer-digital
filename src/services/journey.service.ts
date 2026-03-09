@@ -117,8 +117,9 @@ class JourneyService {
   }
 
   // Check whether the participant should see the onboarding journey gate
-  async checkOnboarding(): Promise<{ should_show: boolean; journey_id: string | null }> {
-    return apiClient.get<{ should_show: boolean; journey_id: string | null }>('/journeys/me/onboarding-check');
+  async checkOnboarding(orgId?: string): Promise<{ should_show: boolean; journey_id: string | null }> {
+    const params = orgId ? `?org_id=${encodeURIComponent(orgId)}` : '';
+    return apiClient.get<{ should_show: boolean; journey_id: string | null }>(`/journeys/me/onboarding-check${params}`);
   }
 }
 
