@@ -37,7 +37,7 @@ function isOnboardingJourney(journey: Journey): boolean {
 
 export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, selectJourney, isLoading } = useJourneyStore();
+  const { journeys, fetchJourneys, selectJourney } = useJourneyStore();
   const [phase, setPhase] = useState<Phase>('welcome');
   const [showConfetti, setShowConfetti] = useState(false);
   const [journeyData, setJourneyData] = useState<Journey | null>(null);
@@ -122,7 +122,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
   const firstName = user?.name?.split(' ')[0] || 'Bienvenido';
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="fixed inset-0 z-[9999]">
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-[10000]">
           <ReactConfetti width={width} height={height} recycle={false} numberOfPieces={600} />
@@ -133,10 +133,10 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'welcome' && (
           <motion.div
             key="welcome"
-            className="flex-1 flex flex-col items-center justify-center gap-6 text-center px-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center gap-6 text-center px-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
             {/* Logo / Brand */}
@@ -183,38 +183,43 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'journey' && (
           <motion.div
             key="journey"
-            className="flex-1 flex flex-col overflow-hidden"
+            className="fixed inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.4 }}
           >
-            <div className="flex-1 p-4 overflow-hidden">
-              {isLoading || !journeyData ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-slate-400">Cargando tu journey...</div>
-                </div>
-              ) : isOnboardingJourney(journeyData) ? (
-                <JourneyWizard journey={journeyData} onBack={handlePlayerBack} />
-              ) : (
-                <JourneyPlayer journey={journeyData} onBack={handlePlayerBack} />
-              )}
-            </div>
+            {!journeyData ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-slate-400">Cargando tu journey...</div>
+              </div>
+            ) : isOnboardingJourney(journeyData) ? (
+              <JourneyWizard journey={journeyData} onBack={handlePlayerBack} />
+            ) : (
+              <JourneyPlayer journey={journeyData} onBack={handlePlayerBack} />
+            )}
           </motion.div>
         )}
 
         {phase === 'completed' && (
           <motion.div
             key="completed"
-            className="flex-1 flex flex-col items-center justify-center gap-6 text-center px-8"
-            initial={{ opacity: 0, scale: 0.8 }}
+            className="fixed inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50 flex flex-col items-center justify-center gap-6 text-center px-8"
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="text-7xl mb-4">🏆</div>
-            <h1 className="text-4xl font-bold text-white">¡Nivel 1 Alcanzado!</h1>
-            <p className="text-xl text-fuchsia-300 font-semibold mt-2">Oasis desbloqueado</p>
-            <p className="text-slate-400 text-lg mt-2">Estás listo para explorar la plataforma</p>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="h-24 w-24 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg"
+            >
+              <span className="text-5xl">🏆</span>
+            </motion.div>
+            <h1 className="text-4xl font-bold text-slate-800">¡Nivel 1 Alcanzado!</h1>
+            <p className="text-xl text-teal-600 font-semibold mt-2">Oasis desbloqueado</p>
+            <p className="text-slate-500 text-lg mt-2">Estás listo para explorar la plataforma</p>
           </motion.div>
         )}
       </AnimatePresence>

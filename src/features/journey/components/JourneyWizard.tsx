@@ -122,7 +122,7 @@ export function JourneyWizard({
   onBack,
 }: JourneyWizardProps) {
   const { user } = useAuthStore();
-  const { selectJourney, fetchJourneys, completeActivity } = useJourneyStore();
+  const { selectJourney, refreshJourneys, completeActivity } = useJourneyStore();
   const storeJourneys = useJourneyStore(s => s.journeys);
 
   const liveJourney = isPreviewMode
@@ -312,7 +312,7 @@ export function JourneyWizard({
       const saved = await crmService.updateMyContact(fieldsToSave);
       setContact(saved);
       triggerStepSuccess();
-      await fetchJourneys(user?.organizationId ?? undefined);
+      await refreshJourneys(user?.organizationId ?? undefined);
       showXp(currentNode.points ?? 10);
       checkJourneyComplete();
     } catch (err) {
@@ -338,7 +338,7 @@ export function JourneyWizard({
       const saved = await crmService.updateMyContact(fieldsToSave as Partial<ApiCrmContact>);
       setContact(saved);
       triggerStepSuccess();
-      await fetchJourneys(user?.organizationId ?? undefined);
+      await refreshJourneys(user?.organizationId ?? undefined);
       showXp(currentNode.points ?? 10);
       checkJourneyComplete();
     } catch (err) {
@@ -356,7 +356,7 @@ export function JourneyWizard({
       if (isPreviewMode) { simCompleteNode(node); return; }
       triggerStepSuccess();
       await completeActivity(node.id);
-      await fetchJourneys(user?.organizationId ?? undefined);
+      await refreshJourneys(user?.organizationId ?? undefined);
       showXp(node.points ?? 10);
       checkJourneyComplete();
     } catch (err) {

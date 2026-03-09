@@ -120,7 +120,35 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
   const [error, setError] = useState<string | null>(null);
 
-  // Load CRM contact + field options when user changes
+  // Load CRM contact + field options
+  const refreshContact = useCallback(async (userId: string, silent = false) => {
+    if (!silent) setCrmLoading(true);
+    try {
+      const [contact, options] = await Promise.all([
+        crmService.getContact(userId).catch(() => null),
+        crmService.listFieldOptions(undefined, false).catch((err) => {
+          console.error('Error loading field options:', err);
+          return [] as ApiFieldOption[];
+        }),
+      ]);
+      setCrmContact(contact);
+      const grouped: Record<string, ApiFieldOption[]> = {};
+      for (const o of options) {
+        if (!grouped[o.field_name]) grouped[o.field_name] = [];
+        grouped[o.field_name].push(o);
+      }
+      setFieldOptions(grouped);
+    } catch (err) {
+      if (!silent) {
+        console.error('Error loading contact data:', err);
+        setError('Error al cargar datos del contacto');
+      }
+    } finally {
+      if (!silent) setCrmLoading(false);
+    }
+  }, []);
+
+  // Load on user change
   useEffect(() => {
     if (!user) {
       setCrmContact(null);
@@ -131,29 +159,16 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       setEventsLoaded(false);
       return;
     }
-    setCrmLoading(true);
-    Promise.all([
-      crmService.getContact(user.id).catch(() => null),
-      crmService.listFieldOptions(undefined, false).catch((err) => {
-        console.error('Error loading field options:', err);
-        return [];
-      }),
-    ])
-      .then(([contact, options]) => {
-        setCrmContact(contact);
-        const grouped: Record<string, ApiFieldOption[]> = {};
-        for (const o of options) {
-          if (!grouped[o.field_name]) grouped[o.field_name] = [];
-          grouped[o.field_name].push(o);
-        }
-        setFieldOptions(grouped);
-      })
-      .catch((err) => {
-        console.error('Error loading contact data:', err);
-        setError('Error al cargar datos del contacto');
-      })
-      .finally(() => setCrmLoading(false));
-  }, [user]);
+    refreshContact(user.id);
+  }, [user, refreshContact]);
+
+  // Auto-refresh CRM contact when tab regains focus
+  useEffect(() => {
+    if (!user) return;
+    const handleFocus = () => refreshContact(user.id, true);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, refreshContact]);
 
   // Load notes & tasks
   const loadNotesAndTasks = useCallback(async (userId: string) => {

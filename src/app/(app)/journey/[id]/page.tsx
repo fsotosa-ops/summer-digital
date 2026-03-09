@@ -37,7 +37,7 @@ export default function JourneyPlayerPage() {
     }
   }, [journey, hasFetched, user, fetchJourneys]);
 
-  if (isLoading || (!journey && !hasFetched)) {
+  if (!journey && (isLoading || !hasFetched)) {
     return (
       <div className="fixed inset-0 z-[100] bg-gradient-to-br from-sky-50 via-white to-teal-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />

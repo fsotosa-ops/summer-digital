@@ -77,8 +77,8 @@ export function ContactsTab() {
 
   const isSuperAdmin = currentUser?.role === 'SuperAdmin';
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
+  const loadUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const result = await userService.listUsers(
         page * PAGE_SIZE,
@@ -89,14 +89,27 @@ export function ContactsTab() {
       setTotalCount(result.count);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar contactos');
+      if (!silent) setError(err instanceof Error ? err.message : 'Error al cargar contactos');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, searchQuery]);
 
   useEffect(() => {
     loadUsers();
+  }, [loadUsers]);
+
+  // Auto-refresh every 30s when tab is visible
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') loadUsers(true);
+    }, 30_000);
+    const handleFocus = () => loadUsers(true);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [loadUsers]);
 
   useEffect(() => {

@@ -13,6 +13,7 @@ interface JourneyState {
   viewingOrgId: string | null;
   isPreviewMode: boolean;
   fetchJourneys: (orgIdOverride?: string) => Promise<void>;
+  refreshJourneys: (orgIdOverride?: string) => Promise<void>;
   fetchJourneysForAdmin: (orgId: string) => Promise<void>;
   selectJourney: (id: string | null) => void;
   completeActivity: (nodeId: string, externalReference?: string) => Promise<void>;
@@ -46,6 +47,18 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
       set({ journeys: [], enrollmentMap: new Map(), lastError: message });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  // Silent refetch — updates data WITHOUT setting isLoading (avoids UI flashes)
+  refreshJourneys: async (fallbackOrgId?: string) => {
+    const user = useAuthStore.getState().user;
+    const orgId = fallbackOrgId || user?.organizationId;
+    try {
+      const { journeys, enrollmentMap } = await journeyService.fetchJourneys(orgId);
+      set({ journeys, enrollmentMap });
+    } catch (error: any) {
+      console.error('Error refreshing journeys:', error);
     }
   },
 
