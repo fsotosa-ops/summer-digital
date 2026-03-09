@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Check,
   Lock,
+  ChevronLeft,
   ChevronRight,
   Zap,
   User,
@@ -136,6 +137,7 @@ export function JourneyWizard({
 
   // UI state
   const [fieldIndex, setFieldIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [xpPop, setXpPop] = useState<{ visible: boolean; amount: number }>({ visible: false, amount: 0 });
   const [showCelebration, setShowCelebration] = useState(false);
   const [showStepSuccess, setShowStepSuccess] = useState(false);
@@ -249,7 +251,15 @@ export function JourneyWizard({
   const handleNextField = () => {
     const fields = currentNode?.fieldNames || [];
     if (fieldIndex < fields.length - 1) {
+      setDirection(1);
       setFieldIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevField = () => {
+    if (fieldIndex > 0) {
+      setDirection(-1);
+      setFieldIndex(prev => prev - 1);
     }
   };
 
@@ -363,7 +373,10 @@ export function JourneyWizard({
     if (isLast) {
       setTimeout(() => handleCompletePillSelect(fieldName, value), 350);
     } else {
-      setTimeout(() => setFieldIndex(prev => prev + 1), 350);
+      setTimeout(() => {
+        setDirection(1);
+        setFieldIndex(prev => prev + 1);
+      }, 350);
     }
   };
 
@@ -592,9 +605,9 @@ export function JourneyWizard({
         <AnimatePresence mode="wait">
           <motion.div
             key={`${node.id}-f${fieldIndex}`}
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: 30 * direction }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
+            exit={{ opacity: 0, x: -30 * direction }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4"
           >
@@ -622,26 +635,41 @@ export function JourneyWizard({
           </motion.div>
         </AnimatePresence>
 
-        {/* CTA — hidden for pill fields (they auto-advance on click) */}
-        {node.status === 'available' && !isPillField && (
-          <button
-            onClick={isLastField ? handleCompleteStep : handleNextField}
-            disabled={!fieldFilled || (isLastField && isSaving)}
-            className={cn(
-              'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
-              fieldFilled && !(isLastField && isSaving)
-                ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+        {/* CTA buttons */}
+        {node.status === 'available' && (
+          <div className={cn('flex gap-3', fieldIndex > 0 ? 'flex-row' : 'flex-col')}>
+            {/* Back button — only when not on the first field */}
+            {fieldIndex > 0 && (
+              <button
+                onClick={handlePrevField}
+                className="py-4 px-5 rounded-xl font-semibold text-base flex items-center justify-center gap-1.5 transition-all border-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              >
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </button>
             )}
-          >
-            {isLastField && isSaving ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
-            ) : isLastField ? (
-              <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
-            ) : (
-              <>Siguiente <ChevronRight className="h-4 w-4" /></>
+
+            {/* Next / Complete — hidden for pill fields (they auto-advance) */}
+            {!isPillField && (
+              <button
+                onClick={isLastField ? handleCompleteStep : handleNextField}
+                disabled={!fieldFilled || (isLastField && isSaving)}
+                className={cn(
+                  'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
+                  fieldFilled && !(isLastField && isSaving)
+                    ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                )}
+              >
+                {isLastField && isSaving ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+                ) : isLastField ? (
+                  <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
+                ) : (
+                  <>Siguiente <ChevronRight className="h-4 w-4" /></>
+                )}
+              </button>
             )}
-          </button>
+          </div>
         )}
 
         {node.points && (
