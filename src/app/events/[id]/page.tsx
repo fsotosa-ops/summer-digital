@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { eventService } from '@/services/event.service';
-import { journeyService } from '@/services/journey.service';
 import { Loader2 } from 'lucide-react';
 
 export default function EventGatewayPage() {
@@ -39,21 +38,13 @@ export default function EventGatewayPage() {
       return;
     }
 
-    // Usuario autenticado → enrollment
-    const processEnrollment = async () => {
+    // Usuario autenticado → unified join
+    const processJoin = async () => {
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
 
       try {
-        // 1. Obtener el evento para saber su journey asociado
-        const event = await eventService.getEventById(eventId);
-        const journeyId = event.journey_ids?.[0];
-
-        if (journeyId) {
-          // 2. Inscribir al usuario en el journey, registrando el evento de origen
-          await journeyService.enrollInJourneyWithEvent(journeyId, eventId);
-        }
-
+        await eventService.joinEvent(eventId);
         setIsRouting(true);
         router.replace('/dashboard');
       } catch (error: any) {
@@ -71,13 +62,13 @@ export default function EventGatewayPage() {
           return;
         }
 
-        // Ya inscrito u otro error no crítico → igual va al dashboard
+        // Non-critical error → still go to dashboard
         setIsRouting(true);
         router.replace('/dashboard');
       }
     };
 
-    processEnrollment();
+    processJoin();
   }, [hydrated, user, router, eventId, logout, isRouting]);
 
   return (

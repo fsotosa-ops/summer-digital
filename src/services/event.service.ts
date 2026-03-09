@@ -40,6 +40,11 @@ class EventService {
     return apiClient.get<ApiEvent>(`/auth/events/${eventId}`);
   }
 
+  /** Unified join flow: org membership + attendance + enrollment. */
+  async joinEvent(eventId: string) {
+    return apiClient.post(`/auth/events/${eventId}/join`, {});
+  }
+
   // ---------------------------------------------------------------------------
   // Event ↔ Journey assignment
   // ---------------------------------------------------------------------------

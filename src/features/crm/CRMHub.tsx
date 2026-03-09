@@ -17,6 +17,15 @@ export function CRMHub() {
   const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
   const [activeSection, setActiveSection] = useState<Section>('overview');
 
+  if (!user || !isAdmin) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="text-xl font-bold text-red-600">Acceso denegado</h1>
+        <p className="text-slate-500">No tienes permisos para acceder a esta página.</p>
+      </div>
+    );
+  }
+
   const navItems = [
     { value: 'overview' as Section,  label: 'Inicio',          icon: LayoutDashboard },
     { value: 'contacts' as Section,  label: 'Contactos',       icon: Users           },
