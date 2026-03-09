@@ -59,8 +59,9 @@ export default function EventGatewayPage() {
           setUser({ ...user, organizationId: orgId });
         }
 
-        // Inline onboarding check — only for Participants
-        if (user.role === 'Participant' && orgId) {
+        // Inline onboarding check — skip only for admins (catches Participant + Subscriber)
+        const isAdmin = user.role === 'Admin' || user.role === 'SuperAdmin';
+        if (!isAdmin && orgId) {
           try {
             const check = await journeyService.checkOnboarding(orgId);
             if (check.should_show && check.journey_id) {

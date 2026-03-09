@@ -21,6 +21,7 @@ import {
   ChevronDown,
   Trophy,
   ArrowLeftRight,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -84,6 +85,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [onboardingJourneyId, setOnboardingJourneyId] = useState<string | null>(null);
+  const [onboardingChecking, setOnboardingChecking] = useState(false);
 
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
   const isParticipantMode = isAdminUser && viewMode === 'participant';
@@ -115,13 +117,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!hydrated || !user || user.role !== 'Participant') return;
     const checked = sessionStorage.getItem(SESSION_KEYS.ONBOARDING_CHECKED);
     if (checked) return;
+    setOnboardingChecking(true);
     journeyService.checkOnboarding(user.organizationId ?? undefined).then(res => {
       if (res.should_show && res.journey_id) {
         setOnboardingJourneyId(res.journey_id);
       }
-      // else: should_show=false → no hacer nada, re-check en el próximo fresh load
+      setOnboardingChecking(false);
     }).catch(() => {
       sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
+      setOnboardingChecking(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, user?.id, user?.organizationId]);
@@ -181,6 +185,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           router.push('/dashboard');
         }}
       />
+    );
+  }
+
+  // Block dashboard render while onboarding check is in flight
+  if (onboardingChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-fuchsia-600" />
+      </div>
     );
   }
 
