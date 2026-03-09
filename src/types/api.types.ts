@@ -381,6 +381,8 @@ export interface ApiEnrollmentResponse {
 // --- Event DTOs ---
 
 export type ApiEventStatus = 'upcoming' | 'live' | 'past' | 'cancelled';
+export type ApiAttendanceModality = 'presencial' | 'online' | 'hibrido';
+export type ApiAttendanceStatus = 'registered' | 'attended' | 'no_show' | 'cancelled';
 
 export interface ApiEventCounterpartDetails {
   address?: string | null;
@@ -415,7 +417,10 @@ export interface ApiEventDiagnosis {
 export interface ApiEvent {
   id: string;
   organization_id: string;
+  /** journey_ids viene del join con event_journeys — lista de UUIDs asignados */
   journey_ids: string[];
+  /** Conteo de registros en event_attendances */
+  attendance_count: number;
   name: string;
   slug: string;
   description?: string | null;
@@ -441,7 +446,6 @@ export interface ApiEventCreate {
   end_date?: string | null;
   location?: string | null;
   status?: ApiEventStatus;
-  journey_ids?: string[];
   notes?: string | null;
   expected_participants?: number | null;
   counterpart_details?: ApiEventCounterpartDetails;
@@ -456,13 +460,52 @@ export interface ApiEventUpdate {
   end_date?: string | null;
   location?: string | null;
   status?: ApiEventStatus | null;
-  journey_ids?: string[] | null;
   is_active?: boolean | null;
   notes?: string | null;
   expected_participants?: number | null;
   counterpart_details?: ApiEventCounterpartDetails | null;
   venue_details?: ApiEventVenueDetails | null;
   diagnosis?: ApiEventDiagnosis | null;
+}
+
+// Event ↔ Journey assignment (via crm.event_journeys)
+
+export interface ApiEventJourneyAdd {
+  journey_id: string;
+}
+
+export interface ApiEventJourneyResponse {
+  id: string;
+  event_id: string;
+  journey_id: string;
+  created_at: string;
+}
+
+// Attendance (via crm.event_attendances)
+
+export interface ApiAttendanceCreate {
+  user_id: string;
+  modality?: ApiAttendanceModality;
+  notes?: string | null;
+}
+
+export interface ApiAttendanceUpdate {
+  status?: ApiAttendanceStatus;
+  modality?: ApiAttendanceModality;
+  notes?: string | null;
+}
+
+export interface ApiAttendanceResponse {
+  id: string;
+  event_id: string;
+  user_id: string;
+  modality: ApiAttendanceModality;
+  status: ApiAttendanceStatus;
+  registered_at: string;
+  checked_in_at?: string | null;
+  notes?: string | null;
+  user_email?: string | null;
+  user_full_name?: string | null;
 }
 
 export interface ApiStepProgressRead {
