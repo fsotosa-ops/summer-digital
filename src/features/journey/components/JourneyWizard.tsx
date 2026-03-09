@@ -106,6 +106,8 @@ const FIELD_PRESETS: Record<string, { value: string; label: string }[]> = {
 
 const NONE = '__none__';
 
+const WIZARD_BG = 'bg-gradient-to-br from-sky-50 via-white to-teal-50';
+
 // ─── Types ──────────────────────────────────────────────────────
 interface JourneyWizardProps {
   journey: Journey;
@@ -503,10 +505,10 @@ export function JourneyWizard({
     return (
       <motion.div
         key={node.id}
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -40 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        initial={{ opacity: 0, scale: 0.97, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: -8 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
         className="w-full max-w-lg"
       >
         <div className="text-center mb-8">
@@ -584,10 +586,10 @@ export function JourneyWizard({
     return (
       <motion.div
         key={node.id}
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -40 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        initial={{ opacity: 0, scale: 0.97, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: -8 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
         className="w-full max-w-lg"
       >
         {/* Step context badge */}
@@ -602,13 +604,13 @@ export function JourneyWizard({
         </div>
 
         {/* Field card — animated per field */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${node.id}-f${fieldIndex}`}
-            initial={{ opacity: 0, x: 30 * direction }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 * direction }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4"
           >
             {node.status === 'locked' ? (
@@ -685,9 +687,14 @@ export function JourneyWizard({
   // ─── Loading ────────────────────────────────────────────────
   if (isFetchingContact) {
     return (
-      <div className="fixed inset-0 z-[100] bg-white flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className={`fixed inset-0 z-[100] ${WIZARD_BG} flex items-center justify-center`}
+      >
         <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
-      </div>
+      </motion.div>
     );
   }
 
@@ -695,7 +702,12 @@ export function JourneyWizard({
   if (showCelebration) {
     const xpTotal = nodes.reduce((sum, n) => sum + (n.points || 0), 0);
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-sky-50 to-teal-50 flex flex-col items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className={`fixed inset-0 z-[100] ${WIZARD_BG} flex flex-col items-center justify-center`}
+      >
         <ReactConfetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={300} />
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -717,7 +729,7 @@ export function JourneyWizard({
             Continuar
           </button>
         </motion.div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -725,7 +737,12 @@ export function JourneyWizard({
   const isComplete = progressPct === 100;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gradient-to-br from-sky-50 via-white to-teal-50 flex flex-col">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className={`fixed inset-0 z-[100] ${WIZARD_BG} flex flex-col`}
+    >
       {/* Step success overlay */}
       <AnimatePresence>
         {showStepSuccess && (
@@ -733,15 +750,16 @@ export function JourneyWizard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[150] bg-teal-500/20 flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 z-[150] bg-white/60 backdrop-blur-sm flex items-center justify-center pointer-events-none"
           >
             <motion.div
-              initial={{ scale: 0.5 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', bounce: 0.5 }}
-              className="h-24 w-24 rounded-full bg-teal-500 flex items-center justify-center shadow-xl"
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.1, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="h-20 w-20 rounded-full bg-teal-500 flex items-center justify-center shadow-xl"
             >
-              <Check className="h-12 w-12 text-white" />
+              <Check className="h-10 w-10 text-white" />
             </motion.div>
           </motion.div>
         )}
@@ -832,6 +850,6 @@ export function JourneyWizard({
           </AnimatePresence>
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
