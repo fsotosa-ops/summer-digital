@@ -26,11 +26,16 @@ function AuthCallbackContent() {
         const user = await authService.handleOAuthCallback(code);
         setUser(user);
 
-        // Recuperar si el usuario venía de un evento / QR
+        // Recuperar si el usuario venía de un evento / QR / join intent
         const qrReturn = sessionStorage.getItem(SESSION_KEYS.QR_RETURN_URL);
+        const joinEventId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
+
         if (qrReturn) {
           sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);
           router.push(qrReturn);
+        } else if (joinEventId) {
+          sessionStorage.removeItem(SESSION_KEYS.JOIN_EVENT);
+          router.push(`/events/${joinEventId}`);
         } else {
           router.push('/dashboard');
         }

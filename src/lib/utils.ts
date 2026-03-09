@@ -21,4 +21,5 @@ export function generateSlug(name: string): string {
 export const SESSION_KEYS = {
   QR_RETURN_URL: 'qr_return_url',
   ONBOARDING_CHECKED: 'onboarding_checked',
+  JOIN_EVENT: 'OASIS_JOIN_EVENT_ID',
 } as const;

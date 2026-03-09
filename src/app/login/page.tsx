@@ -17,9 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-// Constante para gestionar la intención de unirse a un evento
-const JOIN_EVENT_SESSION_KEY = 'OASIS_JOIN_EVENT_ID';
+import { SESSION_KEYS } from '@/lib/utils';
 
 function LoginContent() {
   const router = useRouter();
@@ -52,7 +50,7 @@ function LoginContent() {
   // Sobrevive a recargas o saltos hacia Google OAuth
   useEffect(() => {
     if (joinEventId) {
-      sessionStorage.setItem(JOIN_EVENT_SESSION_KEY, joinEventId);
+      sessionStorage.setItem(SESSION_KEYS.JOIN_EVENT, joinEventId);
     }
   }, [joinEventId]);
 
@@ -72,7 +70,7 @@ function LoginContent() {
     if (hydrated && user && !isNavigating) {
       setIsNavigating(true);
       
-      const savedJoinId = sessionStorage.getItem(JOIN_EVENT_SESSION_KEY);
+      const savedJoinId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
       const targetEventId = savedJoinId || joinEventId;
       
       // Si existe una intención de evento, lo enviamos al Gateway del evento
@@ -81,7 +79,7 @@ function LoginContent() {
       
       // Limpiamos la intención para no crear loops en futuros inicios de sesión
       if (savedJoinId) {
-        sessionStorage.removeItem(JOIN_EVENT_SESSION_KEY);
+        sessionStorage.removeItem(SESSION_KEYS.JOIN_EVENT);
       }
       
       router.push(targetPath);
