@@ -237,11 +237,28 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           diagnosis: formData.diagnosis,
         };
         const updated = await eventService.updateEvent(orgId, editingEvent.id, updatePayload);
+
+        // Sync journey assignments (diff current vs selected)
+        const currentJourneyIds = editingEvent.journey_ids ?? [];
+        const selectedJourneyIds = formData.journey_ids ?? [];
+        const toAdd = selectedJourneyIds.filter(id => !currentJourneyIds.includes(id));
+        const toRemove = currentJourneyIds.filter(id => !selectedJourneyIds.includes(id));
+        for (const jId of toAdd) await eventService.addJourneyToEvent(orgId, editingEvent.id, jId);
+        for (const jId of toRemove) await eventService.removeJourneyFromEvent(orgId, editingEvent.id, jId);
+        updated.journey_ids = selectedJourneyIds;
+
         setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
         toast.success('Evento actualizado');
       } else {
         const { journey_ids: _jids, ...createPayload } = formData;
         const newEvent = await eventService.createEvent(orgId, createPayload);
+
+        // Assign selected journeys to the new event
+        for (const jId of formData.journey_ids) {
+          await eventService.addJourneyToEvent(orgId, newEvent.id, jId);
+        }
+        newEvent.journey_ids = formData.journey_ids;
+
         setEvents((prev) => [newEvent, ...prev]);
         toast.success('Evento creado');
       }
