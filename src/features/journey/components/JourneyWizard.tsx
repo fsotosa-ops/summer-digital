@@ -240,6 +240,27 @@ export function JourneyWizard({
     if (fieldIndex > 0) {
       setDirection(-1);
       setFieldIndex(prev => prev - 1);
+    } else {
+      // First field of current step → go back to previous completed step
+      const currentIdx = nodes.findIndex(n => n.id === currentNode?.id);
+      if (currentIdx > 0) {
+        const prevNode = nodes[currentIdx - 1];
+        if (prevNode.status === 'completed') {
+          // Revert previous node to available, current stays as-is
+          if (isPreviewMode) {
+            const updatedNodes = nodes.map((n, idx) => {
+              if (idx === currentIdx - 1) return { ...n, status: 'available' as NodeStatus };
+              return n;
+            });
+            const cCount = updatedNodes.filter(n => n.status === 'completed').length;
+            setSimJourney({ ...journey, nodes: updatedNodes, progress: Math.round((cCount / updatedNodes.length) * 100) });
+          }
+          // In real mode, the step is already completed server-side — just navigate back visually
+          const prevFields = prevNode.fieldNames || [];
+          setDirection(-1);
+          setFieldIndex(prevFields.length > 0 ? prevFields.length - 1 : 0);
+        }
+      }
     }
   };
 
@@ -301,32 +322,6 @@ export function JourneyWizard({
     }
   };
 
-  // Used by pill auto-advance on the last field — passes value explicitly to avoid stale closure
-  const handleCompletePillSelect = async (lastField: string, lastValue: string) => {
-    if (!currentNode || isSaving) return;
-    setIsSaving(true);
-    try {
-      if (isPreviewMode) { simCompleteNode(currentNode); return; }
-
-      const fieldsToSave: Record<string, unknown> = { ...draft, [lastField]: lastValue };
-      for (const key of Object.keys(fieldsToSave)) {
-        const val = fieldsToSave[key];
-        if (val === '' || val === NONE) delete fieldsToSave[key];
-      }
-      const saved = await crmService.updateMyContact(fieldsToSave as Partial<ApiCrmContact>);
-      setContact(saved);
-      triggerStepSuccess();
-      await refreshJourneys(user?.organizationId ?? undefined);
-      showXp(currentNode.points ?? 10);
-      checkJourneyComplete();
-    } catch (err) {
-      console.error('[JourneyWizard] error completing step:', err);
-      toast.error('Error al guardar. Intenta de nuevo.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleCompleteMilestoneStep = async (node: JourneyNode) => {
     if (isSaving) return;
     setIsSaving(true);
@@ -345,19 +340,9 @@ export function JourneyWizard({
     }
   };
 
-  // ─── Pill select handler (auto-advances after 350ms) ────────
+  // ─── Pill select handler (select only, no auto-advance) ────────
   const handlePillSelect = (fieldName: string, value: string) => {
     handleDraftChange(fieldName, value);
-    const fields = currentNode?.fieldNames || [];
-    const isLast = fieldIndex === fields.length - 1;
-    if (isLast) {
-      setTimeout(() => handleCompletePillSelect(fieldName, value), 350);
-    } else {
-      setTimeout(() => {
-        setDirection(1);
-        setFieldIndex(prev => prev + 1);
-      }, 350);
-    }
   };
 
   // ─── Pill renderer ──────────────────────────────────────────
@@ -555,9 +540,6 @@ export function JourneyWizard({
     const currentField = fields[fieldIndex];
     const isLastField = fieldIndex === fields.length - 1;
     const fieldFilled = isFieldFilled(currentField);
-    const isPillField = (fieldOptions[currentField] || []).length > 0
-      && currentField !== 'country' && currentField !== 'state' && currentField !== 'city'
-      && currentField !== 'birth_date';
     const FieldIcon = FIELD_ICONS[currentField];
     const question = FIELD_QUESTIONS[currentField] || FIELD_LABELS[currentField] || currentField;
 
@@ -615,40 +597,42 @@ export function JourneyWizard({
           </motion.div>
         </AnimatePresence>
 
-        {/* CTA buttons */}
+        {/* CTA buttons — always show Back + Next */}
         {node.status === 'available' && (
-          <div className={cn('flex gap-3', fieldIndex > 0 ? 'flex-row' : 'flex-col')}>
-            {/* Back button — only when not on the first field */}
-            {fieldIndex > 0 && (
-              <button
-                onClick={handlePrevField}
-                className="py-4 px-5 rounded-xl font-semibold text-base flex items-center justify-center gap-1.5 transition-all border-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-              >
-                <ChevronLeft className="h-4 w-4" /> Anterior
-              </button>
-            )}
+          <div className="flex gap-3">
+            {/* Back button — goes to previous field or previous step */}
+            <button
+              onClick={handlePrevField}
+              disabled={fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0}
+              className={cn(
+                'py-4 px-5 rounded-xl font-semibold text-base flex items-center justify-center gap-1.5 transition-all border-2',
+                fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0
+                  ? 'border-slate-100 text-slate-300 cursor-not-allowed'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </button>
 
-            {/* Next / Complete — hidden for pill fields (they auto-advance) */}
-            {!isPillField && (
-              <button
-                onClick={isLastField ? handleCompleteStep : handleNextField}
-                disabled={!fieldFilled || (isLastField && isSaving)}
-                className={cn(
-                  'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
-                  fieldFilled && !(isLastField && isSaving)
-                    ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                )}
-              >
-                {isLastField && isSaving ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
-                ) : isLastField ? (
-                  <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
-                ) : (
-                  <>Siguiente <ChevronRight className="h-4 w-4" /></>
-                )}
-              </button>
-            )}
+            {/* Next / Complete — enabled when field is filled */}
+            <button
+              onClick={isLastField ? handleCompleteStep : handleNextField}
+              disabled={!fieldFilled || (isLastField && isSaving)}
+              className={cn(
+                'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
+                fieldFilled && !(isLastField && isSaving)
+                  ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              )}
+            >
+              {isLastField && isSaving ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+              ) : isLastField ? (
+                <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
+              ) : (
+                <>Siguiente <ChevronRight className="h-4 w-4" /></>
+              )}
+            </button>
           </div>
         )}
 
