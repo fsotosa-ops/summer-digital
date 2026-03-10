@@ -134,12 +134,12 @@ export function JourneyWizard({
   }, [isPreviewMode, initialJourney.id, selectJourney]);
 
   useEffect(() => {
-    if (isPreviewMode) {
-      setIsFetchingContact(false);
-      return;
-    }
+    const contactPromise = isPreviewMode
+      ? Promise.resolve(null)
+      : crmService.getMyContact().catch(() => null);
+
     Promise.all([
-      crmService.getMyContact().catch(() => null),
+      contactPromise,
       crmService.listFieldOptions().catch(err => {
         console.error('[JourneyWizard] failed to load field options:', err);
         return [] as ApiFieldOption[];
