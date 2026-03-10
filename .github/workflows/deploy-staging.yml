@@ -51,6 +51,6 @@ jobs:
             --service-account=cloudrun-runtime@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
             --port=3000
             --concurrency=80
-            --min-instances=0
+            --min-instances=1
             --max-instances=5
             --allow-unauthenticated
