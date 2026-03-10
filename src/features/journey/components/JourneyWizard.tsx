@@ -77,8 +77,6 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   company: 'Ej: Mi Empresa S.A.',
 };
 
-// Fields rendered as pill buttons (no dropdown)
-const SELECT_FIELDS = new Set(['gender', 'education_level', 'occupation']);
 
 
 const NONE = '__none__';
@@ -441,30 +439,6 @@ export function JourneyWizard({
       );
     }
 
-    if (SELECT_FIELDS.has(fieldName)) {
-      const opts = (fieldOptions[fieldName] || []).map(o => ({ value: o.value, label: o.label }));
-      if (opts.length === 0) {
-        // Graceful degradation: free text input when server options unavailable
-        return (
-          <Input
-            type="text"
-            value={value}
-            placeholder={FIELD_PLACEHOLDERS[fieldName] || ''}
-            onChange={e => handleDraftChange(fieldName, e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && isFieldFilled(fieldName)) {
-                const fields = currentNode?.fieldNames || [];
-                if (fieldIndex < fields.length - 1) handleNextField();
-                else handleCompleteStep();
-              }
-            }}
-            className="h-14 text-base border-slate-200 focus:border-sky-400 focus-visible:ring-sky-400/20"
-          />
-        );
-      }
-      return renderPillSelect(fieldName, opts);
-    }
-
     if (fieldName === 'birth_date') {
       return (
         <Input
@@ -474,6 +448,12 @@ export function JourneyWizard({
           className="h-14 text-base border-slate-200 focus:border-sky-400 focus-visible:ring-sky-400/20"
         />
       );
+    }
+
+    // Dynamic: any field with options in the DB renders as pill selector
+    const dynamicOpts = (fieldOptions[fieldName] || []).map(o => ({ value: o.value, label: o.label }));
+    if (dynamicOpts.length > 0) {
+      return renderPillSelect(fieldName, dynamicOpts);
     }
 
     return (
@@ -575,8 +555,9 @@ export function JourneyWizard({
     const currentField = fields[fieldIndex];
     const isLastField = fieldIndex === fields.length - 1;
     const fieldFilled = isFieldFilled(currentField);
-    const hasPillOptions = SELECT_FIELDS.has(currentField) && (fieldOptions[currentField] || []).length > 0;
-    const isPillField = hasPillOptions;
+    const isPillField = (fieldOptions[currentField] || []).length > 0
+      && currentField !== 'country' && currentField !== 'state' && currentField !== 'city'
+      && currentField !== 'birth_date';
     const FieldIcon = FIELD_ICONS[currentField];
     const question = FIELD_QUESTIONS[currentField] || FIELD_LABELS[currentField] || currentField;
 
