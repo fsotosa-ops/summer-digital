@@ -8,6 +8,20 @@ const DASHBOARD_ID = process.env.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID || '';
 
 export async function GET() {
   try {
+    // Validar que las variables de entorno estén configuradas
+    if (!SUPERSET_URL || !SUPERSET_ADMIN || !SUPERSET_PASSWORD || !DASHBOARD_ID) {
+      console.error('Superset env vars missing:', {
+        hasUrl: !!SUPERSET_URL,
+        hasAdmin: !!SUPERSET_ADMIN,
+        hasPassword: !!SUPERSET_PASSWORD,
+        hasDashboardId: !!DASHBOARD_ID,
+      });
+      return NextResponse.json(
+        { error: 'Superset no está configurado correctamente en el servidor.' },
+        { status: 500 }
+      );
+    }
+
     // 1. Autenticación con Superset (Obtener Access Token de Admin)
     const loginResponse = await fetch(`${SUPERSET_URL}/api/v1/security/login`, {
       method: 'POST',
