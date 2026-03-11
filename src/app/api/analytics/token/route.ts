@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 // Asegúrate de tener estas variables en tu archivo .env
 const SUPERSET_URL = process.env.NEXT_PUBLIC_SUPERSET_URL || '';
-const SUPERSET_ADMIN = process.env.NEXT_PUBLIC_SUPERSET_ADMIN || '';
-const SUPERSET_PASSWORD = process.env.NEXT_PUBLIC_SUPERSET_PASSWORD || '';
+const SUPERSET_ADMIN = process.env.SUPERSET_ADMIN_USERNAME || '';
+const SUPERSET_PASSWORD = process.env.SUPERSET_ADMIN_PASSWORD || '';
 const DASHBOARD_ID = process.env.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID || '';
 
 export async function GET() {

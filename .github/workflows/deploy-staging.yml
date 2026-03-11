@@ -38,6 +38,8 @@ jobs:
             --build-arg "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" \
             --build-arg "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
             --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --build-arg "NEXT_PUBLIC_SUPERSET_URL=${{ secrets.NEXT_PUBLIC_SUPERSET_URL }}" \
+            --build-arg "NEXT_PUBLIC_SUPERSET_DASHBOARD_ID=${{ secrets.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID }}" \
             -t "${IMAGE}" .
           docker push "${IMAGE}"
 
@@ -54,3 +56,4 @@ jobs:
             --min-instances=1
             --max-instances=5
             --allow-unauthenticated
+            --set-secrets=SUPERSET_ADMIN_USERNAME=SUPERSET_ADMIN_USERNAME:latest,SUPERSET_ADMIN_PASSWORD=SUPERSET_ADMIN_PASSWORD:latest
