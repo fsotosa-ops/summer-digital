@@ -31,13 +31,30 @@ export default function AnalyticsPage() {
 
     let mounted = true;
 
+    const fetchGuestTokenSafe = async (): Promise<string> => {
+      const token = await analyticsService.getGuestToken();
+      if (!token || typeof token !== 'string') {
+        throw new Error('El servidor no devolvió un token válido. Verifica las credenciales de Superset.');
+      }
+      return token;
+    };
+
     const initDashboard = async () => {
       try {
+        // Pre-validate the token before passing to embedDashboard
+        // This prevents the SDK from cascading into 403/404 errors
+        // when the token fetch fails
+        const testToken = await fetchGuestTokenSafe();
+        if (!mounted) return;
+
         await embedDashboard({
           id: DASHBOARD_ID,
           supersetDomain: SUPERSET_URL,
           mountPoint: containerRef.current!,
-          fetchGuestToken: () => analyticsService.getGuestToken(),
+          fetchGuestToken: async () => {
+            // On subsequent calls (token refresh), fetch a new one
+            return fetchGuestTokenSafe();
+          },
           dashboardUiConfig: {
             hideTitle: true,
             hideChartControls: false,
@@ -104,15 +121,25 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {error && (
+        {error && !loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
             <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
             <p className="text-red-600 font-medium mb-1">
               Error al cargar el dashboard
             </p>
-            <p className="text-slate-500 text-sm max-w-md text-center">
+            <p className="text-slate-500 text-sm max-w-md text-center mb-4">
               {error}
             </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                window.location.reload();
+              }}
+            >
+              Reintentar
+            </Button>
           </div>
         )}
 

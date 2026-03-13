@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Asegúrate de tener estas variables en tu archivo .env
 const SUPERSET_URL = process.env.NEXT_PUBLIC_SUPERSET_URL || '';
 const SUPERSET_ADMIN = process.env.SUPERSET_ADMIN_USERNAME || '';
 const SUPERSET_PASSWORD = process.env.SUPERSET_ADMIN_PASSWORD || '';
@@ -8,26 +7,25 @@ const DASHBOARD_ID = process.env.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID || '';
 
 export async function GET() {
   try {
-    // Validar que las variables de entorno estén configuradas
     if (!SUPERSET_URL || !SUPERSET_ADMIN || !SUPERSET_PASSWORD || !DASHBOARD_ID) {
-      console.error('Superset env vars missing:', {
-        hasUrl: !!SUPERSET_URL,
-        hasAdmin: !!SUPERSET_ADMIN,
-        hasPassword: !!SUPERSET_PASSWORD,
-        hasDashboardId: !!DASHBOARD_ID,
-      });
+      const missing = [
+        !SUPERSET_URL && 'NEXT_PUBLIC_SUPERSET_URL',
+        !SUPERSET_ADMIN && 'SUPERSET_ADMIN_USERNAME',
+        !SUPERSET_PASSWORD && 'SUPERSET_ADMIN_PASSWORD',
+        !DASHBOARD_ID && 'NEXT_PUBLIC_SUPERSET_DASHBOARD_ID',
+      ].filter(Boolean);
+      console.error('[Analytics] Missing env vars:', missing.join(', '));
       return NextResponse.json(
-        { error: 'Superset no está configurado correctamente en el servidor.' },
+        { error: `Superset no está configurado. Faltan: ${missing.join(', ')}` },
         { status: 500 }
       );
     }
 
-    // 1. Autenticación con Superset (Obtener Access Token de Admin)
+    // 1. Login to Superset
+    console.log(`[Analytics] Logging in to Superset at ${SUPERSET_URL} as "${SUPERSET_ADMIN}"`);
     const loginResponse = await fetch(`${SUPERSET_URL}/api/v1/security/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: SUPERSET_ADMIN,
         password: SUPERSET_PASSWORD,
@@ -36,45 +34,57 @@ export async function GET() {
     });
 
     if (!loginResponse.ok) {
-      const errorText = await loginResponse.text();
-      console.error('Superset Login Failed:', errorText);
+      const errorBody = await loginResponse.text();
+      console.error(
+        `[Analytics] Superset login failed — status: ${loginResponse.status}, ` +
+        `user: "${SUPERSET_ADMIN}", body: ${errorBody}`
+      );
       return NextResponse.json(
-        { error: 'Error al autenticar con el motor de análisis' },
-        { status: 401 }
+        {
+          error: 'Error al autenticar con Superset. Verifica las credenciales en GCP Secret Manager.',
+          detail: `Status ${loginResponse.status}: ${errorBody}`,
+        },
+        { status: 502 }
       );
     }
 
     const loginData = await loginResponse.json();
     const accessToken = loginData.access_token;
 
-    // 2. Obtener Token CSRF (Necesario para versiones recientes de Superset)
+    if (!accessToken) {
+      console.error('[Analytics] Login succeeded but no access_token in response:', loginData);
+      return NextResponse.json(
+        { error: 'Superset login response missing access_token' },
+        { status: 502 }
+      );
+    }
+
+    // 2. Get CSRF token
     const csrfResponse = await fetch(`${SUPERSET_URL}/api/v1/security/csrf_token/`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!csrfResponse.ok) {
-      console.error('Superset CSRF Failed');
+      const csrfError = await csrfResponse.text();
+      console.error(`[Analytics] CSRF token failed — status: ${csrfResponse.status}, body: ${csrfError}`);
       return NextResponse.json(
-        { error: 'Error al obtener token de seguridad' },
-        { status: 500 }
+        { error: 'Error al obtener token CSRF de Superset', detail: csrfError },
+        { status: 502 }
       );
     }
 
     const csrfData = await csrfResponse.json();
     const csrfToken = csrfData.result;
 
-    // 3. Generar Guest Token (El token que usará el iframe)
-    // Este usuario "invitado" herederá los permisos del rol "GuestRole" que configuraste
+    // 3. Generate Guest Token
     const guestResponse = await fetch(`${SUPERSET_URL}/api/v1/security/guest_token/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
         'X-CSRFToken': csrfToken,
-        Referer: SUPERSET_URL, // Importante para evitar validaciones estrictas
+        Referer: SUPERSET_URL,
       },
       body: JSON.stringify({
         user: {
@@ -82,34 +92,38 @@ export async function GET() {
           first_name: 'Admin',
           last_name: 'Viewer',
         },
-        resources: [
-          {
-            type: 'dashboard',
-            id: DASHBOARD_ID,
-          },
-        ],
-        rls: [], // Aquí podrías filtrar datos si fuera necesario
+        resources: [{ type: 'dashboard', id: DASHBOARD_ID }],
+        rls: [],
       }),
     });
 
     if (!guestResponse.ok) {
       const guestError = await guestResponse.text();
-      console.error('Guest Token Generation Failed:', guestError);
+      console.error(`[Analytics] Guest token failed — status: ${guestResponse.status}, body: ${guestError}`);
       return NextResponse.json(
-        { error: 'Error al generar sesión de invitado' },
-        { status: 500 }
+        { error: 'Error al generar guest token de Superset', detail: guestError },
+        { status: 502 }
       );
     }
 
     const guestData = await guestResponse.json();
-    
-    // Devolver solo el token al frontend
-    return NextResponse.json({ token: guestData.token });
 
+    if (!guestData.token) {
+      console.error('[Analytics] Guest token response missing token field:', guestData);
+      return NextResponse.json(
+        { error: 'Superset guest token response missing token' },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ token: guestData.token });
   } catch (error) {
-    console.error('Analytics API Error:', error);
+    console.error('[Analytics] Unhandled error:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor de analítica' },
+      {
+        error: 'Error interno del servidor de analítica',
+        detail: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
