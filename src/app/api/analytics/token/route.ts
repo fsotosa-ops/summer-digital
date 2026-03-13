@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 
-const SUPERSET_URL = process.env.NEXT_PUBLIC_SUPERSET_URL || '';
-const SUPERSET_ADMIN = process.env.SUPERSET_ADMIN_USERNAME || '';
-const SUPERSET_PASSWORD = process.env.SUPERSET_ADMIN_PASSWORD || '';
-const DASHBOARD_ID = process.env.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID || '';
+const SUPERSET_URL = (process.env.NEXT_PUBLIC_SUPERSET_URL || '').trim();
+const SUPERSET_ADMIN = (process.env.SUPERSET_ADMIN_USERNAME || '').trim();
+const SUPERSET_PASSWORD = (process.env.SUPERSET_ADMIN_PASSWORD || '').trim();
+const DASHBOARD_ID = (process.env.NEXT_PUBLIC_SUPERSET_DASHBOARD_ID || '').trim();
+
+// Force dynamic — never cache this route
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -26,6 +29,7 @@ export async function GET() {
     const loginResponse = await fetch(`${SUPERSET_URL}/api/v1/security/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
       body: JSON.stringify({
         username: SUPERSET_ADMIN,
         password: SUPERSET_PASSWORD,
@@ -63,6 +67,7 @@ export async function GET() {
     const csrfResponse = await fetch(`${SUPERSET_URL}/api/v1/security/csrf_token/`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
     });
 
     if (!csrfResponse.ok) {
@@ -80,6 +85,7 @@ export async function GET() {
     // 3. Generate Guest Token
     const guestResponse = await fetch(`${SUPERSET_URL}/api/v1/security/guest_token/`, {
       method: 'POST',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
