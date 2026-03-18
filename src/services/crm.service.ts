@@ -24,12 +24,14 @@ class CrmService {
     offset = 0,
     limit = 50,
     search?: string,
+    orgId?: string,
   ): Promise<ApiCrmContactsResponse> {
     const params = new URLSearchParams({
       offset: String(offset),
       limit: String(limit),
     });
     if (search) params.set('search', search);
+    if (orgId) params.set('organization_id', orgId);
     return apiClient.get<ApiCrmContactsResponse>(
       `/crm/contacts/?${params.toString()}`,
     );
@@ -98,6 +100,7 @@ class CrmService {
     limit = 50,
     status?: string,
     assignedTo?: string,
+    orgId?: string,
   ): Promise<ApiCrmTask[]> {
     const params = new URLSearchParams({
       offset: String(offset),
@@ -105,6 +108,7 @@ class CrmService {
     });
     if (status) params.set('status', status);
     if (assignedTo) params.set('assigned_to', assignedTo);
+    if (orgId) params.set('organization_id', orgId);
     return apiClient.get<ApiCrmTask[]>(`/crm/tasks/?${params.toString()}`);
   }
 

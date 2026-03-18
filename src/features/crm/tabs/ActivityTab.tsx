@@ -60,7 +60,7 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
     try {
       const [statsResult, tasksResult] = await Promise.allSettled([
         crmService.getStats(orgId),
-        crmService.listTasks(0, 50, undefined, undefined), // Simplificamos por ahora sin filtros de usuario
+        crmService.listTasks(0, 50, undefined, undefined, orgId),
       ]);
       
       if (statsResult.status === 'fulfilled') setStats(statsResult.value);

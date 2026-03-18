@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { userService } from '@/services/user.service';
-import { ApiUser, ApiAccountStatus } from '@/types/api.types';
+import { crmService } from '@/services/crm.service';
+import {
+  ApiUser,
+  ApiAccountStatus,
+  ApiCrmContact,
+  ApiContactStatus,
+} from '@/types/api.types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,64 +59,109 @@ const STATUS_COLORS: Record<ApiAccountStatus, string> = {
   deleted: 'bg-slate-50 text-slate-700 border-slate-100/50',
 };
 
+const CRM_STATUS_COLORS: Record<ApiContactStatus, string> = {
+  active: 'bg-emerald-50 text-emerald-700 border-emerald-100/50',
+  inactive: 'bg-slate-50 text-slate-700 border-slate-100/50',
+  risk: 'bg-amber-50 text-amber-700 border-amber-100/50',
+};
+
+const CRM_STATUS_LABELS: Record<ApiContactStatus, string> = {
+  active: 'Activo',
+  inactive: 'Inactivo',
+  risk: 'En Riesgo',
+};
+
 const PAGE_SIZE = 20;
 
-export function ContactsTab() {
-  const { user: currentUser } = useAuthStore();
+interface ContactsTabProps {
+  orgId?: string;
+}
 
-  const [users, setUsers] = useState<ApiUser[]>([]);
+/** Build a minimal ApiUser stub from a CRM contact so ContactDetailSheet can load */
+function crmContactToUserStub(contact: ApiCrmContact): ApiUser {
+  const fullName = [contact.first_name, contact.last_name]
+    .filter(Boolean)
+    .join(' ') || null;
+  return {
+    id: contact.user_id,
+    email: contact.email,
+    full_name: fullName,
+    avatar_url: contact.avatar_url ?? null,
+    is_platform_admin: false,
+    status: contact.status === 'active' ? 'active' : undefined,
+    created_at: contact.created_at ?? null,
+    organizations: [],
+  };
+}
+
+export function ContactsTab({ orgId }: ContactsTabProps) {
+  const { user: currentUser } = useAuthStore();
+  const isSuperAdmin = currentUser?.role === 'SuperAdmin';
+
+  // --- Shared state ---
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
-
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
-  const [togglingAdmin, setTogglingAdmin] = useState<string | null>(null);
 
+  // --- SuperAdmin-only state ---
+  const [users, setUsers] = useState<ApiUser[]>([]);
+  const [togglingAdmin, setTogglingAdmin] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteProgress, setBulkDeleteProgress] = useState(0);
 
-  const isSuperAdmin = currentUser?.role === 'SuperAdmin';
+  // --- Org admin state ---
+  const [crmContacts, setCrmContacts] = useState<ApiCrmContact[]>([]);
 
-  const loadUsers = useCallback(async (silent = false) => {
+  // ====== Data loading ======
+  const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const result = await userService.listUsers(
-        page * PAGE_SIZE,
-        PAGE_SIZE,
-        searchQuery || undefined,
-      );
-      setUsers(result.users);
-      setTotalCount(result.count);
+      if (isSuperAdmin) {
+        const result = await userService.listUsers(
+          page * PAGE_SIZE,
+          PAGE_SIZE,
+          searchQuery || undefined,
+        );
+        setUsers(result.users);
+        setTotalCount(result.count);
+      } else {
+        const result = await crmService.listContacts(
+          page * PAGE_SIZE,
+          PAGE_SIZE,
+          searchQuery || undefined,
+          orgId,
+        );
+        setCrmContacts(result.contacts);
+        setTotalCount(result.count);
+      }
       setError(null);
     } catch (err) {
       if (!silent) setError(err instanceof Error ? err.message : 'Error al cargar contactos');
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [isSuperAdmin, page, searchQuery, orgId]);
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Auto-refresh every 30s when tab is visible
   useEffect(() => {
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') loadUsers(true);
+      if (document.visibilityState === 'visible') loadData(true);
     }, 30_000);
-    const handleFocus = () => loadUsers(true);
+    const handleFocus = () => loadData(true);
     window.addEventListener('focus', handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [loadUsers]);
+  }, [loadData]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -121,11 +172,9 @@ export function ContactsTab() {
   }, [searchInput]);
 
   // Clear selection on page/search change
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [page, searchQuery]);
+  useEffect(() => { setSelectedIds(new Set()); }, [page, searchQuery]);
 
-  // Selection computed values
+  // ====== SuperAdmin selection helpers ======
   const selectableUsers = users.filter((u) => u.id !== currentUser?.id);
   const allSelectableSelected =
     selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.id));
@@ -134,21 +183,15 @@ export function ContactsTab() {
   const handleToggleSelect = (userId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-      }
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
       return next;
     });
   };
 
   const handleToggleSelectAll = () => {
-    if (allSelectableSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(selectableUsers.map((u) => u.id)));
-    }
+    if (allSelectableSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(selectableUsers.map((u) => u.id)));
   };
 
   const handleBulkDelete = async () => {
@@ -157,11 +200,8 @@ export function ContactsTab() {
     const ids = Array.from(selectedIds);
     const failedIds: string[] = [];
     for (let i = 0; i < ids.length; i++) {
-      try {
-        await userService.deleteUser(ids[i]);
-      } catch {
-        failedIds.push(ids[i]);
-      }
+      try { await userService.deleteUser(ids[i]); }
+      catch { failedIds.push(ids[i]); }
       setBulkDeleteProgress(Math.round(((i + 1) / ids.length) * 100));
     }
     const deletedCount = ids.length - failedIds.length;
@@ -195,15 +235,16 @@ export function ContactsTab() {
     }
   };
 
-  const getInitials = (user: ApiUser) => {
-    if (user.full_name) {
-      return user.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    return user.email[0].toUpperCase();
+  // ====== Helpers ======
+  const getInitials = (name: string | null | undefined, email: string) => {
+    if (name) return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+    return email[0].toUpperCase();
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const isEmpty = isSuperAdmin ? users.length === 0 : crmContacts.length === 0;
 
+  // ====== Render ======
   return (
     <div className="space-y-4">
       {/* Search bar */}
@@ -260,13 +301,13 @@ export function ContactsTab() {
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
         </div>
-      ) : users.length === 0 ? (
+      ) : isEmpty ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Search className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-600 mb-2">No se encontraron contactos</h3>
             <p className="text-slate-500">
-              {searchQuery ? 'Intenta con otro término' : 'No hay usuarios registrados'}
+              {searchQuery ? 'Intenta con otro término' : 'No hay contactos registrados'}
             </p>
           </CardContent>
         </Card>
@@ -284,115 +325,147 @@ export function ContactsTab() {
                   </TableHead>
                 )}
                 <TableHead>Contacto</TableHead>
-                <TableHead>Organizaciones</TableHead>
+                {isSuperAdmin && <TableHead>Organizaciones</TableHead>}
                 <TableHead>Estado</TableHead>
-                <TableHead>Rol</TableHead>
+                {isSuperAdmin && <TableHead>Rol</TableHead>}
                 <TableHead>Creado</TableHead>
                 {isSuperAdmin && <TableHead className="text-right">Admin</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
-                <TableRow
-                  key={u.id}
-                  className="cursor-pointer hover:bg-slate-50/80"
-                  onClick={() => setSelectedUser(u)}
-                >
-                  {isSuperAdmin && (
-                    <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
-                      {u.id === currentUser?.id ? (
-                        <div className="h-4 w-4" />
-                      ) : (
-                        <Checkbox
-                          checked={selectedIds.has(u.id)}
-                          onCheckedChange={() => handleToggleSelect(u.id)}
-                        />
-                      )}
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={u.avatar_url || undefined} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
-                          {getInitials(u)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-sm">{u.full_name || 'Sin nombre'}</div>
-                        <div className="text-xs text-slate-500">{u.email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {u.organizations.length > 0 ? (
-                        u.organizations.slice(0, 2).map((org) => (
-                          <Badge
-                            key={org.id}
-                            variant="secondary"
-                            className="bg-slate-100 text-slate-600 text-[10px] font-normal"
-                          >
-                            {org.organization_name || org.organization_slug}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-slate-400 text-xs">Sin org</span>
-                      )}
-                      {u.organizations.length > 2 && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-slate-100 text-slate-500 text-[10px]"
-                        >
-                          +{u.organizations.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={STATUS_COLORS[u.status || 'active']}>
-                      {STATUS_OPTIONS.find((s) => s.value === u.status)?.label || 'Activo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {u.is_platform_admin ? (
-                      <Badge className="bg-purple-100 text-purple-800 text-xs">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Admin
-                      </Badge>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Usuario</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-slate-500 text-xs">
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
-                  </TableCell>
-                  {isSuperAdmin && (
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title={u.is_platform_admin ? 'Quitar admin' : 'Hacer admin'}
-                        onClick={(e) => handleToggleAdmin(u, e)}
-                        disabled={togglingAdmin === u.id || u.id === currentUser?.id}
-                        className={
-                          u.is_platform_admin
-                            ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
-                            : 'text-slate-400 hover:text-slate-600'
-                        }
-                      >
-                        {togglingAdmin === u.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : u.is_platform_admin ? (
-                          <ShieldOff className="h-4 w-4" />
+              {isSuperAdmin
+                ? /* ===== SuperAdmin: render ApiUser rows ===== */
+                  users.map((u) => (
+                    <TableRow
+                      key={u.id}
+                      className="cursor-pointer hover:bg-slate-50/80"
+                      onClick={() => setSelectedUser(u)}
+                    >
+                      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                        {u.id === currentUser?.id ? (
+                          <div className="h-4 w-4" />
                         ) : (
-                          <Shield className="h-4 w-4" />
+                          <Checkbox
+                            checked={selectedIds.has(u.id)}
+                            onCheckedChange={() => handleToggleSelect(u.id)}
+                          />
                         )}
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={u.avatar_url || undefined} />
+                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                              {getInitials(u.full_name, u.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm">{u.full_name || 'Sin nombre'}</div>
+                            <div className="text-xs text-slate-500">{u.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {u.organizations.length > 0 ? (
+                            u.organizations.slice(0, 2).map((org) => (
+                              <Badge
+                                key={org.id}
+                                variant="secondary"
+                                className="bg-slate-100 text-slate-600 text-[10px] font-normal"
+                              >
+                                {org.organization_name || org.organization_slug}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-slate-400 text-xs">Sin org</span>
+                          )}
+                          {u.organizations.length > 2 && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-slate-100 text-slate-500 text-[10px]"
+                            >
+                              +{u.organizations.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={STATUS_COLORS[u.status || 'active']}>
+                          {STATUS_OPTIONS.find((s) => s.value === u.status)?.label || 'Activo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {u.is_platform_admin ? (
+                          <Badge className="bg-purple-100 text-purple-800 text-xs">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Admin
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400 text-xs">Usuario</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-500 text-xs">
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={u.is_platform_admin ? 'Quitar admin' : 'Hacer admin'}
+                          onClick={(e) => handleToggleAdmin(u, e)}
+                          disabled={togglingAdmin === u.id || u.id === currentUser?.id}
+                          className={
+                            u.is_platform_admin
+                              ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                              : 'text-slate-400 hover:text-slate-600'
+                          }
+                        >
+                          {togglingAdmin === u.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : u.is_platform_admin ? (
+                            <ShieldOff className="h-4 w-4" />
+                          ) : (
+                            <Shield className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : /* ===== Org admin: render ApiCrmContact rows ===== */
+                  crmContacts.map((c) => {
+                    const displayName = [c.first_name, c.last_name].filter(Boolean).join(' ') || null;
+                    return (
+                      <TableRow
+                        key={c.user_id}
+                        className="cursor-pointer hover:bg-slate-50/80"
+                        onClick={() => setSelectedUser(crmContactToUserStub(c))}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={c.avatar_url || undefined} />
+                              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                {getInitials(displayName, c.email)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-sm">{displayName || 'Sin nombre'}</div>
+                              <div className="text-xs text-slate-500">{c.email}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={CRM_STATUS_COLORS[c.status]}>
+                            {CRM_STATUS_LABELS[c.status] || c.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-xs">
+                          {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
             </TableBody>
           </Table>
 
@@ -430,11 +503,17 @@ export function ContactsTab() {
         user={selectedUser}
         onClose={() => setSelectedUser(null)}
         onUserUpdated={(updated) => {
-          setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+          if (isSuperAdmin) {
+            setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+          }
           setSelectedUser(updated);
         }}
         onUserDeleted={(id) => {
-          setUsers((prev) => prev.filter((u) => u.id !== id));
+          if (isSuperAdmin) {
+            setUsers((prev) => prev.filter((u) => u.id !== id));
+          } else {
+            setCrmContacts((prev) => prev.filter((c) => c.user_id !== id));
+          }
           setTotalCount((c) => c - 1);
           setSelectedUser(null);
         }}
