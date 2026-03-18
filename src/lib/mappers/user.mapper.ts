@@ -1,17 +1,34 @@
 import { User, UserRole } from '@/types';
-import { ApiUser } from '@/types/api.types';
+import { ApiUser, ApiOrgMembership } from '@/types/api.types';
 import { calculateRank } from '@/lib/gamification';
+
+const ROLE_PRIORITY: Record<string, number> = {
+  owner: 4, admin: 3, facilitador: 2, participante: 1,
+};
+
+function findBestMembership(orgs: ApiOrgMembership[] | undefined): ApiOrgMembership | undefined {
+  if (!orgs) return undefined;
+  const active = orgs.filter(o => o.status === 'active');
+  if (active.length === 0) return undefined;
+  return active.sort((a, b) => {
+    const roleDiff = (ROLE_PRIORITY[b.role] ?? 0) - (ROLE_PRIORITY[a.role] ?? 0);
+    if (roleDiff !== 0) return roleDiff;
+    // Tiebreak: oldest joined_at first (original membership over auto-assigned)
+    const aTime = a.joined_at ? new Date(a.joined_at).getTime() : Infinity;
+    const bTime = b.joined_at ? new Date(b.joined_at).getTime() : Infinity;
+    return aTime - bTime;
+  })[0];
+}
 
 function mapUserRole(apiUser: ApiUser): UserRole {
   if (apiUser.is_platform_admin) return 'SuperAdmin';
 
-  const membership = apiUser.organizations?.find(o => o.status === 'active');
-  if (!membership) return 'Subscriber';
+  const best = findBestMembership(apiUser.organizations);
+  if (!best) return 'Subscriber';
 
-  switch (membership.role) {
+  switch (best.role) {
     case 'owner':
     case 'admin':
-      return 'Admin';
     case 'facilitador':
       return 'Admin';
     case 'participante':
@@ -21,7 +38,7 @@ function mapUserRole(apiUser: ApiUser): UserRole {
 }
 
 export function mapApiUserToUser(apiUser: ApiUser): User {
-  const activeMembership = apiUser.organizations?.find(o => o.status === 'active');
+  const activeMembership = findBestMembership(apiUser.organizations);
   const oasisScore = 0;
 
   return {
