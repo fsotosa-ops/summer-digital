@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
+import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +23,7 @@ import { SESSION_KEYS } from '@/lib/utils';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, register, requestPasswordRecovery, isLoading, error, user } = useAuthStore();
+  const { login, register, requestPasswordRecovery, setUser, isLoading, error, user } = useAuthStore();
 
   // --- Estados de Control de Flujo ---
   const [hydrated, setHydrated] = useState(false);
@@ -63,6 +64,37 @@ function LoginContent() {
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     return unsub;
   }, []);
+
+  // Efecto 2.5: Procesar hash fragments de confirmación de email de Supabase
+  // Supabase redirige a /login#access_token=...&refresh_token=...&type=signup
+  useEffect(() => {
+    const handleHashTokens = async () => {
+      const hash = window.location.hash.substring(1);
+      if (!hash) return;
+
+      const params = new URLSearchParams(hash);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (!accessToken || !refreshToken) return;
+
+      // Limpiar hash de la URL inmediatamente
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+      try {
+        apiClient.setTokens(accessToken, refreshToken);
+        const profile = await authService.getUserProfile();
+        setUser(profile); // Efecto 3 se encarga de redirigir a /dashboard
+      } catch {
+        // Si falla, el usuario puede hacer login manual
+        apiClient.clearTokens();
+      }
+    };
+
+    if (hydrated && !user) {
+      handleHashTokens();
+    }
+  }, [hydrated, user, setUser]);
 
   // Efecto 3: Motor centralizado de enrutamiento (Single Source of Truth)
   // Reacciona automáticamente cuando detecta un usuario autenticado válido
