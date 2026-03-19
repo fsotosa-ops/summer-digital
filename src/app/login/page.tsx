@@ -7,6 +7,7 @@ import { authService } from '@/services/auth.service';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -232,9 +233,8 @@ function LoginContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Contraseña</Label>
-                  <Input
+                  <PasswordInput
                     id="login-password"
-                    type="password"
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -375,14 +375,14 @@ function LoginContent() {
 
                   <div className="space-y-2">
                     <Label htmlFor="register-password">Contraseña</Label>
-                    <Input
+                    <PasswordInput
                       id="register-password"
-                      type="password"
                       placeholder="Contraseña segura"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required
                       disabled={isLoading}
+                      showCopy
                     />
                     {registerPassword.length > 0 && (
                       <ul className="space-y-1 text-xs">

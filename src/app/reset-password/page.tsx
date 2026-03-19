@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { authService } from '@/services/auth.service';
 import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { AlertCircle, CheckCircle2, Circle } from 'lucide-react';
 import { PASSWORD_RULES, validatePassword } from '@/lib/password-validation';
 
@@ -70,14 +70,14 @@ export default function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">Nueva contraseña</Label>
-                <Input
+                <PasswordInput
                   id="new-password"
-                  type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  showCopy
                 />
               </div>
 
@@ -101,9 +101,8 @@ export default function ResetPasswordPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirmar contraseña</Label>
-                <Input
+                <PasswordInput
                   id="confirm-password"
-                  type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
