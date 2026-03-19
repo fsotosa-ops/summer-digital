@@ -17,8 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Circle } from 'lucide-react';
 import { SESSION_KEYS } from '@/lib/utils';
+import { PASSWORD_RULES, validatePassword } from '@/lib/password-validation';
 
 function LoginContent() {
   const router = useRouter();
@@ -65,8 +66,9 @@ function LoginContent() {
     return unsub;
   }, []);
 
-  // Efecto 2.5: Procesar hash fragments de confirmación de email de Supabase
-  // Supabase redirige a /login#access_token=...&refresh_token=...&type=signup
+  // Efecto 2.5: Procesar hash fragments de Supabase
+  // Signup: /login#access_token=...&type=signup → auto-login
+  // Recovery: /login#access_token=...&type=recovery → redirect a /reset-password
   useEffect(() => {
     const handleHashTokens = async () => {
       const hash = window.location.hash.substring(1);
@@ -75,12 +77,21 @@ function LoginContent() {
       const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
 
       if (!accessToken || !refreshToken) return;
 
       // Limpiar hash de la URL inmediatamente
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
+      // Recovery: guardar tokens y redirigir a página de cambio de contraseña
+      if (type === 'recovery') {
+        apiClient.setTokens(accessToken, refreshToken);
+        router.push('/reset-password');
+        return;
+      }
+
+      // Signup/otros: auto-login
       try {
         apiClient.setTokens(accessToken, refreshToken);
         const profile = await authService.getUserProfile();
@@ -94,7 +105,7 @@ function LoginContent() {
     if (hydrated && !user) {
       handleHashTokens();
     }
-  }, [hydrated, user, setUser]);
+  }, [hydrated, user, setUser, router]);
 
   // Efecto 3: Motor centralizado de enrutamiento (Single Source of Truth)
   // Reacciona automáticamente cuando detecta un usuario autenticado válido
@@ -367,13 +378,31 @@ function LoginContent() {
                     <Input
                       id="register-password"
                       type="password"
-                      placeholder="Mínimo 8 caracteres"
+                      placeholder="Contraseña segura"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required
-                      minLength={8}
                       disabled={isLoading}
                     />
+                    {registerPassword.length > 0 && (
+                      <ul className="space-y-1 text-xs">
+                        {PASSWORD_RULES.map((rule, i) => {
+                          const passed = rule.test(registerPassword);
+                          return (
+                            <li key={i} className="flex items-center gap-1.5">
+                              {passed ? (
+                                <CheckCircle2 size={12} className="text-green-500 shrink-0" />
+                              ) : (
+                                <Circle size={12} className="text-slate-300 shrink-0" />
+                              )}
+                              <span className={passed ? 'text-green-700' : 'text-slate-500'}>
+                                {rule.label}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
 
                   {error && (
@@ -386,7 +415,7 @@ function LoginContent() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
-                    disabled={isLoading}
+                    disabled={isLoading || !validatePassword(registerPassword).valid}
                   >
                     {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
                   </Button>

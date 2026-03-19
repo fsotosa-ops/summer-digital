@@ -35,6 +35,10 @@ class AuthService {
     return mapApiUserToUser(response.user);
   }
 
+  async updatePassword(newPassword: string): Promise<void> {
+    await apiClient.post('/auth/password/update', { new_password: newPassword });
+  }
+
   async getUserProfile(): Promise<User> {
     const apiUser = await apiClient.get<ApiUser>('/auth/users/me');
     return mapApiUserToUser(apiUser);
