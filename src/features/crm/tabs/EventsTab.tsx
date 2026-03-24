@@ -241,6 +241,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   const handleSave = async () => {
     if (!formData.name || !formData.slug || !orgId) return;
     setSaving(true);
+    console.log('[EventsTab] formData.location_details:', JSON.stringify(formData.location_details));
     try {
       if (editingEvent) {
         const updatePayload: ApiEventUpdate = {
