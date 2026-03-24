@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { crmService } from '@/services/crm.service';
 import { organizationService } from '@/services/organization.service';
 import { eventService } from '@/services/event.service';
@@ -10,6 +10,11 @@ import {
   ApiOrganization,
   ApiEvent,
 } from '@/types/api.types';
+
+interface GroupedEvent {
+  attendance: ApiContactEventParticipation;
+  enrollments: Array<{ id: string; status: string; journey_id: string }>;
+}
 import { EVENT_STATUS_CONFIG } from '@/lib/constants/crm-data';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,6 +92,25 @@ export function EventsParticipationTab({ userId, isSuperAdmin }: Props) {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // Group raw rows by attendance_id (SQL fans out via LEFT JOIN on enrollments)
+  const grouped = useMemo<GroupedEvent[]>(() => {
+    const map = new Map<string, GroupedEvent>();
+    for (const row of events) {
+      if (!map.has(row.attendance_id)) {
+        map.set(row.attendance_id, { attendance: row, enrollments: [] });
+      }
+      const entry = map.get(row.attendance_id)!;
+      if (row.enrollment_id) {
+        entry.enrollments.push({
+          id: row.enrollment_id,
+          status: row.enrollment_status!,
+          journey_id: row.journey_id!,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [events]);
 
   // Load orgs when form opens
   const handleShowForm = async () => {
@@ -178,14 +202,14 @@ export function EventsParticipationTab({ userId, isSuperAdmin }: Props) {
         </p>
       )}
 
-      {events.length === 0 && !showForm && (
+      {grouped.length === 0 && !showForm && (
         <div className="text-center py-12 text-slate-500 text-sm">
           <Calendar className="h-10 w-10 mx-auto text-slate-300 mb-3" />
           Este contacto aun no ha participado en ningun evento
         </div>
       )}
 
-      {events.length > 0 && (
+      {grouped.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <Table>
             <TableHeader>
@@ -196,12 +220,12 @@ export function EventsParticipationTab({ userId, isSuperAdmin }: Props) {
                 <TableHead>Estado evento</TableHead>
                 <TableHead>Asistencia</TableHead>
                 <TableHead>Modalidad</TableHead>
-                <TableHead>Journey</TableHead>
+                <TableHead>Journeys</TableHead>
                 {isSuperAdmin && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((e) => {
+              {grouped.map(({ attendance: e, enrollments }) => {
                 const statusCfg = EVENT_STATUS_CONFIG[e.event_status as ApiEventStatus];
                 return (
                   <TableRow key={e.attendance_id}>
@@ -234,10 +258,14 @@ export function EventsParticipationTab({ userId, isSuperAdmin }: Props) {
                       {e.modality ? (MODALITY_LABELS[e.modality] || e.modality) : '\u2014'}
                     </TableCell>
                     <TableCell>
-                      {e.enrollment_id ? (
-                        <Badge variant="outline" className="text-xs">
-                          {ENROLLMENT_STATUS_LABELS[e.enrollment_status!] || e.enrollment_status}
-                        </Badge>
+                      {enrollments.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {enrollments.map((enr) => (
+                            <Badge key={enr.id} variant="outline" className="text-xs">
+                              {ENROLLMENT_STATUS_LABELS[enr.status] || enr.status}
+                            </Badge>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-slate-400 text-xs">{'\u2014'}</span>
                       )}
