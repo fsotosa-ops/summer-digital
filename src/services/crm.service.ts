@@ -193,6 +193,14 @@ class CrmService {
   async getContactEvents(userId: string): Promise<ApiContactEventParticipation[]> {
     return apiClient.get<ApiContactEventParticipation[]>(`/crm/contacts/${userId}/events`);
   }
+
+  // --- CSV Export for Brevo ---
+
+  async exportContactsCsv(orgId?: string): Promise<Blob> {
+    const params = orgId ? `?organization_id=${orgId}` : '';
+    const response = await apiClient.getRaw(`/crm/contacts/export/csv${params}`);
+    return response.blob();
+  }
 }
 
 export const crmService = new CrmService();

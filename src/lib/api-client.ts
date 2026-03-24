@@ -278,6 +278,47 @@ export class ApiError extends Error {
       });
     }
 
+    /**
+     * Returns the raw Response (for non-JSON payloads like CSV).
+     * Reuses the same auth/refresh/retry logic as request<T>().
+     */
+    public async getRaw(endpoint: string, headers?: HeadersInit): Promise<Response> {
+      const url = `${this.baseUrl}${endpoint}`;
+
+      const hdrs = new Headers(headers);
+
+      if (!this.accessToken) {
+        const hasRefreshToken = typeof window !== 'undefined' && !!localStorage.getItem('refresh_token');
+        if (hasRefreshToken) {
+          try { await this.refreshAccessToken(); } catch { /* continue */ }
+        }
+      }
+      if (this.accessToken) {
+        hdrs.set('Authorization', `Bearer ${this.accessToken}`);
+      }
+
+      let response = await this.fetchWithRetry(url, { method: 'GET', headers: hdrs });
+
+      if (response.status === 401) {
+        try {
+          await this.refreshAccessToken();
+          hdrs.set('Authorization', `Bearer ${this.accessToken}`);
+          response = await this.fetchWithRetry(url, { method: 'GET', headers: hdrs });
+        } catch {
+          throw new ApiError(401, 'Session expired', null);
+        }
+      }
+
+      if (!response.ok) {
+        let errorData;
+        const text = await response.text();
+        try { errorData = JSON.parse(text); } catch { errorData = { message: text }; }
+        throw new ApiError(response.status, response.statusText, errorData);
+      }
+
+      return response;
+    }
+
     public delete<T>(endpoint: string, body?: any, headers?: HeadersInit): Promise<T> {
       return this.request<T>(endpoint, {
         method: 'DELETE',

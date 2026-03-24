@@ -41,6 +41,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContactDetailSheet } from '../components/contact-detail';
@@ -117,6 +118,9 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
 
   // --- Org admin state ---
   const [crmContacts, setCrmContacts] = useState<ApiCrmContact[]>([]);
+
+  // --- Export state ---
+  const [exporting, setExporting] = useState(false);
 
   // ====== Data loading ======
   const loadData = useCallback(async (silent = false) => {
@@ -241,6 +245,26 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
     return email[0].toUpperCase();
   };
 
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const blob = await crmService.exportContactsCsv(orgId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contacts_brevo_${new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('CSV exportado correctamente');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al exportar CSV');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const isEmpty = isSuperAdmin ? users.length === 0 : crmContacts.length === 0;
 
@@ -261,6 +285,19 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
         <span className="text-sm text-slate-500">
           {totalCount} contacto(s){searchQuery && ` para "${searchQuery}"`}
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={exporting || totalCount === 0}
+        >
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <Download className="h-4 w-4 mr-1" />
+          )}
+          Exportar CSV
+        </Button>
       </div>
 
       {isSuperAdmin && selectedIds.size > 0 && (
