@@ -568,7 +568,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
                   <TabsContent value="events" className="mt-0">
                     {eventsLoaded ? (
-                      <EventsParticipationTab userId={user.id} />
+                      <EventsParticipationTab userId={user.id} isSuperAdmin={isSuperAdmin} />
                     ) : (
                       <div className="flex justify-center py-12">
                         <p className="text-sm text-slate-400">Haz clic en la pestaña para cargar eventos</p>

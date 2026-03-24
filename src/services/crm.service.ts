@@ -194,6 +194,14 @@ class CrmService {
     return apiClient.get<ApiContactEventParticipation[]>(`/crm/contacts/${userId}/events`);
   }
 
+  async assignContactEvent(userId: string, data: { event_id: string; modality?: string }) {
+    return apiClient.post(`/crm/contacts/${userId}/assign-event`, data);
+  }
+
+  async removeContactEvent(userId: string, attendanceId: string) {
+    return apiClient.delete(`/crm/contacts/${userId}/events/${attendanceId}`);
+  }
+
   // --- CSV Export for Brevo ---
 
   async exportContactsCsv(filters?: {
