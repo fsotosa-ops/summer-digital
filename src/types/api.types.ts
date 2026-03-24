@@ -414,6 +414,13 @@ export interface ApiEventDiagnosis {
   main_obstacles?: string | null;
 }
 
+export interface ApiEventLocationDetails {
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  locality?: string | null;
+}
+
 export interface ApiEvent {
   id: string;
   organization_id: string;
@@ -427,6 +434,7 @@ export interface ApiEvent {
   start_date?: string | null;
   end_date?: string | null;
   location?: string | null;
+  location_details?: ApiEventLocationDetails;
   status: ApiEventStatus;
   is_active: boolean;
   notes?: string | null;
@@ -445,6 +453,7 @@ export interface ApiEventCreate {
   start_date?: string | null;
   end_date?: string | null;
   location?: string | null;
+  location_details?: ApiEventLocationDetails;
   status?: ApiEventStatus;
   notes?: string | null;
   expected_participants?: number | null;
@@ -459,6 +468,7 @@ export interface ApiEventUpdate {
   start_date?: string | null;
   end_date?: string | null;
   location?: string | null;
+  location_details?: ApiEventLocationDetails | null;
   status?: ApiEventStatus | null;
   is_active?: boolean | null;
   notes?: string | null;

@@ -11,6 +11,7 @@ import {
   ApiEventCounterpartDetails,
   ApiEventVenueDetails,
   ApiEventDiagnosis,
+  ApiEventLocationDetails,
   ApiEventStatus,
   ApiEventUpdate,
   ApiJourneyAdminRead,
@@ -89,6 +90,13 @@ const defaultDiagnosis: ApiEventDiagnosis = {
 /** Local form state extends ApiEventCreate with journey_ids for the MultiSelect UI */
 type EventFormData = ApiEventCreate & { journey_ids: string[] };
 
+const defaultLocationDetails: ApiEventLocationDetails = {
+  country: null,
+  state: null,
+  city: null,
+  locality: null,
+};
+
 const defaultForm: EventFormData = {
   name: '',
   slug: '',
@@ -96,6 +104,7 @@ const defaultForm: EventFormData = {
   start_date: null,
   end_date: null,
   location: '',
+  location_details: { ...defaultLocationDetails },
   status: 'upcoming',
   journey_ids: [],
   notes: null,
@@ -173,16 +182,21 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     setLocState('');
     setLocCity('');
     setLocLocality('');
-    setFormData({ ...defaultForm, location: composeLocation('CL', '', '', '') });
+    setFormData({
+      ...defaultForm,
+      location: composeLocation('CL', '', '', ''),
+      location_details: { country: 'CL', state: null, city: null, locality: null },
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (event: ApiEvent) => {
     setEditingEvent(event);
-    setLocCountry('');
-    setLocState('');
-    setLocCity('');
-    setLocLocality('');
+    const ld = event.location_details ?? {};
+    setLocCountry(ld.country ?? '');
+    setLocState(ld.state ?? '');
+    setLocCity(ld.city ?? '');
+    setLocLocality(ld.locality ?? '');
     setFormData({
       name: event.name,
       slug: event.slug,
@@ -190,6 +204,12 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
       start_date: event.start_date ?? null,
       end_date: event.end_date ?? null,
       location: event.location ?? '',
+      location_details: {
+        country: ld.country ?? null,
+        state: ld.state ?? null,
+        city: ld.city ?? null,
+        locality: ld.locality ?? null,
+      },
       status: event.status,
       journey_ids: event.journey_ids ?? [],
       notes: event.notes ?? null,
@@ -229,6 +249,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           start_date: formData.start_date || null,
           end_date: formData.end_date || null,
           location: formData.location || null,
+          location_details: formData.location_details,
           status: formData.status,
           notes: formData.notes || null,
           expected_participants: formData.expected_participants || null,
@@ -442,7 +463,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                     setLocCountry(v);
                     setLocState('');
                     setLocCity('');
-                    setFormData(p => ({ ...p, location: composeLocation(v, '', '', locLocality) }));
+                    setFormData(p => ({
+                      ...p,
+                      location: composeLocation(v, '', '', locLocality),
+                      location_details: { country: v, state: null, city: null, locality: locLocality || null },
+                    }));
                   }}
                 >
                   <SelectTrigger><SelectValue placeholder="Selecciona un país" /></SelectTrigger>
@@ -464,7 +489,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                       onValueChange={(v) => {
                         setLocState(v);
                         setLocCity('');
-                        setFormData(p => ({ ...p, location: composeLocation(locCountry, v, '', locLocality) }));
+                        setFormData(p => ({
+                          ...p,
+                          location: composeLocation(locCountry, v, '', locLocality),
+                          location_details: { country: locCountry, state: v, city: null, locality: locLocality || null },
+                        }));
                       }}
                     >
                       <SelectTrigger><SelectValue placeholder="Selecciona un estado" /></SelectTrigger>
@@ -483,7 +512,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                       disabled={!locState}
                       onValueChange={(v) => {
                         setLocCity(v);
-                        setFormData(p => ({ ...p, location: composeLocation(locCountry, locState, v, locLocality) }));
+                        setFormData(p => ({
+                          ...p,
+                          location: composeLocation(locCountry, locState, v, locLocality),
+                          location_details: { country: locCountry, state: locState, city: v, locality: locLocality || null },
+                        }));
                       }}
                     >
                       <SelectTrigger><SelectValue placeholder={locState ? 'Selecciona una ciudad' : 'Primero selecciona región'} /></SelectTrigger>
@@ -505,7 +538,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                   onChange={(e) => {
                     const v = e.target.value;
                     setLocLocality(v);
-                    setFormData(p => ({ ...p, location: composeLocation(locCountry, locState, locCity, v) }));
+                    setFormData(p => ({
+                      ...p,
+                      location: composeLocation(locCountry, locState, locCity, v),
+                      location_details: { country: locCountry, state: locState, city: locCity || null, locality: v || null },
+                    }));
                   }}
                   placeholder="Colonia, barrio, localidad o referencia adicional"
                 />
