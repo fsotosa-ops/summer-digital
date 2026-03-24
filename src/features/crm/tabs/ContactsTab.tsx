@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { userService } from '@/services/user.service';
 import { crmService } from '@/services/crm.service';
+import { organizationService } from '@/services/organization.service';
 import {
   ApiUser,
   ApiAccountStatus,
   ApiCrmContact,
   ApiContactStatus,
+  ApiOrganization,
 } from '@/types/api.types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { MultiSelect } from '@/components/ui/multi-select';
 import {
   Search,
   Shield,
@@ -121,6 +124,11 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
 
   // --- Export state ---
   const [exporting, setExporting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportOrgIds, setExportOrgIds] = useState<string[]>([]);
+  const [exportCreatedFrom, setExportCreatedFrom] = useState('');
+  const [exportCreatedTo, setExportCreatedTo] = useState('');
+  const [orgs, setOrgs] = useState<ApiOrganization[]>([]);
 
   // ====== Data loading ======
   const loadData = useCallback(async (silent = false) => {
@@ -245,10 +253,35 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
     return email[0].toUpperCase();
   };
 
+  const openExportDialog = async () => {
+    setExportOrgIds([]);
+    setExportCreatedFrom('');
+    setExportCreatedTo('');
+    setExportDialogOpen(true);
+    // Load orgs for multi-select (only needed for superadmin)
+    if (isSuperAdmin && orgs.length === 0) {
+      try {
+        const data = await organizationService.listMyOrganizations();
+        setOrgs(data);
+      } catch { /* ignore */ }
+    }
+  };
+
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const blob = await crmService.exportContactsCsv(orgId);
+      const filters: { organizationIds?: string[]; createdFrom?: string; createdTo?: string } = {};
+      if (isSuperAdmin && exportOrgIds.length > 0) {
+        filters.organizationIds = exportOrgIds;
+      } else if (orgId) {
+        filters.organizationIds = [orgId];
+      }
+      if (exportCreatedFrom) filters.createdFrom = exportCreatedFrom;
+      if (exportCreatedTo) filters.createdTo = exportCreatedTo;
+
+      const blob = await crmService.exportContactsCsv(
+        Object.keys(filters).length > 0 ? filters : undefined,
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -258,6 +291,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('CSV exportado correctamente');
+      setExportDialogOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al exportar CSV');
     } finally {
@@ -288,14 +322,10 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={handleExportCsv}
-          disabled={exporting || totalCount === 0}
+          onClick={openExportDialog}
+          disabled={totalCount === 0}
         >
-          {exporting ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <Download className="h-4 w-4 mr-1" />
-          )}
+          <Download className="h-4 w-4 mr-1" />
           Exportar CSV
         </Button>
       </div>
@@ -600,6 +630,65 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                 <Trash2 className="h-4 w-4 mr-1" />
               )}
               Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export CSV Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={(open) => { if (!exporting) setExportDialogOpen(open); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Exportar contactos a CSV</DialogTitle>
+            <DialogDescription>
+              Selecciona filtros para la exportación. Deja vacío para exportar todos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {isSuperAdmin && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Organizaciones</label>
+                <MultiSelect
+                  options={orgs.map((o) => ({ value: o.id, label: o.name }))}
+                  selected={exportOrgIds}
+                  onChange={setExportOrgIds}
+                  placeholder="Todas las organizaciones"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Creado desde</label>
+                <Input
+                  type="date"
+                  value={exportCreatedFrom}
+                  onChange={(e) => setExportCreatedFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Creado hasta</label>
+                <Input
+                  type="date"
+                  value={exportCreatedTo}
+                  onChange={(e) => setExportCreatedTo(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)} disabled={exporting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleExportCsv} disabled={exporting}>
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Download className="h-4 w-4 mr-1" />
+              )}
+              Descargar CSV
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -196,9 +196,19 @@ class CrmService {
 
   // --- CSV Export for Brevo ---
 
-  async exportContactsCsv(orgId?: string): Promise<Blob> {
-    const params = orgId ? `?organization_id=${orgId}` : '';
-    const response = await apiClient.getRaw(`/crm/contacts/export/csv${params}`);
+  async exportContactsCsv(filters?: {
+    organizationIds?: string[];
+    createdFrom?: string;
+    createdTo?: string;
+  }): Promise<Blob> {
+    const params = new URLSearchParams();
+    if (filters?.organizationIds?.length) {
+      params.set('organization_ids', filters.organizationIds.join(','));
+    }
+    if (filters?.createdFrom) params.set('created_from', filters.createdFrom);
+    if (filters?.createdTo) params.set('created_to', filters.createdTo);
+    const qs = params.toString();
+    const response = await apiClient.getRaw(`/crm/contacts/export/csv${qs ? `?${qs}` : ''}`);
     return response.blob();
   }
 }
