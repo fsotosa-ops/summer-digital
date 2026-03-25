@@ -229,7 +229,7 @@ export default function JourneyPage() {
       <div className="space-y-6 animate-in fade-in duration-300">
         {/* Hero skeleton */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
+          <div className="h-1 bg-gradient-to-r from-summer-yellow via-orange-400 to-summer-orange" />
           <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Skeleton className="h-10 w-10 rounded-xl" />
@@ -292,10 +292,10 @@ export default function JourneyPage() {
 
       {/* ── Page hero ──────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
+        <div className="h-[2px] bg-gradient-to-r from-summer-yellow via-orange-400 to-summer-orange" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-yellow to-summer-orange
                             flex items-center justify-center shadow-sm shrink-0">
               <Map size={20} className="text-white" />
             </div>
@@ -318,8 +318,8 @@ export default function JourneyPage() {
                 className={cn(
                   'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
                   activeTab === 'progress'
-                    ? 'bg-summer-teal border-summer-teal text-white'
-                    : 'bg-summer-teal/10 border-summer-teal text-summer-teal hover:bg-summer-teal'
+                    ? 'bg-summer-orange border-summer-orange text-white'
+                    : 'bg-summer-orange/10 border-summer-orange/20 text-summer-orange hover:bg-summer-orange hover:text-white'
                 )}
               >
                 <Play size={11} /> {activeJourneys.length} En progreso
@@ -329,8 +329,8 @@ export default function JourneyPage() {
                 className={cn(
                   'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
                   activeTab === 'history'
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100'
+                    ? 'bg-amber-500 border-amber-500 text-white'
+                    : 'bg-amber-50 border-amber-100 text-amber-700 hover:bg-amber-100'
                 )}
               >
                 <CheckCircle size={11} /> {completedJourneys.length} Completados
@@ -386,7 +386,7 @@ export default function JourneyPage() {
             className={cn(
               'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
               !orgFilter
-                ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
+                ? 'bg-summer-orange border-summer-orange text-white shadow-sm'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             )}
           >
@@ -399,7 +399,7 @@ export default function JourneyPage() {
               className={cn(
                 'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
                 orgFilter === org.id
-                  ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
+                  ? 'bg-summer-orange border-summer-orange text-white shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               )}
             >
@@ -419,7 +419,7 @@ export default function JourneyPage() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
                 activeTab === tab.key
-                  ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               )}
             >
@@ -566,7 +566,7 @@ export default function JourneyPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-[1.5px] bg-summer-teal" />
+                      <div className="h-[1.5px] bg-summer-orange" />
                     )}
                     <div className="p-4 flex flex-col gap-3 flex-1">
                       <div className="flex items-start justify-between gap-2">
@@ -574,19 +574,19 @@ export default function JourneyPage() {
                           {journey.title}
                         </h3>
                         {!journey.thumbnail_url && (
-                          <CheckCircle size={16} className="text-summer-teal shrink-0 mt-0.5" />
+                          <CheckCircle size={16} className="text-summer-orange shrink-0 mt-0.5" />
                         )}
                       </div>
                       {journey.category && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-summer-teal
-                                         bg-summer-teal/10 border border-summer-teal px-2 py-0.5 rounded-full w-fit">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-summer-orange
+                                         bg-summer-orange/10 border border-summer-orange/30 px-2 py-0.5 rounded-full w-fit">
                           {journey.category}
                         </span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); router.push('/journey/' + journey.id); }}
-                        className="mt-auto text-xs font-semibold text-slate-500 hover:text-summer-teal
-                                   border border-slate-200 hover:border-summer-teal rounded-xl py-2 transition-colors"
+                        className="mt-auto text-xs font-semibold text-slate-500 hover:text-summer-orange
+                                   border border-slate-200 hover:border-summer-orange rounded-xl py-2 transition-colors"
                       >
                         Ver certificado / Repasar
                       </button>
