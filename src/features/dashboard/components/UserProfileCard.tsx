@@ -40,7 +40,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
         <div className="relative z-10 flex flex-col items-center text-center gap-3">
           {/* Avatar */}
           {user.avatarUrl ? (
-            <div className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-white/10 ring-2 ring-oasis-blue/30 drop-shadow">
+            <div className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-white/10 ring-2 ring-summer-sky/30 drop-shadow">
               <Image
                 src={user.avatarUrl}
                 alt={user.name}

@@ -95,7 +95,7 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
                 >
                     <div className="flex justify-between items-center mb-3">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <Target size={14} /> Progreso Oasis
+                            <Target size={14} /> Progreso Summer UP
                         </h4>
                         <Badge variant="outline" className="bg-white text-teal-700 border-teal-200">
                             Rango: {user.rank}

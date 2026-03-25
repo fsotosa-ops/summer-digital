@@ -95,7 +95,7 @@ export function Dashboard() {
                 <span className="text-4xl font-bold text-white tabular-nums block leading-none">
                   {displayPts}
                 </span>
-                <span className="text-white/60 text-xs mt-1 block">Oasis Score</span>
+                <span className="text-white/60 text-xs mt-1 block">Summer Score</span>
               </div>
             </div>
 

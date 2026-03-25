@@ -23,8 +23,9 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "Oasis Digital",
-  description: "Plataforma de transformación digital de Fundación Summer",
+  title: "Summer UP",
+  description: "Summer UP — Tu plataforma de experiencias",
+  icons: { icon: "/favicon.png" },
 };
 
 export default function RootLayout({

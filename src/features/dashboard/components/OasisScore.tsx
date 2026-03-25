@@ -88,7 +88,7 @@ export function OasisScore({ score, rank, variant = 'default' }: OasisScoreProps
 
       <div className="relative z-10 flex flex-col items-center">
         <h3 className="text-slate-500 font-medium text-sm uppercase tracking-wider mb-4">
-          Oasis Score
+          Summer Score
         </h3>
 
         <div className="relative flex items-center justify-center">

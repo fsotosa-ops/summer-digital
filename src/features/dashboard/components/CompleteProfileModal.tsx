@@ -231,7 +231,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                     </p>
                   )}
                   <p className="text-slate-400 text-sm mt-2">
-                    Tu perfil está completo. Ya puedes disfrutar la experiencia completa de Oasis Digital.
+                    Tu perfil está completo. Ya puedes disfrutar la experiencia completa de Summer UP.
                   </p>
                 </motion.div>
 
@@ -270,7 +270,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                     Completar perfil
                   </DialogTitle>
                   <DialogDescription>
-                    Completa todos los campos para personalizar tu experiencia en Oasis Digital
+                    Completa todos los campos para personalizar tu experiencia en Summer UP
                     {profileCompletionPoints > 0 && (
                       <span className="inline-flex items-center gap-1 ml-1 text-fuchsia-600 font-medium">
                         y ganar {profileCompletionPoints} puntos

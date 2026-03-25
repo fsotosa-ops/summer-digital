@@ -18,14 +18,15 @@
   --font-mono: var(--font-geist-mono);
   --font-titles: "Horizon";
 
-  /* ── Brand Pastel Colors ── */
-  --color-oasis-blue: #92adef;
-  --color-oasis-teal: #8dd4da;
-  --color-oasis-pink: #f4c4dc;
-  --color-oasis-yellow: #fde49c;
-  --color-oasis-orange: #ecc389;
-  --color-oasis-black: #000000;
-  --color-oasis-white: #ffffff;
+  /* ── Summer UP Brand Colors ── */
+  --color-summer-sky: #76D0E4;
+  --color-summer-teal: #00B38B;
+  --color-summer-pink: #FF299D;
+  --color-summer-yellow: #E0FF00;
+  --color-summer-orange: #FF8900;
+  --color-summer-lavender: #E05CFF;
+  --color-summer-black: #000000;
+  --color-summer-white: #ffffff;
 
   /* ── Shadcn semantic aliases mapped to brand ── */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -74,31 +75,31 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #92adef;
+  --primary: #FF299D;
   --primary-foreground: #000000;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: #8dd4da;
+  --accent: #76D0E4;
   --accent-foreground: #000000;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: #92adef;
-  --chart-1: #92adef;
-  --chart-2: #8dd4da;
-  --chart-3: #f4c4dc;
-  --chart-4: #fde49c;
-  --chart-5: #ecc389;
+  --ring: #FF299D;
+  --chart-1: #FF299D;
+  --chart-2: #76D0E4;
+  --chart-3: #E0FF00;
+  --chart-4: #FF8900;
+  --chart-5: #E05CFF;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #92adef;
+  --sidebar-primary: #FF299D;
   --sidebar-primary-foreground: #000000;
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: #92adef;
+  --sidebar-ring: #FF299D;
 
   /* ── Brand Font Variables ── */
   --font-primary: "Montserrat", sans-serif;
@@ -118,68 +119,40 @@
 }
 
 /* ══════════════════════════════════════════════════════════
-   Oasis Digital — Brand Gradient Utilities
+   Summer UP — Brand Gradient Utilities
    ══════════════════════════════════════════════════════════ */
 
-/* Linear 135° — diagonal pastel sweep */
-.oasis-gradient-135 {
-  background: linear-gradient(
-    135deg,
-    #92adef 0%,
-    #8dd4da 25%,
-    #f4c4dc 50%,
-    #fde49c 75%,
-    #ecc389 100%
-  );
+/* Linear 135° — diagonal vivid sweep */
+.summer-gradient-135 {
+  background: linear-gradient(135deg, #FF299D 0%, #FF8900 25%, #E0FF00 50%, #76D0E4 75%, #E05CFF 100%);
 }
 
-/* Linear 180° — vertical pastel flow */
-.oasis-gradient-180 {
-  background: linear-gradient(
-    180deg,
-    #92adef 0%,
-    #8dd4da 25%,
-    #f4c4dc 50%,
-    #fde49c 75%,
-    #ecc389 100%
-  );
+/* Linear 180° — vertical vivid flow */
+.summer-gradient-180 {
+  background: linear-gradient(180deg, #FF299D 0%, #FF8900 33%, #E0FF00 66%, #76D0E4 100%);
 }
 
-/* Linear 90° — horizontal pastel band */
-.oasis-gradient-90 {
-  background: linear-gradient(
-    90deg,
-    #92adef 0%,
-    #8dd4da 25%,
-    #f4c4dc 50%,
-    #fde49c 75%,
-    #ecc389 100%
-  );
+/* Linear 90° — horizontal vivid band */
+.summer-gradient-90 {
+  background: linear-gradient(90deg, #76D0E4 0%, #FF299D 33%, #E0FF00 66%, #FF8900 100%);
 }
 
 /* Circular radial 50/50 — centered bloom */
-.oasis-gradient-radial {
-  background: radial-gradient(
-    circle at 50% 50%,
-    #92adef 0%,
-    #8dd4da 20%,
-    #f4c4dc 40%,
-    #fde49c 70%,
-    #ecc389 100%
-  );
+.summer-gradient-radial {
+  background: radial-gradient(circle at 50% 50%, #FF299D 0%, #FF8900 30%, #E0FF00 60%, #76D0E4 100%);
 }
 
 /* ── Premium Glassmorphism ── */
-.oasis-glass {
+.summer-glass {
   @apply bg-white/70 backdrop-blur-md border border-white/20;
 }
 
-.oasis-glass-dark {
+.summer-glass-dark {
   @apply bg-black/95 backdrop-blur-xl border-b border-white/10;
 }
 
 /* ── Subtle gradient for skeletons ── */
-@keyframes oasis-shimmer {
+@keyframes summer-shimmer {
   0% {
     background-position: -200% 0;
   }
@@ -188,36 +161,36 @@
   }
 }
 
-.oasis-skeleton {
+.summer-skeleton {
   background: linear-gradient(
     90deg,
-    rgba(141, 212, 218, 0.05) 25%,
-    rgba(244, 196, 220, 0.2) 50%,
-    rgba(141, 212, 218, 0.05) 75%
+    rgba(255, 41, 157, 0.05) 25%,
+    rgba(224, 255, 0, 0.15) 50%,
+    rgba(255, 41, 157, 0.05) 75%
   );
   background-size: 200% 100%;
-  animation: oasis-shimmer 3s ease-in-out infinite;
+  animation: summer-shimmer 3s ease-in-out infinite;
 }
 
 /* ── Brand gradient text utility ── */
-.oasis-gradient-text {
-  background: linear-gradient(135deg, #92adef, #8dd4da, #f4c4dc);
+.summer-gradient-text {
+  background: linear-gradient(135deg, #FF299D, #FF8900, #E0FF00);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ── Glow effect for interactive elements ── */
-.oasis-glow {
+.summer-glow {
   box-shadow:
-    0 0 20px rgba(146, 173, 239, 0.3),
-    0 0 40px rgba(141, 212, 218, 0.15);
+    0 0 20px rgba(255, 41, 157, 0.35),
+    0 0 40px rgba(118, 208, 228, 0.2);
 }
 
-.oasis-glow-pink {
+.summer-glow-yellow {
   box-shadow:
-    0 0 20px rgba(244, 196, 220, 0.35),
-    0 0 40px rgba(146, 173, 239, 0.15);
+    0 0 20px rgba(224, 255, 0, 0.4),
+    0 0 40px rgba(255, 137, 0, 0.2);
 }
 
 /* ── Font utility classes ── */
@@ -229,4 +202,39 @@
 }
 .font-secondary {
   font-family: var(--font-secondary);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Summer UP — Admin Theme Override
+   Applied via [data-theme="admin"] on the admin layout wrapper
+   ══════════════════════════════════════════════════════════ */
+[data-theme="admin"] {
+  --primary: #00B38B;
+  --primary-foreground: #ffffff;
+  --accent: #000000;
+  --accent-foreground: #ffffff;
+  --ring: #00B38B;
+  --chart-1: #00B38B;
+  --chart-2: #000000;
+  --chart-3: #76D0E4;
+  --chart-4: #E05CFF;
+  --chart-5: #FF8900;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #00B38B;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255,255,255,0.1);
+  --sidebar-ring: #00B38B;
+}
+
+.admin-gradient {
+  background: linear-gradient(135deg, #00B38B 0%, #000000 50%, #76D0E4 100%);
+}
+.admin-gradient-text {
+  background: linear-gradient(135deg, #00B38B, #76D0E4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

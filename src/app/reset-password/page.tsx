@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-slate-900">Oasis Digital</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Summer UP</h1>
           <p className="text-slate-500">Restablecer contraseña</p>
         </div>
 

@@ -182,7 +182,7 @@ function LoginContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-slate-900">Oasis Digital</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Summer UP</h1>
           <p className="text-slate-500">
             {isNavigating ? 'Preparando tu espacio...' : 'Cargando...'}
           </p>
@@ -200,7 +200,7 @@ function LoginContent() {
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-slate-900">Oasis Digital</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Summer UP</h1>
           <p className="text-slate-500">Plataforma de bienestar y desarrollo</p>
         </div>
 
@@ -336,7 +336,7 @@ function LoginContent() {
             <TabsContent value="register" className="p-6 space-y-4">
               <div className="text-center pb-2">
                 <h2 className="text-lg font-semibold text-slate-800">Crear cuenta</h2>
-                <p className="text-sm text-slate-500">Únete a la comunidad Oasis</p>
+                <p className="text-sm text-slate-500">Únete a la comunidad Summer UP</p>
               </div>
 
               {registerSuccess ? (
@@ -460,7 +460,7 @@ export default function LoginPage() {
       fallback={
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">Oasis Digital</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Summer UP</h1>
             <p className="text-slate-500">Cargando...</p>
           </div>
         </div>

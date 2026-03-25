@@ -169,7 +169,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">Oasis Digital</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Summer UP</h1>
           <p className="text-slate-500">Cargando...</p>
         </div>
       </div>
@@ -411,8 +411,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <header className={cn(
           'sticky top-0 z-50 h-16 flex items-center gap-4 px-4 md:px-6 transition-all duration-500',
           isParticipantTheme
-            ? 'oasis-glass border-b border-sky-100/50'
-            : 'oasis-glass-dark'
+            ? 'summer-glass border-b border-sky-100/50'
+            : 'summer-glass-dark'
         )}>
   
           {/* Logo */}
@@ -421,8 +421,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             className="shrink-0 mr-4 flex items-center"
           >
             <Image
-              src="/2.svg"
-              alt="Oasis Digital"
+              src="/logo-summerup.png"
+              alt="Summer UP"
               width={180}
               height={48}
               priority

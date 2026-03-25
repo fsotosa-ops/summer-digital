@@ -116,7 +116,7 @@ export function CRMTable() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Organización</TableHead>
                 <TableHead>Rango</TableHead>
-                <TableHead>Oasis Score</TableHead>
+                <TableHead>Summer Score</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Última Conexión</TableHead>
             </TableRow>
@@ -163,7 +163,7 @@ export function CRMTable() {
                 >
                     <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 ring-2 ring-oasis-blue/30">
+                            <Avatar className="h-8 w-8 ring-2 ring-summer-sky/30">
                                 <AvatarImage src={`https://i.pravatar.cc/150?u=${user.id}`} />
                                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                             </Avatar>
