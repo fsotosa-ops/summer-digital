@@ -19,7 +19,7 @@ export function GamificationWidget({ score, rank }: GamificationWidgetProps) {
   return (
     <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
       {/* Top decorative border */}
-      <div className="h-1 bg-gradient-to-r from-amber-100/50 via-purple-50/10 to-transparent" />
+      <div className="h-1 bg-gradient-to-r from-summer-yellow/50 via-summer-lavender/10/10 to-transparent" />
 
       <div className="p-6">
         <OasisScore score={score} rank={rank} />

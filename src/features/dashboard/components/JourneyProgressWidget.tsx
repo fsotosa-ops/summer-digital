@@ -21,7 +21,7 @@ export function JourneyProgressWidget() {
           <h3 className="text-base font-semibold text-slate-800">Mi Progreso</h3>
           <Link
             href="/journey"
-            className="flex items-center gap-1 text-xs text-fuchsia-600 hover:text-fuchsia-500 font-medium transition-colors"
+            className="flex items-center gap-1 text-xs text-summer-pink hover:text-summer-pink font-medium transition-colors"
           >
             Ver todo <ArrowRight size={12} />
           </Link>
@@ -50,7 +50,7 @@ export function JourneyProgressWidget() {
               >
                 {/* Progress bar gradient background */}
                 <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-fuchsia-50 to-transparent rounded-2xl transition-all duration-500"
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-summer-pink/10 to-transparent rounded-2xl transition-all duration-500"
                   style={{ width: `${Math.max(journey.progress, 5)}%` }}
                 />
                 <div className="relative z-10 flex items-center justify-between">

@@ -48,17 +48,17 @@ import { toast } from 'sonner';
 function categoryBadgeClasses(cat: string): string {
   const key = cat.toLowerCase();
   const map: Record<string, string> = {
-    liderazgo:  'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-    bienestar:  'bg-teal-50    text-teal-700    border-teal-200',
-    innovacion: 'bg-amber-50   text-amber-700   border-amber-200',
-    comunidad:  'bg-sky-50     text-sky-700     border-sky-200',
+    liderazgo:  'bg-summer-pink/10 text-summer-pink border-summer-pink',
+    bienestar:  'bg-summer-teal/10    text-summer-teal    border-summer-teal',
+    innovacion: 'bg-summer-yellow/10   text-summer-yellow   border-summer-yellow',
+    comunidad:  'bg-summer-sky/10     text-summer-sky     border-summer-sky',
   };
   return map[key] ?? 'bg-slate-100 text-slate-600 border-slate-200';
 }
 
 /* ─── Mini progress bar ──────────────────────────────── */
 function MiniProgress({ pct }: { pct: number }) {
-  const color = pct >= 60 ? 'bg-teal-500' : pct >= 30 ? 'bg-amber-400' : 'bg-slate-300';
+  const color = pct >= 60 ? 'bg-summer-teal' : pct >= 30 ? 'bg-summer-yellow' : 'bg-slate-300';
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
@@ -292,10 +292,10 @@ export default function AdminJourneysPage() {
 
       {/* ── Page header ─────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="h-[2px] bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
         <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender
                             flex items-center justify-center shadow-sm shrink-0">
               <Map size={22} className="text-white" />
             </div>
@@ -314,7 +314,7 @@ export default function AdminJourneysPage() {
             }}>
               <DialogTrigger asChild>
                 <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                                   bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                                   bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                                    hover:opacity-90 transition-opacity shadow-sm shrink-0">
                   <Plus size={15} /> Nuevo Journey
                   <Sparkles size={12} className="opacity-70" />
@@ -399,11 +399,11 @@ export default function AdminJourneysPage() {
                   </div>
 
                   {formData.category === 'Onboarding' && (
-                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 space-y-2">
+                    <div className="rounded-lg border border-summer-sky bg-summer-sky/10 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium text-sky-800">Usar template preconfigurado</p>
-                          <p className="text-xs text-sky-600">
+                          <p className="text-sm font-medium text-summer-sky">Usar template preconfigurado</p>
+                          <p className="text-xs text-summer-sky">
                             Crea 4 steps de perfil CRM con XP (trayectoria, ubicación, datos personales, contacto).
                             Se completan automáticamente al guardar el perfil.
                           </p>
@@ -411,7 +411,7 @@ export default function AdminJourneysPage() {
                         <Switch checked={useOnboardingTemplate} onCheckedChange={setUseOnboardingTemplate} />
                       </div>
                       {useOnboardingTemplate && (
-                        <p className="text-xs text-sky-500">
+                        <p className="text-xs text-summer-sky">
                           El título y slug serán reemplazados por los del template.
                         </p>
                       )}
@@ -444,7 +444,7 @@ export default function AdminJourneysPage() {
                     <Button
                       type="submit"
                       disabled={isCreating || (!useOnboardingTemplate && !formData.title) || (isSuperAdmin && accessOrgIds.length === 0)}
-                      className="bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0
+                      className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white hover:opacity-90 border-0
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isCreating ? (
@@ -462,12 +462,12 @@ export default function AdminJourneysPage() {
 
       {/* ── SuperAdmin org selector ─────────────────────── */}
       {isSuperAdmin && organizations.length > 1 && (
-        <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4
+        <div className="bg-white rounded-2xl border border-summer-lavender shadow-sm p-4
                         flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-purple-50 border border-purple-200
+            <div className="h-8 w-8 rounded-lg bg-summer-lavender/10 border border-summer-lavender
                             flex items-center justify-center shrink-0">
-              <Building2 size={15} className="text-purple-600" />
+              <Building2 size={15} className="text-summer-lavender" />
             </div>
             <span className="text-sm font-medium text-slate-700">Organización activa</span>
           </div>
@@ -475,7 +475,7 @@ export default function AdminJourneysPage() {
             value={selectedOrgId || '__all__'}
             onValueChange={(v) => setSelectedOrgId(v === '__all__' ? null : v)}
           >
-            <SelectTrigger className="w-full sm:w-[240px] border-purple-200 focus:ring-purple-400 text-sm">
+            <SelectTrigger className="w-full sm:w-[240px] border-summer-lavender focus:ring-summer-lavender text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -500,18 +500,18 @@ export default function AdminJourneysPage() {
             <div key={label}
               className={cn(
                 'bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-3',
-                color === 'fuchsia' && 'border-fuchsia-100',
-                color === 'teal'    && 'border-teal-100',
+                color === 'fuchsia' && 'border-summer-pink',
+                color === 'teal'    && 'border-summer-teal',
                 color === 'slate'   && 'border-slate-100',
-                color === 'amber'   && 'border-amber-100',
+                color === 'amber'   && 'border-summer-yellow',
               )}
             >
               <span className={cn(
                 'h-9 w-9 rounded-xl flex items-center justify-center shrink-0',
-                color === 'fuchsia' && 'bg-fuchsia-50 text-fuchsia-600',
-                color === 'teal'    && 'bg-teal-50    text-teal-600',
+                color === 'fuchsia' && 'bg-summer-pink/10 text-summer-pink',
+                color === 'teal'    && 'bg-summer-teal/10    text-summer-teal',
                 color === 'slate'   && 'bg-slate-100  text-slate-500',
-                color === 'amber'   && 'bg-amber-50   text-amber-600',
+                color === 'amber'   && 'bg-summer-yellow/10   text-summer-yellow',
               )}>
                 {icon}
               </span>
@@ -537,7 +537,7 @@ export default function AdminJourneysPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all',
               statusFilter === key
-                ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-summer-pink to-summer-lavender text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
@@ -581,7 +581,7 @@ export default function AdminJourneysPage() {
         /* ── Empty state ───────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-16 px-6
                         bg-white rounded-2xl border border-slate-100 shadow-sm text-center">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-summer-pink to-summer-lavender
                           flex items-center justify-center shadow-sm mb-4">
             <Map size={28} className="text-white" />
           </div>
@@ -597,7 +597,7 @@ export default function AdminJourneysPage() {
             <button
               onClick={() => setCreateDialogOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                         bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                         bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                          hover:opacity-90 transition-opacity shadow-sm"
             >
               <Plus size={15} /> Crear primer journey
@@ -630,7 +630,7 @@ export default function AdminJourneysPage() {
                 return (
                   <TableRow
                     key={journey.id}
-                    className="group cursor-pointer hover:bg-fuchsia-50/30 transition-colors"
+                    className="group cursor-pointer hover:bg-summer-pink/10/30 transition-colors"
                     onClick={() => router.push(`/admin/journeys/${journey.id}`)}
                   >
                     {/* Title with color bar */}
@@ -638,7 +638,7 @@ export default function AdminJourneysPage() {
                       <div className="flex items-center gap-0">
                         <div className={cn(
                           'w-1 self-stretch rounded-r-full mr-4 shrink-0',
-                          journey.is_active ? 'bg-fuchsia-400' : 'bg-slate-200'
+                          journey.is_active ? 'bg-summer-pink' : 'bg-slate-200'
                         )} />
                         <div>
                           <p className="font-medium text-slate-800">{journey.title}</p>
@@ -656,7 +656,7 @@ export default function AdminJourneysPage() {
                               <Badge
                                 key={name}
                                 variant="outline"
-                                className="text-[10px] font-medium bg-purple-50 text-purple-700 border-purple-200 whitespace-nowrap"
+                                className="text-[10px] font-medium bg-summer-lavender/10 text-summer-lavender border-summer-lavender whitespace-nowrap"
                               >
                                 {name}
                               </Badge>
@@ -687,7 +687,7 @@ export default function AdminJourneysPage() {
                       <Badge variant="outline" className={cn(
                         'text-xs font-semibold',
                         journey.is_active
-                          ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                          ? 'bg-summer-pink/10 text-summer-pink border-summer-pink'
                           : 'bg-slate-100 text-slate-500 border-slate-200'
                       )}>
                         {journey.is_active ? 'Activo' : 'Inactivo'}
@@ -723,7 +723,7 @@ export default function AdminJourneysPage() {
                             onClick={() => router.push(`/admin/journeys/${journey.id}`)}
                             title="Editar"
                             className="h-8 w-8 flex items-center justify-center rounded-lg
-                                       text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50 transition-colors"
+                                       text-slate-400 hover:text-summer-pink hover:bg-summer-pink/10 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -731,7 +731,7 @@ export default function AdminJourneysPage() {
                             onClick={() => handleToggleActive(journey)}
                             title={journey.is_active ? 'Archivar' : 'Publicar'}
                             className="h-8 w-8 flex items-center justify-center rounded-lg
-                                       text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                                       text-slate-400 hover:text-summer-teal hover:bg-summer-teal/10 transition-colors"
                           >
                             {journey.is_active ? <Archive size={14} /> : <Eye size={14} />}
                           </button>

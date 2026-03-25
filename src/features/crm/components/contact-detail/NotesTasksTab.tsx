@@ -93,7 +93,7 @@ export function NotesTasksTab({
             size="sm"
             onClick={onCreateNote}
             disabled={savingNote || !newNoteContent.trim()}
-            className="bg-teal-600 hover:bg-teal-700 h-8"
+            className="bg-summer-teal hover:bg-summer-teal h-8"
           >
             {savingNote && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
             <Plus className="h-3.5 w-3.5 mr-1" />
@@ -172,7 +172,7 @@ export function NotesTasksTab({
             size="sm"
             onClick={onCreateTask}
             disabled={savingTask || !newTaskTitle.trim()}
-            className="bg-teal-600 hover:bg-teal-700 h-8"
+            className="bg-summer-teal hover:bg-summer-teal h-8"
           >
             {savingTask ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

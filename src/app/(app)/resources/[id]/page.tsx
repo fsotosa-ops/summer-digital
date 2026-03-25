@@ -111,7 +111,7 @@ export default function ResourceDetailPage() {
             {resource.lock_reasons.map((reason, i) => (
               <p
                 key={i}
-                className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg inline-block"
+                className="text-sm text-summer-yellow bg-summer-yellow/10 px-3 py-2 rounded-lg inline-block"
               >
                 <Lock className="h-3 w-3 inline mr-1" />
                 {reason}
@@ -140,11 +140,11 @@ export default function ResourceDetailPage() {
   const TypeIcon = typeIcons[resource.type] || FileText;
 
   const typeBadgeColors: Record<string, string> = {
-    video: 'bg-sky-50 text-sky-700 border-sky-200',
-    podcast: 'bg-purple-50 text-purple-700 border-purple-200',
+    video: 'bg-summer-sky/10 text-summer-sky border-summer-sky',
+    podcast: 'bg-summer-lavender/10 text-summer-lavender border-summer-lavender',
     pdf: 'bg-red-50 text-red-700 border-red-200',
-    capsula: 'bg-amber-50 text-amber-700 border-amber-200',
-    actividad: 'bg-teal-50 text-teal-700 border-teal-200',
+    capsula: 'bg-summer-yellow/10 text-summer-yellow border-summer-yellow',
+    actividad: 'bg-summer-teal/10 text-summer-teal border-summer-teal',
   };
   const badgeColor = typeBadgeColors[resource.type] || 'bg-slate-50 text-slate-700 border-slate-200';
 
@@ -184,7 +184,7 @@ export default function ResourceDetailPage() {
 
         {/* XP badge */}
         {resource.points_on_completion > 0 && !resource.is_consumed && (
-          <span className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+          <span className="flex items-center gap-1 bg-summer-yellow/10 text-summer-yellow border border-summer-yellow text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
             <Zap size={11} /> {resource.points_on_completion} xp
           </span>
         )}
@@ -230,7 +230,7 @@ export default function ResourceDetailPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl
-                           bg-gradient-to-r from-sky-500 to-teal-500 text-white
+                           bg-gradient-to-r from-summer-sky to-summer-teal text-white
                            font-bold shadow hover:opacity-90 transition-opacity"
               >
                 <ExternalLink size={16} />
@@ -270,7 +270,7 @@ export default function ResourceDetailPage() {
             exit={{ opacity: 0, y: -100 }}
             transition={{ duration: 1.4, ease: 'easeOut' }}
           >
-            <span className="text-3xl font-black text-amber-500 drop-shadow-lg">
+            <span className="text-3xl font-black text-summer-yellow drop-shadow-lg">
               +{xpPop.amount} xp ⚡
             </span>
           </motion.div>
@@ -296,7 +296,7 @@ export default function ResourceDetailPage() {
             onClick={handleComplete}
             disabled={isCompleting}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold shadow
-                       bg-gradient-to-r from-sky-500 to-teal-500 text-white text-sm
+                       bg-gradient-to-r from-summer-sky to-summer-teal text-white text-sm
                        hover:opacity-90 transition-opacity disabled:opacity-60 flex-shrink-0 ml-4"
           >
             {isCompleting ? (

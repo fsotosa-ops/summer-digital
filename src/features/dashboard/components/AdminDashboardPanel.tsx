@@ -27,28 +27,28 @@ const QUICK_ACTIONS = [
     description: 'Diseña experiencias de aprendizaje',
     href: '/admin/journeys',
     icon: Route,
-    gradient: 'from-fuchsia-500 to-purple-600',
+    gradient: 'from-summer-pink to-summer-lavender',
   },
   {
     label: 'Publicar Recurso',
     description: 'Sube videos, PDFs y cápsulas',
     href: '/admin/resources',
     icon: BookOpen,
-    gradient: 'from-sky-400 to-blue-500',
+    gradient: 'from-summer-sky to-blue-500',
   },
   {
     label: 'CRM',
     description: 'Gestiona contactos y pipeline',
     href: '/crm',
     icon: Users,
-    gradient: 'from-teal-400 to-cyan-500',
+    gradient: 'from-summer-teal to-cyan-500',
   },
   {
     label: 'Gamificación',
     description: 'Puntos, rangos y recompensas',
     href: '/admin/gamification',
     icon: Trophy,
-    gradient: 'from-amber-400 to-orange-500',
+    gradient: 'from-summer-yellow to-orange-500',
   },
   {
     label: 'Analítica',
@@ -96,10 +96,10 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
   }, [orgId]);
 
   const KPI_CARDS = [
-    { label: 'Usuarios Activos', sub: 'Total registrados', icon: Users,     border: 'border-fuchsia-100', iconGradient: 'from-fuchsia-500 to-purple-600', value: stats.users },
-    { label: 'Journeys',         sub: 'Publicados',        icon: Route,     border: 'border-sky-100',     iconGradient: 'from-sky-500 to-blue-600',       value: stats.journeys },
-    { label: 'Recursos',         sub: 'Disponibles',       icon: Layers,    border: 'border-teal-100',    iconGradient: 'from-teal-500 to-cyan-600',       value: stats.resources },
-    { label: 'Completados',      sub: 'Total acumulado',   icon: BarChart3, border: 'border-amber-100',   iconGradient: 'from-amber-500 to-orange-500',    value: stats.completions },
+    { label: 'Usuarios Activos', sub: 'Total registrados', icon: Users,     border: 'border-summer-pink', iconGradient: 'from-summer-pink to-summer-lavender', value: stats.users },
+    { label: 'Journeys',         sub: 'Publicados',        icon: Route,     border: 'border-summer-sky',     iconGradient: 'from-summer-sky to-blue-600',       value: stats.journeys },
+    { label: 'Recursos',         sub: 'Disponibles',       icon: Layers,    border: 'border-summer-teal',    iconGradient: 'from-summer-teal to-cyan-600',       value: stats.resources },
+    { label: 'Completados',      sub: 'Total acumulado',   icon: BarChart3, border: 'border-summer-yellow',   iconGradient: 'from-summer-yellow to-orange-500',    value: stats.completions },
   ];
 
   return (
@@ -107,9 +107,9 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
 
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="h-1 bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
         <div className="p-6 flex items-center gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shrink-0">
             <LayoutDashboard size={22} className="text-white" />
           </div>
           <div>
@@ -156,7 +156,7 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
 
       {/* Quick Actions card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="h-1 bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
         <div className="p-6">
           <h2 className="text-base font-semibold text-slate-700 border-b border-slate-100 pb-3 mb-4">
             Acciones Rápidas

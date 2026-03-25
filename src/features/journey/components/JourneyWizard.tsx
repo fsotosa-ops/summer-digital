@@ -81,7 +81,7 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
 
 const NONE = '__none__';
 
-const WIZARD_BG = 'bg-gradient-to-br from-sky-50 via-white to-teal-50';
+const WIZARD_BG = 'bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10';
 
 // ─── Types ──────────────────────────────────────────────────────
 interface JourneyWizardProps {
@@ -357,8 +357,8 @@ export function JourneyWizard({
             className={cn(
               'px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-150',
               currentValue === opt.value
-                ? 'border-sky-500 bg-sky-50 text-sky-700 scale-[1.03] shadow-sm'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50/60'
+                ? 'border-summer-sky bg-summer-sky/10 text-summer-sky scale-[1.03] shadow-sm'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-summer-sky hover:bg-summer-sky/10/60'
             )}
           >
             {opt.label}
@@ -430,7 +430,7 @@ export function JourneyWizard({
           type="date"
           value={value}
           onChange={e => handleDraftChange(fieldName, e.target.value)}
-          className="h-14 text-base border-slate-200 focus:border-sky-400 focus-visible:ring-sky-400/20"
+          className="h-14 text-base border-slate-200 focus:border-summer-sky focus-visible:ring-summer-sky/20"
         />
       );
     }
@@ -454,7 +454,7 @@ export function JourneyWizard({
             else handleCompleteStep();
           }
         }}
-        className="h-14 text-base border-slate-200 focus:border-sky-400 focus-visible:ring-sky-400/20"
+        className="h-14 text-base border-slate-200 focus:border-summer-sky focus-visible:ring-summer-sky/20"
       />
     );
   };
@@ -473,13 +473,13 @@ export function JourneyWizard({
         className="w-full max-w-lg"
       >
         <div className="text-center mb-8">
-          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-sky-500 to-teal-500 flex items-center justify-center mx-auto mb-3">
+          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-sky to-summer-teal flex items-center justify-center mx-auto mb-3">
             {node.type === 'video'
               ? <Video className="h-10 w-10 text-white" />
               : <FileText className="h-10 w-10 text-white" />
             }
           </div>
-          <div className="h-1 w-12 bg-gradient-to-r from-sky-400 to-teal-400 rounded-full mx-auto mt-2 mb-6" />
+          <div className="h-1 w-12 bg-gradient-to-r from-summer-sky to-summer-teal rounded-full mx-auto mt-2 mb-6" />
           <h2 className="text-2xl font-bold text-slate-800">{node.title}</h2>
           {node.description && (
             <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">{node.description}</p>
@@ -511,7 +511,7 @@ export function JourneyWizard({
             className={cn(
               'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
               !isSaving
-                ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             )}
           >
@@ -524,7 +524,7 @@ export function JourneyWizard({
 
         {node.points && (
           <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
-            <Zap className="h-3 w-3 text-amber-400" />
+            <Zap className="h-3 w-3 text-summer-yellow" />
             +{node.points} XP al completar
           </p>
         )}
@@ -554,10 +554,10 @@ export function JourneyWizard({
       >
         {/* Step context badge */}
         <div className="text-center mb-5">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-sky-500 to-teal-500 flex items-center justify-center mx-auto mb-2">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-summer-sky to-summer-teal flex items-center justify-center mx-auto mb-2">
             <User className="h-6 w-6 text-white" />
           </div>
-          <p className="text-xs font-semibold text-sky-500 uppercase tracking-wider">{node.title}</p>
+          <p className="text-xs font-semibold text-summer-sky uppercase tracking-wider">{node.title}</p>
           {node.description && fieldIndex === 0 && (
             <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">{node.description}</p>
           )}
@@ -582,8 +582,8 @@ export function JourneyWizard({
               <div className="space-y-5">
                 {FieldIcon && (
                   <div className="flex justify-center">
-                    <div className="h-16 w-16 rounded-2xl bg-sky-50 flex items-center justify-center">
-                      <FieldIcon className="h-8 w-8 text-sky-500" />
+                    <div className="h-16 w-16 rounded-2xl bg-summer-sky/10 flex items-center justify-center">
+                      <FieldIcon className="h-8 w-8 text-summer-sky" />
                     </div>
                   </div>
                 )}
@@ -621,7 +621,7 @@ export function JourneyWizard({
               className={cn(
                 'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
                 fieldFilled && !(isLastField && isSaving)
-                  ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                  ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               )}
             >
@@ -638,7 +638,7 @@ export function JourneyWizard({
 
         {node.points && (
           <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
-            <Zap className="h-3 w-3 text-amber-400" />
+            <Zap className="h-3 w-3 text-summer-yellow" />
             +{node.points} XP al completar
           </p>
         )}
@@ -655,7 +655,7 @@ export function JourneyWizard({
         transition={{ duration: 0.4, ease: 'easeOut' }}
         className={`fixed inset-0 z-[100] ${WIZARD_BG} flex items-center justify-center`}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-summer-sky" />
       </motion.div>
     );
   }
@@ -677,16 +677,16 @@ export function JourneyWizard({
           transition={{ type: 'spring', bounce: 0.5 }}
           className="text-center px-8 max-w-sm"
         >
-          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-yellow to-yellow-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
             <Trophy className="h-12 w-12 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Perfil Completo</h1>
           <p className="text-slate-500 mb-6">
-            Ganaste <span className="font-bold text-sky-600">+{xpTotal} XP</span> por completar tu onboarding.
+            Ganaste <span className="font-bold text-summer-sky">+{xpTotal} XP</span> por completar tu onboarding.
           </p>
           <button
             onClick={onBack}
-            className="bg-gradient-to-r from-sky-500 to-teal-500 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
+            className="bg-gradient-to-r from-summer-sky to-summer-teal text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
             Continuar
           </button>
@@ -719,7 +719,7 @@ export function JourneyWizard({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.1, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className="h-20 w-20 rounded-full bg-teal-500 flex items-center justify-center shadow-xl"
+              className="h-20 w-20 rounded-full bg-summer-teal flex items-center justify-center shadow-xl"
             >
               <Check className="h-10 w-10 text-white" />
             </motion.div>
@@ -749,9 +749,9 @@ export function JourneyWizard({
               className={cn(
                 'h-2.5 rounded-full transition-all duration-300',
                 node.status === 'completed'
-                  ? 'w-2.5 bg-teal-500'
+                  ? 'w-2.5 bg-summer-teal'
                   : node.status === 'available'
-                  ? 'w-8 bg-sky-500'
+                  ? 'w-8 bg-summer-sky'
                   : 'w-2.5 bg-slate-200'
               )}
             />
@@ -762,7 +762,7 @@ export function JourneyWizard({
       {/* Progress bar */}
       <div className="h-1.5 bg-slate-100 flex-shrink-0">
         <motion.div
-          className="h-full bg-gradient-to-r from-sky-500 to-teal-500"
+          className="h-full bg-gradient-to-r from-summer-sky to-summer-teal"
           animate={{ width: `${progressPct}%` }}
           transition={{ type: 'spring', stiffness: 80, damping: 20 }}
         />
@@ -775,7 +775,7 @@ export function JourneyWizard({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
-            className="absolute top-20 right-4 z-[110] flex items-center gap-1.5 bg-amber-400 text-amber-900 font-bold text-sm px-3 py-1.5 rounded-full shadow-lg"
+            className="absolute top-20 right-4 z-[110] flex items-center gap-1.5 bg-summer-yellow text-summer-yellow font-bold text-sm px-3 py-1.5 rounded-full shadow-lg"
           >
             <Zap className="h-4 w-4" />
             +{xpPop.amount} XP
@@ -791,14 +791,14 @@ export function JourneyWizard({
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-lg text-center"
           >
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-summer-yellow to-yellow-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Trophy className="h-10 w-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">Todo listo</h2>
             <p className="text-slate-500 mb-6">Tu perfil está completo.</p>
             <button
               onClick={onBack}
-              className="bg-gradient-to-r from-sky-500 to-teal-500 text-white font-semibold px-8 py-3 rounded-xl"
+              className="bg-gradient-to-r from-summer-sky to-summer-teal text-white font-semibold px-8 py-3 rounded-xl"
             >
               Ir al inicio
             </button>

@@ -74,7 +74,7 @@ function AvailableJourneyCards({
                 onClick={() => onEnroll(journey.id)}
                 disabled={enrollingId === journey.id}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
-                           bg-gradient-to-r from-amber-400 to-orange-500 text-white
+                           bg-gradient-to-r from-summer-yellow to-orange-500 text-white
                            text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
               >
                 {enrollingId === journey.id
@@ -213,7 +213,7 @@ export default function JourneyPage() {
   if (!orgId && !isAdminMode && !loadingOrgs && organizations.length === 0) {
     return (
       <div className="p-8 text-center">
-        <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+        <AlertCircle className="h-12 w-12 mx-auto text-summer-yellow mb-4" />
         <h2 className="text-xl font-bold text-slate-800 mb-2">Sin organizacion asignada</h2>
         <p className="text-slate-500">
           Necesitas pertenecer a una organizacion para ver los journeys disponibles.
@@ -229,7 +229,7 @@ export default function JourneyPage() {
       <div className="space-y-6 animate-in fade-in duration-300">
         {/* Hero skeleton */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
+          <div className="h-1 bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
           <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Skeleton className="h-10 w-10 rounded-xl" />
@@ -292,10 +292,10 @@ export default function JourneyPage() {
 
       {/* ── Page hero ──────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
+        <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-teal-500
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
                             flex items-center justify-center shadow-sm shrink-0">
               <Map size={20} className="text-white" />
             </div>
@@ -318,8 +318,8 @@ export default function JourneyPage() {
                 className={cn(
                   'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors',
                   activeTab === 'progress'
-                    ? 'bg-teal-500 border-teal-500 text-white'
-                    : 'bg-teal-50 border-teal-100 text-teal-700 hover:bg-teal-100'
+                    ? 'bg-summer-teal border-summer-teal text-white'
+                    : 'bg-summer-teal/10 border-summer-teal text-summer-teal hover:bg-summer-teal'
                 )}
               >
                 <Play size={11} /> {activeJourneys.length} En progreso
@@ -342,18 +342,18 @@ export default function JourneyPage() {
 
       {/* ── SuperAdmin org selector ─────────────────────── */}
       {isAdminMode && organizations.length > 1 && (
-        <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4
+        <div className="bg-white rounded-2xl border border-summer-lavender shadow-sm p-4
                         flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-purple-50 border border-purple-200
+            <div className="h-8 w-8 rounded-lg bg-summer-lavender/10 border border-summer-lavender
                             flex items-center justify-center shrink-0">
-              <Building2 size={15} className="text-purple-600" />
+              <Building2 size={15} className="text-summer-lavender" />
             </div>
             <span className="text-sm font-medium text-slate-700">Vista de organización</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
-              <SelectTrigger className="w-full sm:w-[220px] border-purple-200 focus:ring-purple-400 text-sm">
+              <SelectTrigger className="w-full sm:w-[220px] border-summer-lavender focus:ring-summer-lavender text-sm">
                 <SelectValue placeholder="Selecciona organización" />
               </SelectTrigger>
               <SelectContent>
@@ -362,7 +362,7 @@ export default function JourneyPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs shrink-0">
+            <Badge variant="outline" className="bg-summer-lavender/10 text-summer-lavender border-summer-lavender text-xs shrink-0">
               Vista Previa
             </Badge>
           </div>
@@ -386,7 +386,7 @@ export default function JourneyPage() {
             className={cn(
               'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
               !orgFilter
-                ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             )}
           >
@@ -399,7 +399,7 @@ export default function JourneyPage() {
               className={cn(
                 'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
                 orgFilter === org.id
-                  ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                  ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               )}
             >
@@ -419,7 +419,7 @@ export default function JourneyPage() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
                 activeTab === tab.key
-                  ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               )}
             >
@@ -566,7 +566,7 @@ export default function JourneyPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-[1.5px] bg-teal-400" />
+                      <div className="h-[1.5px] bg-summer-teal" />
                     )}
                     <div className="p-4 flex flex-col gap-3 flex-1">
                       <div className="flex items-start justify-between gap-2">
@@ -574,19 +574,19 @@ export default function JourneyPage() {
                           {journey.title}
                         </h3>
                         {!journey.thumbnail_url && (
-                          <CheckCircle size={16} className="text-teal-500 shrink-0 mt-0.5" />
+                          <CheckCircle size={16} className="text-summer-teal shrink-0 mt-0.5" />
                         )}
                       </div>
                       {journey.category && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-teal-600
-                                         bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full w-fit">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-summer-teal
+                                         bg-summer-teal/10 border border-summer-teal px-2 py-0.5 rounded-full w-fit">
                           {journey.category}
                         </span>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); router.push('/journey/' + journey.id); }}
-                        className="mt-auto text-xs font-semibold text-slate-500 hover:text-teal-600
-                                   border border-slate-200 hover:border-teal-200 rounded-xl py-2 transition-colors"
+                        className="mt-auto text-xs font-semibold text-slate-500 hover:text-summer-teal
+                                   border border-slate-200 hover:border-summer-teal rounded-xl py-2 transition-colors"
                       >
                         Ver certificado / Repasar
                       </button>

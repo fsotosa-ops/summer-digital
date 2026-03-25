@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 
 const PRIORITY_COLORS: Record<string, string> = {
   low:    'bg-slate-100 text-slate-600',
-  medium: 'bg-sky-100 text-sky-700',
+  medium: 'bg-summer-sky text-summer-sky',
   high:   'bg-orange-100 text-orange-700',
   urgent: 'bg-red-100 text-red-700',
 };
@@ -36,7 +36,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 const COLUMNS: { key: ApiCrmTaskStatus; label: string; color: string; dot: string }[] = [
-  { key: 'pending',     label: 'Pendientes',   color: 'border-t-amber-400',  dot: 'bg-amber-400'  },
+  { key: 'pending',     label: 'Pendientes',   color: 'border-t-summer-yellow',  dot: 'bg-summer-yellow'  },
   { key: 'in_progress', label: 'En Progreso',  color: 'border-t-blue-500',   dot: 'bg-blue-500'   },
   { key: 'completed',   label: 'Completadas',  color: 'border-t-green-500',  dot: 'bg-green-500'  },
 ];
@@ -104,7 +104,7 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Resumen general</h3>
-        <Button variant="ghost" size="sm" onClick={loadData} className="h-8 text-slate-500 hover:text-fuchsia-600">
+        <Button variant="ghost" size="sm" onClick={loadData} className="h-8 text-slate-500 hover:text-summer-pink">
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Actualizar
         </Button>
@@ -112,19 +112,19 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
 
       {/* Hero — Total Contactos + Mini Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card className="lg:col-span-1 rounded-2xl shadow-sm border-0 bg-gradient-to-br from-fuchsia-50 to-purple-50">
+        <Card className="lg:col-span-1 rounded-2xl shadow-sm border-0 bg-gradient-to-br from-summer-pink/10 to-summer-lavender/10">
           <CardContent className="pt-6 pb-5">
             <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-4">
               <div>
-                <p className="text-xs font-semibold text-fuchsia-600 uppercase tracking-wide mb-1">
+                <p className="text-xs font-semibold text-summer-pink uppercase tracking-wide mb-1">
                   Contactos
                 </p>
-                <p className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-600 to-purple-600 leading-none">
+                <p className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-summer-pink to-summer-lavender leading-none">
                   {stats?.total_contacts ?? 0}
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-fuchsia-100 flex items-center justify-center">
-                <Users className="h-6 w-6 text-fuchsia-600" />
+              <div className="h-12 w-12 rounded-2xl bg-summer-pink flex items-center justify-center">
+                <Users className="h-6 w-6 text-summer-pink" />
               </div>
             </div>
           </CardContent>
@@ -133,7 +133,7 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
         <div className="lg:col-span-1 grid grid-cols-1 gap-3">
           {[
             { label: 'Activos', value: stats?.active_contacts ?? 0, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'En Riesgo', value: stats?.risk_contacts ?? 0, icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50' },
+            { label: 'En Riesgo', value: stats?.risk_contacts ?? 0, icon: AlertTriangle, color: 'text-summer-yellow', bg: 'bg-summer-yellow/10' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="bg-white rounded-xl p-3 flex items-center justify-between border border-slate-100 shadow-xs">
               <div>
@@ -170,7 +170,7 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
       {/* Pipeline Header */}
       <div className="pt-4">
         <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-fuchsia-600" />
+          <Activity className="h-4 w-4 text-summer-pink" />
           Pipeline de Tareas
         </h3>
       </div>
@@ -203,12 +203,12 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
                       key={task.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-xl p-3 space-y-3 border border-slate-100 shadow-sm hover:border-fuchsia-200 hover:shadow-md transition-all group relative overflow-hidden"
+                      className="bg-white rounded-xl p-3 space-y-3 border border-slate-100 shadow-sm hover:border-summer-pink hover:shadow-md transition-all group relative overflow-hidden"
                     >
-                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-fuchsia-400 transition-colors" />
+                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-summer-pink transition-colors" />
                       
                       <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-fuchsia-700 transition-colors">
+                        <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-summer-pink transition-colors">
                           {task.title}
                         </p>
                         {task.description && (
@@ -236,7 +236,7 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
                         <button
                           onClick={() => moveTask(task)}
                           disabled={movingId === task.id}
-                          className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50 py-1.5 rounded-lg transition-all border-t border-slate-50 group-hover:border-fuchsia-100"
+                          className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 hover:text-summer-pink hover:bg-summer-pink/10 py-1.5 rounded-lg transition-all border-t border-slate-50 group-hover:border-summer-pink"
                         >
                           {movingId === task.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />

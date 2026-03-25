@@ -144,7 +144,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
-              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-2xl"
+              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shadow-2xl"
             >
               <span className="text-4xl font-bold text-white">S</span>
             </motion.div>
@@ -171,7 +171,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               {[0, 1, 2].map(i => (
                 <motion.div
                   key={i}
-                  className="w-2 h-2 rounded-full bg-fuchsia-400"
+                  className="w-2 h-2 rounded-full bg-summer-pink"
                   animate={{ scale: [1, 1.4, 1] }}
                   transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.2 }}
                 />
@@ -183,7 +183,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'journey' && (
           <motion.div
             key="journey"
-            className="fixed inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50"
+            className="fixed inset-0 bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
@@ -203,7 +203,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'completed' && (
           <motion.div
             key="completed"
-            className="fixed inset-0 bg-gradient-to-br from-sky-50 via-white to-teal-50 flex flex-col items-center justify-center gap-6 text-center px-8"
+            className="fixed inset-0 bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10 flex flex-col items-center justify-center gap-6 text-center px-8"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -213,12 +213,12 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="h-24 w-24 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg"
+              className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-yellow to-yellow-500 flex items-center justify-center shadow-lg"
             >
               <span className="text-5xl">🏆</span>
             </motion.div>
             <h1 className="text-4xl font-bold text-slate-800">¡Nivel 1 Alcanzado!</h1>
-            <p className="text-xl text-teal-600 font-semibold mt-2">Summer UP desbloqueado</p>
+            <p className="text-xl text-summer-teal font-semibold mt-2">Summer UP desbloqueado</p>
             <p className="text-slate-500 text-lg mt-2">Estás listo para explorar la plataforma</p>
           </motion.div>
         )}

@@ -25,7 +25,7 @@ export function HeroBanner({ user }: HeroBannerProps) {
   const subtitle = ROLE_SUBTITLES[user.role] ?? 'Bienvenido de nuevo.';
 
   return (
-    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-sky-400 via-purple-400 to-amber-300 p-6 md:p-8 text-white shadow-xl">
+    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-summer-sky via-summer-lavender to-summer-yellow p-6 md:p-8 text-white shadow-xl">
       {/* Decorative blobs */}
       <svg
         className="absolute -top-12 -right-12 w-64 h-64 text-white/10 pointer-events-none"

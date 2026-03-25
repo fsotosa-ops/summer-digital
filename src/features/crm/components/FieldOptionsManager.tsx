@@ -227,7 +227,7 @@ export function FieldOptionsManager() {
               onClick={() => setActiveField(f.value)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 activeField === f.value
-                  ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-summer-pink to-summer-lavender text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -239,7 +239,7 @@ export function FieldOptionsManager() {
         {/* New Field dialog */}
         <Dialog open={addFieldOpen} onOpenChange={setAddFieldOpen}>
           <DialogTrigger asChild>
-            <button className="px-4 py-1.5 rounded-full text-sm font-medium border-2 border-dashed border-slate-300 text-slate-500 hover:border-fuchsia-400 hover:text-fuchsia-600 transition-colors flex items-center gap-1.5">
+            <button className="px-4 py-1.5 rounded-full text-sm font-medium border-2 border-dashed border-slate-300 text-slate-500 hover:border-summer-pink hover:text-summer-pink transition-colors flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5" />
               Nuevo campo
             </button>
@@ -302,7 +302,7 @@ export function FieldOptionsManager() {
               <Button
                 onClick={handleCreateField}
                 disabled={creatingField || !newFieldKey || !newFieldFirstLabel || !newFieldFirstValue}
-                className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
+                className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white"
               >
                 {creatingField ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Crear campo
@@ -322,7 +322,7 @@ export function FieldOptionsManager() {
             </CardTitle>
             <Dialog open={addOptionOpen} onOpenChange={setAddOptionOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white h-8">
+                <Button size="sm" className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white h-8">
                   <Plus className="h-4 w-4 mr-1" />
                   Nueva opción
                 </Button>
@@ -360,7 +360,7 @@ export function FieldOptionsManager() {
                   <Button
                     onClick={handleAddOption}
                     disabled={creating || !newLabel || !newValue}
-                    className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
+                    className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white"
                   >
                     {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Crear
@@ -411,7 +411,7 @@ export function FieldOptionsManager() {
                         size="sm"
                         onClick={handleSaveEdit}
                         disabled={saving}
-                        className="h-8 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white"
+                        className="h-8 bg-gradient-to-r from-summer-pink to-summer-lavender text-white"
                       >
                         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Guardar'}
                       </Button>
@@ -444,7 +444,7 @@ export function FieldOptionsManager() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-slate-400 hover:text-fuchsia-600"
+                          className="h-7 w-7 text-slate-400 hover:text-summer-pink"
                           onClick={() =>
                             setEditState({ option: opt, label: opt.label, sort_order: opt.sort_order })
                           }

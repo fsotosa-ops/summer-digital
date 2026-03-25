@@ -110,7 +110,7 @@ export default function EventGatewayPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4">
       <div className="text-center space-y-6">
-        <Loader2 className="h-12 w-12 animate-spin mx-auto text-fuchsia-600" />
+        <Loader2 className="h-12 w-12 animate-spin mx-auto text-summer-pink" />
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-slate-800">
             {!user ? 'Preparando tu acceso...' : 'Vinculando tu evento...'}

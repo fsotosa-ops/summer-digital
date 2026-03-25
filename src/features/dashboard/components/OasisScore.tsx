@@ -84,7 +84,7 @@ export function OasisScore({ score, rank, variant = 'default' }: OasisScoreProps
 
   return (
     <div className="flex flex-col items-center justify-center relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full -z-0 opacity-50" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-summer-teal/10 rounded-bl-full -z-0 opacity-50" />
 
       <div className="relative z-10 flex flex-col items-center">
         <h3 className="text-slate-500 font-medium text-sm uppercase tracking-wider mb-4">
@@ -106,7 +106,7 @@ export function OasisScore({ score, rank, variant = 'default' }: OasisScoreProps
               stroke="currentColor" strokeWidth="12" fill="transparent"
               strokeDasharray={circumference}
               strokeLinecap="round"
-              className="text-teal-500"
+              className="text-summer-teal"
             />
           </svg>
           <motion.div
@@ -124,7 +124,7 @@ export function OasisScore({ score, rank, variant = 'default' }: OasisScoreProps
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             key={rank}
-            className="mt-2 px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-semibold uppercase tracking-wide"
+            className="mt-2 px-3 py-1 bg-summer-teal text-summer-teal rounded-full text-xs font-semibold uppercase tracking-wide"
           >
             Rango: {rank}
           </motion.div>

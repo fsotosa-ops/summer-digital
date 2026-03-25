@@ -162,7 +162,7 @@ function SortableStepItem({
       style={style}
       className={cn(
         'flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors',
-        isDragging && 'opacity-50 shadow-lg border-teal-300 z-50'
+        isDragging && 'opacity-50 shadow-lg border-summer-teal z-50'
       )}
     >
       {!readOnly && (
@@ -315,10 +315,10 @@ function StepUrlField({
 
       {/* Kahoot: external link indicator */}
       {isKahoot && (
-        <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+        <div className="flex items-center gap-2 p-3 bg-summer-lavender/10 border border-summer-lavender rounded-lg text-sm text-summer-lavender">
           <Gamepad2 className="h-4 w-4" />
           <span>Kahoot se abrirá en una nueva pestaña para los participantes.</span>
-          <a href={detected.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-purple-600 hover:underline">
+          <a href={detected.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-summer-lavender hover:underline">
             Probar <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -776,7 +776,7 @@ export default function JourneyEditorPage() {
 
       {/* ── Journey header banner ───────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-fuchsia-500 via-purple-500 to-teal-400" />
+        <div className="h-[3px] bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
 
         <div className="p-4 sm:p-5">
           {/* Top row: back + thumbnail + title + actions */}
@@ -800,13 +800,13 @@ export default function JourneyEditorPage() {
                     }}
                     title="Editar imagen de portada"
                     className="w-24 h-16 rounded-xl overflow-hidden border-2 border-slate-200
-                               hover:border-fuchsia-300 transition-colors relative block"
+                               hover:border-summer-pink transition-colors relative block"
                   >
                     {journey?.thumbnail_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={journey.thumbnail_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-fuchsia-500 to-purple-600
+                      <div className="w-full h-full bg-gradient-to-br from-summer-pink to-summer-lavender
                                       flex items-center justify-center">
                         <ImageIcon size={18} className="text-white/70" />
                       </div>
@@ -847,7 +847,7 @@ export default function JourneyEditorPage() {
                     <h1
                       className={cn(
                         'text-lg sm:text-xl font-bold text-slate-900',
-                        canEdit && 'cursor-pointer hover:text-fuchsia-600 transition-colors'
+                        canEdit && 'cursor-pointer hover:text-summer-pink transition-colors'
                       )}
                       onClick={canEdit ? () => { setEditTitle(journey?.title || ''); setIsEditingTitle(true); } : undefined}
                       title={canEdit ? 'Click para editar' : undefined}
@@ -857,13 +857,13 @@ export default function JourneyEditorPage() {
                     <Badge variant="outline" className={cn(
                       'text-xs font-semibold shrink-0',
                       journey?.is_active
-                        ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                        ? 'bg-summer-pink/10 text-summer-pink border-summer-pink'
                         : 'bg-slate-100 text-slate-500 border-slate-200'
                     )}>
                       {journey?.is_active ? 'Activo' : 'Borrador'}
                     </Badge>
                     {journey?.category === 'Onboarding' && (
-                      <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-sky-50 text-sky-700 border-sky-200">
+                      <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-summer-sky/10 text-summer-sky border-summer-sky">
                         Onboarding
                       </Badge>
                     )}
@@ -895,7 +895,7 @@ export default function JourneyEditorPage() {
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40',
                     journey?.is_active
                       ? 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                      : 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:opacity-90'
+                      : 'bg-gradient-to-r from-summer-teal to-cyan-500 text-white hover:opacity-90'
                   )}
                 >
                   {isSaving
@@ -928,7 +928,7 @@ export default function JourneyEditorPage() {
                   autoFocus
                 />
                 <button onClick={handleSaveThumbnail} disabled={savingThumbnail}
-                  className="h-9 px-3 rounded-lg bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm
+                  className="h-9 px-3 rounded-lg bg-gradient-to-r from-summer-pink to-summer-lavender text-white text-sm
                              font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60">
                   {savingThumbnail ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                   Guardar
@@ -972,7 +972,7 @@ export default function JourneyEditorPage() {
                     className={cn(
                       'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
                       editCategory === cat
-                        ? 'bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700'
+                        ? 'bg-summer-pink/10 border-summer-pink text-summer-pink'
                         : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
                     )}
                   >
@@ -981,7 +981,7 @@ export default function JourneyEditorPage() {
                 ))}
               </div>
               {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
-                <p className="text-xs text-sky-500 mt-1">
+                <p className="text-xs text-summer-sky mt-1">
                   Al guardar se agregarán steps de perfil CRM.
                 </p>
               )}
@@ -999,10 +999,10 @@ export default function JourneyEditorPage() {
               onClick={() => setRewardsExpanded((v) => !v)}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
+                <Trophy className="h-4 w-4 text-summer-yellow shrink-0" />
                 <span className="text-sm font-semibold text-slate-700 truncate">Recompensas</span>
                 {linkedRewardsCount > 0 && (
-                  <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">
+                  <span className="text-xs bg-summer-yellow text-summer-yellow px-1.5 py-0.5 rounded-full shrink-0">
                     {linkedRewardsCount}
                   </span>
                 )}
@@ -1033,17 +1033,17 @@ export default function JourneyEditorPage() {
                     {getJourneyCompletionRewards().length > 0 && (
                       <div className="space-y-1.5">
                         <p className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                          <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                          <Trophy className="h-3.5 w-3.5 text-summer-yellow" />
                           Al completar el Journey
                         </p>
                         {getJourneyCompletionRewards().map((r) => (
-                          <div key={r.id} className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
-                            <span className="text-xs font-medium text-amber-800">
+                          <div key={r.id} className="flex items-center justify-between rounded-lg bg-summer-yellow/10 px-3 py-2">
+                            <span className="text-xs font-medium text-summer-yellow">
                               {r.name}{r.points > 0 ? ` (+${r.points} pts)` : ''}
                             </span>
                             <button
                               type="button"
-                              className="text-amber-600 hover:text-amber-800 transition-colors"
+                              className="text-summer-yellow hover:text-summer-yellow transition-colors"
                               onClick={() => router.push('/admin/gamification')}
                               title="Ver en Gamificacion"
                             >
@@ -1122,10 +1122,10 @@ export default function JourneyEditorPage() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-4 w-4 text-fuchsia-500" />
+                <Building2 className="h-4 w-4 text-summer-pink" />
                 <span className="text-sm font-semibold text-slate-700">Organizaciones</span>
                 {assignedOrgIds.length > 0 && (
-                  <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full">
+                  <span className="text-xs bg-summer-pink text-summer-pink px-1.5 py-0.5 rounded-full">
                     {assignedOrgIds.length}
                   </span>
                 )}
@@ -1166,7 +1166,7 @@ export default function JourneyEditorPage() {
           <Button
             onClick={handleSaveConfig}
             disabled={savingConfig || !orgId || !configDirty}
-            className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-summer-pink to-summer-lavender text-white hover:opacity-90 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {savingConfig
               ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</>
@@ -1196,7 +1196,7 @@ export default function JourneyEditorPage() {
               <button
                 onClick={openCreateDialog}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+                           bg-gradient-to-r from-summer-pink to-summer-lavender text-white hover:opacity-90 transition-opacity"
               >
                 <Plus size={12} /> Agregar Step
               </button>
@@ -1302,7 +1302,7 @@ export default function JourneyEditorPage() {
                         className={cn(
                           'w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all',
                           'bg-white border-2 border-slate-300 text-slate-600',
-                          canEdit && 'group-hover:border-teal-500 group-hover:shadow-teal-100 group-hover:scale-110'
+                          canEdit && 'group-hover:border-summer-teal group-hover:shadow-summer-teal group-hover:scale-110'
                         )}
                       >
                         <Icon className="h-6 w-6" />
@@ -1323,7 +1323,7 @@ export default function JourneyEditorPage() {
                       {/* Hover Edit Icon */}
                       {canEdit && (
                       <div className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-summer-teal text-white flex items-center justify-center">
                           <Edit2 className="h-3 w-3" />
                         </div>
                       </div>
@@ -1547,7 +1547,7 @@ export default function JourneyEditorPage() {
                           className={cn(
                             'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
                             selected
-                              ? 'bg-sky-50 border-sky-300 text-sky-700'
+                              ? 'bg-summer-sky/10 border-summer-sky text-summer-sky'
                               : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
                           )}
                         >

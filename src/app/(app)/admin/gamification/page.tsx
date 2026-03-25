@@ -668,7 +668,7 @@ export default function GamificationAdminPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Trophy className="h-6 w-6 text-amber-500" />
+          <Trophy className="h-6 w-6 text-summer-yellow" />
           Gamificación
         </h1>
         <p className="text-slate-500">Configura niveles y recompensas para tu organización.</p>
@@ -724,8 +724,8 @@ export default function GamificationAdminPage() {
               <div className="space-y-2">
                 {levels.map((level) => (
                   <div key={level.id} className="flex items-center gap-4 p-4 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                      {level.icon_url ? <img src={level.icon_url} alt="" className="h-6 w-6" /> : <Star className="h-5 w-5 text-amber-600" />}
+                    <div className="w-10 h-10 rounded-full bg-summer-yellow flex items-center justify-center">
+                      {level.icon_url ? <img src={level.icon_url} alt="" className="h-6 w-6" /> : <Star className="h-5 w-5 text-summer-yellow" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-900">{level.name}</p>
@@ -768,15 +768,15 @@ export default function GamificationAdminPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {rewards.map((reward) => (
                   <div key={reward.id} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
-                      {reward.icon_url ? <img src={reward.icon_url} alt="" className="h-6 w-6" /> : <Award className="h-5 w-5 text-teal-600" />}
+                    <div className="w-10 h-10 rounded-full bg-summer-teal flex items-center justify-center flex-shrink-0">
+                      {reward.icon_url ? <img src={reward.icon_url} alt="" className="h-6 w-6" /> : <Award className="h-5 w-5 text-summer-teal" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <p className="font-medium text-slate-900">{reward.name}</p>
                         <Badge variant="outline" className="text-xs">{reward.type}</Badge>
                         {(reward.points ?? 0) > 0 && (
-                          <Badge className="text-xs bg-fuchsia-100 text-fuchsia-700 border-0">
+                          <Badge className="text-xs bg-summer-pink text-summer-pink border-0">
                             <Zap className="h-3 w-3 mr-1" />{reward.points} pts
                           </Badge>
                         )}
@@ -811,9 +811,9 @@ export default function GamificationAdminPage() {
               ) : (
                 <div className="space-y-3">
                   {([
-                    { key: 'points_enabled',  label: 'Puntos',      desc: 'Los usuarios acumulan puntos al completar steps y journeys', icon: <Zap className="h-4 w-4 text-fuchsia-500" /> },
-                    { key: 'levels_enabled',  label: 'Niveles',     desc: 'Los usuarios suben de nivel al alcanzar ciertos puntos (ej: Semilla → Brote → Arbol)', icon: <TrendingUp className="h-4 w-4 text-teal-500" /> },
-                    { key: 'rewards_enabled', label: 'Recompensas', desc: 'Badges e insignias al cumplir condiciones (completar perfil, journey, step)', icon: <Award className="h-4 w-4 text-amber-500" /> },
+                    { key: 'points_enabled',  label: 'Puntos',      desc: 'Los usuarios acumulan puntos al completar steps y journeys', icon: <Zap className="h-4 w-4 text-summer-pink" /> },
+                    { key: 'levels_enabled',  label: 'Niveles',     desc: 'Los usuarios suben de nivel al alcanzar ciertos puntos (ej: Semilla → Brote → Arbol)', icon: <TrendingUp className="h-4 w-4 text-summer-teal" /> },
+                    { key: 'rewards_enabled', label: 'Recompensas', desc: 'Badges e insignias al cumplir condiciones (completar perfil, journey, step)', icon: <Award className="h-4 w-4 text-summer-yellow" /> },
                   ] as const).map(({ key, label, desc, icon }) => (
                     <div key={key} className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
                       <div className="mt-0.5">{icon}</div>
@@ -826,7 +826,7 @@ export default function GamificationAdminPage() {
                         role="switch"
                         aria-checked={!!configForm[key]}
                         onClick={() => setConfigForm({ ...configForm, [key]: !configForm[key] })}
-                        className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0', configForm[key] ? 'bg-teal-500' : 'bg-slate-200')}
+                        className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0', configForm[key] ? 'bg-summer-teal' : 'bg-slate-200')}
                       >
                         <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', configForm[key] ? 'translate-x-6' : 'translate-x-1')} />
                       </button>
@@ -1035,12 +1035,12 @@ export default function GamificationAdminPage() {
             {/* Puntos */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-fuchsia-500" />
+                <Zap className="h-4 w-4 text-summer-pink" />
                 Puntos que otorga
               </Label>
               <Input type="number" min={0} value={rewardForm.points} onChange={(e) => { setRewardForm({ ...rewardForm, points: parseInt(e.target.value) || 0 }); setPointsAutoCalculated(false); }} placeholder="0" />
               {pointsAutoCalculated ? (
-                <p className="text-xs text-fuchsia-500 flex items-center gap-1">
+                <p className="text-xs text-summer-pink flex items-center gap-1">
                   <Zap className="h-3 w-3" />
                   Calculado automáticamente desde el journey/step asociado.
                 </p>
@@ -1089,7 +1089,7 @@ export default function GamificationAdminPage() {
                 variant="outline"
                 size="sm"
                 onClick={addCondition}
-                className="w-full border-dashed text-slate-500 hover:text-fuchsia-600 hover:border-fuchsia-300"
+                className="w-full border-dashed text-slate-500 hover:text-summer-pink hover:border-summer-pink"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Agregar condición
@@ -1119,14 +1119,14 @@ export default function GamificationAdminPage() {
                           key={org.id}
                           className={cn(
                             'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none',
-                            checked ? 'bg-fuchsia-50 border border-fuchsia-200' : 'hover:bg-slate-50 border border-transparent'
+                            checked ? 'bg-summer-pink/10 border border-summer-pink' : 'hover:bg-slate-50 border border-transparent'
                           )}
                         >
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleOrgAssignment(org.id)}
-                            className="h-4 w-4 rounded accent-fuchsia-600"
+                            className="h-4 w-4 rounded accent-summer-pink"
                           />
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800 truncate">{org.name}</p>

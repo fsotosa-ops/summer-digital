@@ -52,7 +52,7 @@ export function CRMHub() {
               className={cn(
                 'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-left transition-colors',
                 activeSection === value
-                  ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-summer-pink to-summer-lavender text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100',
               )}
             >

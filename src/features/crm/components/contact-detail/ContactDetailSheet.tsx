@@ -393,11 +393,11 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
             Perfil de {user.full_name || user.email}
           </DialogTitle>
           {/* Header */}
-          <div className="shrink-0 bg-gradient-to-r from-sky-50 via-purple-50 to-amber-50 border-b border-purple-100/50">
+          <div className="shrink-0 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 border-b border-summer-lavender/50">
             <div className="flex items-center gap-4 px-6 pt-5 pb-4">
               <Avatar className="h-14 w-14 shrink-0 ring-2 ring-white shadow-sm">
                 <AvatarImage src={user.avatar_url || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white text-lg font-semibold">
+                <AvatarFallback className="bg-gradient-to-br from-summer-pink to-summer-lavender text-white text-lg font-semibold">
                   {getInitials(user)}
                 </AvatarFallback>
               </Avatar>
@@ -418,7 +418,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                   {STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo'}
                 </Badge>
                 {user.is_platform_admin && (
-                  <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                  <Badge className="bg-summer-lavender text-summer-lavender border-summer-lavender">
                     <Shield className="h-3 w-3 mr-1" />
                     Platform Admin
                   </Badge>
@@ -439,7 +439,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
               <TabsTrigger
                 value="profile"
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -450,7 +450,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 value="orgs"
                 onClick={() => loadAvailableOrgs()}
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -461,7 +461,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 value="notes"
                 onClick={() => loadNotesAndTasks(user.id)}
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -472,7 +472,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 value="activity"
                 onClick={() => loadActivity(user.id)}
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -483,7 +483,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 value="events"
                 onClick={() => setEventsLoaded(true)}
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -625,7 +625,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
             <Button
               onClick={handleSaveEdit}
               disabled={saving}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white"
             >
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Guardar

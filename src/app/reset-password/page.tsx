@@ -43,8 +43,8 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-fuchsia-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-summer-pink/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-summer-sky/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
               </p>
               <Button
                 onClick={() => router.push('/login')}
-                className="w-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 border-0 text-white shadow-md"
+                className="w-full bg-gradient-to-r from-summer-pink to-summer-pink hover:from-summer-pink hover:to-summer-pink border-0 text-white shadow-md"
               >
                 Iniciar sesión
               </Button>
@@ -123,7 +123,7 @@ export default function ResetPasswordPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
+                className="w-full bg-gradient-to-r from-summer-pink to-summer-pink hover:from-summer-pink hover:to-summer-pink border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
                 disabled={!canSubmit || isLoading}
               >
                 {isLoading ? 'Actualizando...' : 'Actualizar contraseña'}
@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
               <div className="text-center">
                 <button
                   type="button"
-                  className="text-sm text-slate-500 hover:text-fuchsia-600 underline transition-colors"
+                  className="text-sm text-slate-500 hover:text-summer-pink underline transition-colors"
                   onClick={() => router.push('/login')}
                 >
                   Volver al inicio de sesión

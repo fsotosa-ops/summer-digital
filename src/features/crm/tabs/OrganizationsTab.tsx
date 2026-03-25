@@ -136,7 +136,7 @@ export function OrganizationsTab() {
         <div className="text-sm text-slate-500">{organizations.length} organización(es)</div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm">
+            <Button className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm">
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
             </Button>
@@ -206,7 +206,7 @@ export function OrganizationsTab() {
               <Button
                 onClick={handleCreate}
                 disabled={creating || !formData.name || !formData.slug}
-                className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm disabled:opacity-50"
+                className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm disabled:opacity-50"
               >
                 {creating ? (
                   <>
@@ -243,7 +243,7 @@ export function OrganizationsTab() {
             <p className="text-slate-500 mb-4">Crea tu primera organización para comenzar</p>
             <Button
               onClick={() => setCreateDialogOpen(true)}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm"
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
               Nueva Organización
@@ -278,8 +278,8 @@ export function OrganizationsTab() {
                           className="h-6 w-6 rounded object-cover shrink-0"
                         />
                       ) : (
-                        <div className="h-6 w-6 rounded bg-teal-100 flex items-center justify-center shrink-0">
-                          <Building2 className="h-3.5 w-3.5 text-teal-600" />
+                        <div className="h-6 w-6 rounded bg-summer-teal flex items-center justify-center shrink-0">
+                          <Building2 className="h-3.5 w-3.5 text-summer-teal" />
                         </div>
                       )}
                       {org.name}

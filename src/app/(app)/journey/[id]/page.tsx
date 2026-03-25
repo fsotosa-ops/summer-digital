@@ -39,7 +39,7 @@ export default function JourneyPlayerPage() {
 
   if (!journey && (isLoading || !hasFetched)) {
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-sky-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
@@ -47,11 +47,11 @@ export default function JourneyPlayerPage() {
 
   if (!journey) {
     return (
-      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-sky-50 via-white to-teal-50 flex flex-col items-center justify-center gap-4">
+      <div className="fixed inset-0 z-[100] bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10 flex flex-col items-center justify-center gap-4">
         <p className="text-slate-500">Journey no encontrado</p>
         <button
           onClick={() => router.push('/journey')}
-          className="text-sky-600 hover:underline text-sm"
+          className="text-summer-sky hover:underline text-sm"
         >
           ← Volver a Mis Journeys
         </button>

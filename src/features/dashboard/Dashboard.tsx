@@ -46,7 +46,7 @@ export function Dashboard() {
   if (!user) return (
     <div className="flex flex-col items-center justify-center p-10">
       <p className="text-slate-500 mb-4">No hay sesión activa.</p>
-      <Link href="/login" className="text-fuchsia-600 font-semibold underline">Ir al Login</Link>
+      <Link href="/login" className="text-summer-pink font-semibold underline">Ir al Login</Link>
     </div>
   );
 
@@ -57,11 +57,11 @@ export function Dashboard() {
   const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
 
   // Hero card color tokens — participant vs admin
-  const heroGradient   = isParticipantView ? 'from-sky-500 to-teal-600'                      : 'from-fuchsia-500 to-purple-700';
-  const levelBadge     = isParticipantView ? 'bg-sky-50 text-sky-700 border-sky-100'          : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100';
-  const progressBar    = isParticipantView ? 'from-sky-500 to-teal-500'                       : 'from-fuchsia-500 to-purple-600';
-  const maxLevelText   = isParticipantView ? 'text-teal-600'                                  : 'text-fuchsia-600';
-  const cardHoverBorder = isParticipantView ? 'hover:border-sky-200'                          : 'hover:border-fuchsia-200';
+  const heroGradient   = isParticipantView ? 'from-summer-sky to-summer-teal'                      : 'from-summer-pink to-summer-lavender';
+  const levelBadge     = isParticipantView ? 'bg-summer-sky/10 text-summer-sky border-summer-sky'          : 'bg-summer-pink/10 text-summer-pink border-summer-pink';
+  const progressBar    = isParticipantView ? 'from-summer-sky to-summer-teal'                       : 'from-summer-pink to-summer-lavender';
+  const maxLevelText   = isParticipantView ? 'text-summer-teal'                                  : 'text-summer-pink';
+  const cardHoverBorder = isParticipantView ? 'hover:border-summer-sky'                          : 'hover:border-summer-pink';
 
   const displayPts    = gamSummary?.total_points   ?? user.oasisScore;
   const levelName     = gamSummary?.current_level?.name ?? user.rank ?? '—';
@@ -151,7 +151,7 @@ export function Dashboard() {
               </div>
 
               {/* Hint */}
-              <p className={`text-[11px] text-slate-300 ${isParticipantView ? 'group-hover:text-sky-400' : 'group-hover:text-fuchsia-400'} transition-colors
+              <p className={`text-[11px] text-slate-300 ${isParticipantView ? 'group-hover:text-summer-sky' : 'group-hover:text-summer-pink'} transition-colors
                             flex items-center gap-1`}>
                 <Pencil size={10} /> Ver y editar perfil
               </p>
@@ -166,7 +166,7 @@ export function Dashboard() {
           (Participants see the banner inside ParticipantJourneysSection)
       ══════════════════════════════════════════════════ */}
       {isSubscriber && (
-        <div className="bg-gradient-to-r from-fuchsia-600 via-purple-500 to-fuchsia-400
+        <div className="bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-pink
                         rounded-2xl p-6 text-white shadow-sm">
           <h2 className="font-bold text-lg">Explora el contenido disponible</h2>
           <p className="text-white/80 text-sm mt-1">Accede a recursos y actividades abiertas.</p>

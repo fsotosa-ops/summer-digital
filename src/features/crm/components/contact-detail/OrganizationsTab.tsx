@@ -157,7 +157,7 @@ export function OrganizationsTab({
               size="sm"
               onClick={onAddToOrg}
               disabled={addingOrg || !selectedOrgId}
-              className="bg-teal-600 hover:bg-teal-700 h-8"
+              className="bg-summer-teal hover:bg-summer-teal h-8"
             >
               {addingOrg && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Agregar

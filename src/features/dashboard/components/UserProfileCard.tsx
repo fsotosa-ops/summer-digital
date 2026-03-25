@@ -33,8 +33,8 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
     <>
       <div className="bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-fuchsia-500/20 to-purple-500/10 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-teal-500/15 to-cyan-500/10 rounded-full translate-y-6 -translate-x-6 blur-2xl" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-summer-pink/20 to-summer-lavender/10 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-summer-teal/15 to-cyan-500/10 rounded-full translate-y-6 -translate-x-6 blur-2xl" />
 
         {/* Centered content */}
         <div className="relative z-10 flex flex-col items-center text-center gap-3">
@@ -50,7 +50,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
               />
             </div>
           ) : (
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 border-2 border-white/10 ring-2 ring-fuchsia-500/30 flex items-center justify-center drop-shadow">
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender border-2 border-white/10 ring-2 ring-summer-pink/30 flex items-center justify-center drop-shadow">
               <span className="text-2xl font-bold text-white drop-shadow">{initials}</span>
             </div>
           )}
@@ -73,9 +73,9 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
             whileTap={{ scale: 0.99 }}
             className="relative z-10 mt-5 w-full group cursor-pointer"
           >
-            <div className="bg-gradient-to-r from-fuchsia-600/90 to-purple-600/90 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 border border-fuchsia-400/20 shadow-lg shadow-fuchsia-500/10 transition-all group-hover:shadow-fuchsia-500/20 group-hover:border-fuchsia-400/30">
+            <div className="bg-gradient-to-r from-summer-pink/90 to-summer-lavender/90 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 border border-summer-pink/20 shadow-lg shadow-summer-pink/10 transition-all group-hover:shadow-summer-pink/20 group-hover:border-summer-pink/30">
               <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={16} className="text-amber-300" />
+                <Sparkles size={16} className="text-summer-yellow" />
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold text-white leading-tight">

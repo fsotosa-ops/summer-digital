@@ -204,7 +204,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                   animate={{ rotate: 0, scale: 1 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
                 >
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shadow-lg shadow-summer-pink/30">
                     <PartyPopper className="h-10 w-10 text-white" />
                   </div>
                 </motion.div>
@@ -216,14 +216,14 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                   className="space-y-2"
                 >
                   <h2 className="text-2xl font-bold text-slate-900 flex items-center justify-center gap-2">
-                    <Sparkles className="h-5 w-5 text-amber-500" />
+                    <Sparkles className="h-5 w-5 text-summer-yellow" />
                     Felicitaciones
-                    <Sparkles className="h-5 w-5 text-amber-500" />
+                    <Sparkles className="h-5 w-5 text-summer-yellow" />
                   </h2>
                   {profileCompletionPoints > 0 ? (
                     <p className="text-slate-600 text-lg">
                       Haz alcanzado tus primeros{' '}
-                      <span className="font-bold text-fuchsia-600">{profileCompletionPoints} puntos</span>
+                      <span className="font-bold text-summer-pink">{profileCompletionPoints} puntos</span>
                     </p>
                   ) : (
                     <p className="text-slate-600 text-lg">
@@ -240,9 +240,9 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.6 }}
-                    className="px-6 py-3 bg-gradient-to-r from-fuchsia-50 to-purple-50 border border-fuchsia-200 rounded-2xl"
+                    className="px-6 py-3 bg-gradient-to-r from-summer-pink/10 to-summer-lavender/10 border border-summer-pink rounded-2xl"
                   >
-                    <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-purple-600">
+                    <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-summer-pink to-summer-lavender">
                       +{profileCompletionPoints} pts
                     </p>
                   </motion.div>
@@ -255,7 +255,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                 >
                   <Button
                     onClick={handleCloseCelebration}
-                    className="bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white border-0 hover:from-fuchsia-500 hover:to-purple-500 px-8"
+                    className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white border-0 hover:from-summer-pink hover:to-summer-lavender px-8"
                   >
                     Continuar
                   </Button>
@@ -266,13 +266,13 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
               <motion.div key="form" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-fuchsia-500" />
+                    <Sparkles className="h-5 w-5 text-summer-pink" />
                     Completar perfil
                   </DialogTitle>
                   <DialogDescription>
                     Completa todos los campos para personalizar tu experiencia en Summer UP
                     {profileCompletionPoints > 0 && (
-                      <span className="inline-flex items-center gap-1 ml-1 text-fuchsia-600 font-medium">
+                      <span className="inline-flex items-center gap-1 ml-1 text-summer-pink font-medium">
                         y ganar {profileCompletionPoints} puntos
                       </span>
                     )}
@@ -290,7 +290,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-500 rounded-full transition-all duration-500"
+                          className="h-full bg-gradient-to-r from-summer-pink to-summer-lavender rounded-full transition-all duration-500"
                           style={{ width: `${((REQUIRED_FIELDS.length - emptyFieldCount) / REQUIRED_FIELDS.length) * 100}%` }}
                         />
                       </div>
@@ -479,7 +479,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                   <Button
                     onClick={handleSave}
                     disabled={saving || loading}
-                    className="bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white border-0 hover:from-fuchsia-500 hover:to-purple-500"
+                    className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white border-0 hover:from-summer-pink hover:to-summer-lavender"
                   >
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />

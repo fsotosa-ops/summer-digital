@@ -73,10 +73,10 @@ const TYPE_COLORS: Record<ApiResourceType, {
   bg: string; text: string; border: string;
   barFrom: string; barTo: string; iconCls: string;
 }> = {
-  video:    { bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200',  barFrom: 'from-orange-400',  barTo: 'to-amber-500',   iconCls: 'text-orange-500' },
-  podcast:  { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  barFrom: 'from-violet-500',  barTo: 'to-purple-500',  iconCls: 'text-violet-500' },
+  video:    { bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200',  barFrom: 'from-orange-400',  barTo: 'to-summer-yellow',   iconCls: 'text-orange-500' },
+  podcast:  { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  barFrom: 'from-violet-500',  barTo: 'to-summer-lavender',  iconCls: 'text-violet-500' },
   pdf:      { bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     barFrom: 'from-red-400',     barTo: 'to-rose-500',    iconCls: 'text-red-500'    },
-  capsula:  { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200',    barFrom: 'from-teal-400',    barTo: 'to-cyan-500',    iconCls: 'text-teal-500'   },
+  capsula:  { bg: 'bg-summer-teal/10',    text: 'text-summer-teal',    border: 'border-summer-teal',    barFrom: 'from-summer-teal',    barTo: 'to-cyan-500',    iconCls: 'text-summer-teal'   },
   actividad:{ bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', barFrom: 'from-emerald-400', barTo: 'to-green-500',   iconCls: 'text-emerald-500'},
 };
 
@@ -370,10 +370,10 @@ export default function AdminResourcesPage() {
   const totalConsumptions = resources.reduce((sum, r) => sum + r.consumption_count, 0);
 
   const statCards = [
-    { label: 'Total recursos',   value: resources.length,   icon: BookOpen,  from: 'from-teal-500',   to: 'to-sky-500',    bg: 'bg-teal-50',    text: 'text-teal-700'    },
-    { label: 'Publicados',       value: totalPublished,      icon: Eye,        from: 'from-emerald-500',to: 'to-teal-500',   bg: 'bg-emerald-50', text: 'text-emerald-700' },
+    { label: 'Total recursos',   value: resources.length,   icon: BookOpen,  from: 'from-summer-teal',   to: 'to-summer-sky',    bg: 'bg-summer-teal/10',    text: 'text-summer-teal'    },
+    { label: 'Publicados',       value: totalPublished,      icon: Eye,        from: 'from-emerald-500',to: 'to-summer-teal',   bg: 'bg-emerald-50', text: 'text-emerald-700' },
     { label: 'Borradores',       value: totalDraft,          icon: EyeOff,     from: 'from-slate-400',  to: 'to-slate-500',  bg: 'bg-slate-100',  text: 'text-slate-600'   },
-    { label: 'Consumos totales', value: totalConsumptions,   icon: Zap,        from: 'from-amber-400',  to: 'to-orange-500', bg: 'bg-amber-50',   text: 'text-amber-700'   },
+    { label: 'Consumos totales', value: totalConsumptions,   icon: Zap,        from: 'from-summer-yellow',  to: 'to-orange-500', bg: 'bg-summer-yellow/10',   text: 'text-summer-yellow'   },
   ];
 
   const filterTabs = [
@@ -387,10 +387,10 @@ export default function AdminResourcesPage() {
 
       {/* ── Header ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-fuchsia-600" />
+        <div className="h-1 bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-pink" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender
                             flex items-center justify-center shadow-sm shrink-0">
               <BookOpen size={20} className="text-white" />
             </div>
@@ -423,7 +423,7 @@ export default function AdminResourcesPage() {
               <button
                 onClick={openCreateDialog}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl
-                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                           bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
               >
                 <Plus size={15} />
@@ -463,7 +463,7 @@ export default function AdminResourcesPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
               statusFilter === key
-                ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-summer-pink to-summer-lavender text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
@@ -505,9 +505,9 @@ export default function AdminResourcesPage() {
         /* ── Empty state ── */
         <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl
                         border border-dashed border-slate-200 bg-slate-50/60 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-fuchsia-100 to-purple-100
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-summer-pink to-summer-lavender
                           flex items-center justify-center mb-4">
-            <BookOpen size={32} className="text-fuchsia-500" />
+            <BookOpen size={32} className="text-summer-pink" />
           </div>
           <h3 className="text-base font-semibold text-slate-700 mb-1">Sin recursos todavía</h3>
           <p className="text-sm text-slate-400 mb-6 max-w-xs">
@@ -517,7 +517,7 @@ export default function AdminResourcesPage() {
             <button
               onClick={openCreateDialog}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl
-                         bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                         bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                          text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
             >
               <Plus size={15} />
@@ -600,7 +600,7 @@ export default function AdminResourcesPage() {
                       <td className="py-3 px-4 text-center">
                         {resource.unlock_conditions.length > 0 ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold
-                                           text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                           text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-0.5 rounded-full">
                             <Lock size={10} />
                             {resource.unlock_conditions.length}
                           </span>
@@ -613,7 +613,7 @@ export default function AdminResourcesPage() {
                       <td className="py-3 px-4 text-center">
                         {resource.points_on_completion > 0 ? (
                           <span className="inline-flex items-center gap-0.5 text-xs font-bold
-                                           text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                           text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-0.5 rounded-full">
                             <Zap size={10} />
                             {resource.points_on_completion}
                           </span>
@@ -638,7 +638,7 @@ export default function AdminResourcesPage() {
                                 onClick={() => setPreviewResource(resource)}
                                 title="Vista previa"
                                 className="h-8 w-8 flex items-center justify-center rounded-lg
-                                           text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-colors"
+                                           text-slate-400 hover:text-summer-sky hover:bg-summer-sky/10 transition-colors"
                               >
                                 <Eye size={15} />
                               </button>
@@ -647,7 +647,7 @@ export default function AdminResourcesPage() {
                               onClick={() => openEditDialog(resource)}
                               title="Editar"
                               className="h-8 w-8 flex items-center justify-center rounded-lg
-                                         text-slate-400 hover:text-fuchsia-600 hover:bg-fuchsia-50 transition-colors"
+                                         text-slate-400 hover:text-summer-pink hover:bg-summer-pink/10 transition-colors"
                             >
                               <Edit2 size={15} />
                             </button>
@@ -688,7 +688,7 @@ export default function AdminResourcesPage() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender
                               flex items-center justify-center shrink-0">
                 <BookOpen size={16} className="text-white" />
               </div>
@@ -712,7 +712,7 @@ export default function AdminResourcesPage() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ej: Charla sobre Bienestar"
                 required
-                className="border-slate-200 focus:border-fuchsia-400"
+                className="border-slate-200 focus:border-summer-pink"
               />
             </div>
 
@@ -724,7 +724,7 @@ export default function AdminResourcesPage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe el recurso..."
                 rows={2}
-                className="border-slate-200 focus:border-fuchsia-400 resize-none"
+                className="border-slate-200 focus:border-summer-pink resize-none"
               />
             </div>
 
@@ -767,7 +767,7 @@ export default function AdminResourcesPage() {
                     className={cn(
                       'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                       contentSource === src
-                        ? 'bg-fuchsia-500 text-white border-fuchsia-500'
+                        ? 'bg-summer-pink text-white border-summer-pink'
                         : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                     )}
                   >
@@ -782,7 +782,7 @@ export default function AdminResourcesPage() {
                     value={formData.content_url || ''}
                     onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
                     placeholder="https://youtube.com/watch?v=... o URL directa"
-                    className="border-slate-200 focus:border-fuchsia-400"
+                    className="border-slate-200 focus:border-summer-pink"
                   />
                   {formData.content_url && formData.content_url.length > 8 && (
                     <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
@@ -814,7 +814,7 @@ export default function AdminResourcesPage() {
                 value={formData.thumbnail_url || ''}
                 onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value || undefined })}
                 placeholder="https://..."
-                className="border-slate-200 focus:border-fuchsia-400"
+                className="border-slate-200 focus:border-summer-pink"
               />
             </div>
 
@@ -827,7 +827,7 @@ export default function AdminResourcesPage() {
                   min="0"
                   value={formData.points_on_completion || 0}
                   onChange={(e) => setFormData({ ...formData, points_on_completion: parseInt(e.target.value) || 0 })}
-                  className="border-slate-200 focus:border-fuchsia-400"
+                  className="border-slate-200 focus:border-summer-pink"
                 />
               </div>
               <div className="space-y-1.5">
@@ -855,8 +855,8 @@ export default function AdminResourcesPage() {
                   type="button"
                   onClick={addCondition}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200
-                             text-xs font-medium text-slate-600 hover:border-teal-300 hover:text-teal-700
-                             hover:bg-teal-50 transition-colors"
+                             text-xs font-medium text-slate-600 hover:border-summer-teal hover:text-summer-teal
+                             hover:bg-summer-teal/10 transition-colors"
                 >
                   <Plus size={12} /> Agregar
                 </button>
@@ -982,7 +982,7 @@ export default function AdminResourcesPage() {
                 type="submit"
                 disabled={isSaving || !formData.title || (isSuperAdmin && accessOrgIds.length === 0)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg
-                           bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white
+                           bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity
                            disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -999,7 +999,7 @@ export default function AdminResourcesPage() {
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye size={18} className="text-sky-600" />
+              <Eye size={18} className="text-summer-sky" />
               {previewResource?.title}
             </DialogTitle>
             <DialogDescription>
@@ -1028,12 +1028,12 @@ export default function AdminResourcesPage() {
                   </span>
                 )}
                 {previewResource.points_on_completion > 0 && (
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-1 rounded-full">
                     <Zap size={11} /> +{previewResource.points_on_completion} pts
                   </span>
                 )}
                 {previewResource.unlock_conditions.length > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-1 rounded-full">
                     <Lock size={11} /> {previewResource.unlock_conditions.length} condición(es)
                   </span>
                 ) : (

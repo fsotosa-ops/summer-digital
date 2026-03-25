@@ -141,7 +141,7 @@ function EditableField({ icon, label, value, placeholder, onSave, type = 'text' 
               placeholder={placeholder}
               autoFocus
             />
-            <button onClick={save} disabled={saving} className="text-teal-600 hover:text-teal-700 disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="text-summer-teal hover:text-summer-teal disabled:opacity-50">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             </button>
             <button onClick={cancel} className="text-slate-400 hover:text-slate-600">
@@ -221,7 +221,7 @@ function EditableSelect({ icon, label, value, options, placeholder, onSave }: Ed
                 ))}
               </SelectContent>
             </Select>
-            <button onClick={save} disabled={saving} className="text-teal-600 hover:text-teal-700 disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="text-summer-teal hover:text-summer-teal disabled:opacity-50">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             </button>
             <button onClick={cancel} className="text-slate-400 hover:text-slate-600">
@@ -474,7 +474,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
           <DialogTitle className="sr-only">Perfil de {org.name}</DialogTitle>
 
           {/* Header — mismo gradiente que ContactDetailSheet */}
-          <div className="shrink-0 bg-gradient-to-r from-sky-50 via-purple-50 to-amber-50 border-b border-purple-100/50">
+          <div className="shrink-0 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 border-b border-summer-lavender/50">
             <div className="flex items-center gap-4 px-6 pt-5 pb-4">
               {/* Logo / Avatar */}
               {org.logo_url ? (
@@ -484,7 +484,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                   className="h-14 w-14 shrink-0 rounded-xl object-cover ring-2 ring-white shadow-sm"
                 />
               ) : (
-                <div className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center ring-2 ring-white shadow-sm">
+                <div className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-br from-summer-teal to-summer-teal flex items-center justify-center ring-2 ring-white shadow-sm">
                   <Building2 className="h-7 w-7 text-white" />
                 </div>
               )}
@@ -497,7 +497,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </div>
 
               <div className="flex gap-2 flex-wrap shrink-0">
-                <Badge variant="outline" className="border-teal-200 text-teal-700 bg-teal-50">
+                <Badge variant="outline" className="border-summer-teal text-summer-teal bg-summer-teal/10">
                   {orgTypeLabel}
                 </Badge>
               </div>
@@ -527,7 +527,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               <TabsTrigger
                 value="perfil"
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -537,7 +537,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               <TabsTrigger
                 value="miembros"
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -547,7 +547,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               <TabsTrigger
                 value="eventos"
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -557,7 +557,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               <TabsTrigger
                 value="journeys"
                 className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
-                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-fuchsia-600 data-[state=active]:to-purple-600
+                  data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
@@ -741,7 +741,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                 <TableRow key={member.id}>
                                   <TableCell>
                                     <div className="flex items-center gap-2">
-                                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-purple-500 flex items-center justify-center shrink-0">
+                                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shrink-0">
                                         <span className="text-white text-[10px] font-semibold">
                                           {(member.user?.full_name || member.user?.email || '?')
                                             .split(' ')
@@ -813,7 +813,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                           {togglingAdminId === member.user_id ? (
                                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                           ) : member.user?.is_platform_admin ? (
-                                            <Shield className="h-3.5 w-3.5 text-teal-600" />
+                                            <Shield className="h-3.5 w-3.5 text-summer-teal" />
                                           ) : (
                                             <ShieldOff className="h-3.5 w-3.5 text-slate-400" />
                                           )}
@@ -935,7 +935,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAddMember} disabled={adding || !addEmail} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white">
+            <Button onClick={handleAddMember} disabled={adding || !addEmail} className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white">
               {adding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Agregar
             </Button>
@@ -967,7 +967,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancelar</Button>
-            <Button onClick={handleInvite} disabled={inviting || !inviteEmail} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white">
+            <Button onClick={handleInvite} disabled={inviting || !inviteEmail} className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white">
               {inviting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               <Mail className="h-4 w-4 mr-1" />
               Enviar invitación
@@ -1001,7 +1001,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setBulkResults(null); setBulkEmails(''); }}>Cargar más</Button>
-                <Button onClick={() => setBulkOpen(false)} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white">Cerrar</Button>
+                <Button onClick={() => setBulkOpen(false)} className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white">Cerrar</Button>
               </DialogFooter>
             </div>
           ) : (
@@ -1021,7 +1021,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancelar</Button>
-                <Button onClick={handleBulkAdd} disabled={bulkLoading || !bulkEmails.trim()} className="bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white">
+                <Button onClick={handleBulkAdd} disabled={bulkLoading || !bulkEmails.trim()} className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white">
                   {bulkLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
                   Agregar todos
                 </Button>

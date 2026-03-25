@@ -344,7 +344,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
         <div className="text-sm text-slate-500">{events.length} evento(s)</div>
         <Button
           onClick={openCreate}
-          className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm"
+          className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm"
         >
           <Plus className="h-4 w-4 mr-2" />
           Nuevo Evento
@@ -812,7 +812,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             <Button
               onClick={handleSave}
               disabled={saving || !formData.name || !formData.slug}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm disabled:opacity-50"
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm disabled:opacity-50"
             >
               {saving ? (
                 <>
@@ -839,7 +839,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             <p className="text-slate-500 mb-4">Crea tu primer evento para comenzar a gestionar actividades</p>
             <Button
               onClick={openCreate}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white shadow-sm"
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white shadow-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Evento
@@ -879,7 +879,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                           <button
                             onClick={() => handleCopyUrl(event)}
                             title="Copiar URL completa"
-                            className="text-slate-400 hover:text-fuchsia-600 transition-colors"
+                            className="text-slate-400 hover:text-summer-pink transition-colors"
                           >
                             {isCopied
                               ? <Check className="h-3.5 w-3.5 text-emerald-500" />
@@ -914,7 +914,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                           size="sm"
                           onClick={() => openEdit(event)}
                           title="Editar evento"
-                          className="text-slate-500 hover:text-fuchsia-600 hover:bg-fuchsia-50"
+                          className="text-slate-500 hover:text-summer-pink hover:bg-summer-pink/10"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>

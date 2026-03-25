@@ -151,14 +151,14 @@ export function JourneyMap() {
 
       case 'kahoot':
         return (
-          <Card className="border-purple-200 bg-purple-50">
+          <Card className="border-summer-lavender bg-summer-lavender/10">
             <CardContent className="flex flex-col items-center gap-4 pt-6">
-              <Gamepad2 className="h-12 w-12 text-purple-500" />
-              <p className="text-sm text-purple-700 text-center">
+              <Gamepad2 className="h-12 w-12 text-summer-lavender" />
+              <p className="text-sm text-summer-lavender text-center">
                 Este quiz interactivo se abre en una nueva pestaña.
               </p>
               {embedSrc && (
-                <Button asChild className="bg-purple-600 hover:bg-purple-700">
+                <Button asChild className="bg-summer-lavender hover:bg-summer-lavender">
                   <a href={embedSrc} target="_blank" rel="noopener noreferrer">
                     Abrir Kahoot <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
@@ -174,7 +174,7 @@ export function JourneyMap() {
             node={node}
             icon={
               node.type === 'quiz' ? <span className="text-4xl">?</span> :
-              node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" /> :
+              node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-summer-yellow opacity-50" /> :
               node.type === 'challenge' ? <Star className="h-10 w-10 text-yellow-500 opacity-50" /> :
               <Play className="h-10 w-10 text-brand opacity-50" />
             }
@@ -280,7 +280,7 @@ export function JourneyMap() {
         {xpPop.visible && (
           <motion.div
             key="xp-pop"
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-2xl font-bold text-teal-600"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-2xl font-bold text-summer-teal"
             initial={{ y: 0, opacity: 1, scale: 0.8 }}
             animate={{ y: -60, opacity: 0, scale: 1.2 }}
             exit={{ opacity: 0 }}
@@ -302,7 +302,7 @@ export function JourneyMap() {
             exit={{ opacity: 0, scale: 1.2 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="bg-white/90 backdrop-blur-sm rounded-3xl px-10 py-6 shadow-2xl border border-teal-100">
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl px-10 py-6 shadow-2xl border border-summer-teal">
               <p className="text-4xl font-bold text-center text-slate-800">{encouragement}</p>
             </div>
           </motion.div>
@@ -346,7 +346,7 @@ export function JourneyMap() {
               ) : (
                 <Button
                   onClick={() => selectedNode && handleCompleteActivity(selectedNode)}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white text-base py-6"
+                  className="w-full bg-summer-teal hover:bg-summer-teal text-white text-base py-6"
                 >
                   Completar Actividad
                 </Button>
@@ -399,9 +399,9 @@ const getNodeIcon = (node: JourneyNode) => {
 
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
-    completed: "bg-teal-500 text-white shadow-teal-200",
-    "in-progress": "bg-amber-400 text-amber-900 shadow-amber-200 animate-pulse-slow",
-    available: "bg-white text-teal-600 border-2 border-teal-500",
+    completed: "bg-summer-teal text-white shadow-summer-teal",
+    "in-progress": "bg-summer-yellow text-summer-yellow shadow-summer-yellow animate-pulse-slow",
+    available: "bg-white text-summer-teal border-2 border-summer-teal",
     locked: "bg-slate-200 text-slate-400",
   };
 

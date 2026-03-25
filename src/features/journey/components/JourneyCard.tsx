@@ -6,32 +6,32 @@ import { Journey } from '@/types';
 
 /* ─── Category → gradient ────────────────────────────── */
 export const CAT_GRADIENTS: Record<string, string> = {
-  liderazgo:  'from-fuchsia-500 to-purple-600',
-  bienestar:  'from-teal-400   to-cyan-500',
-  innovacion: 'from-amber-400  to-orange-500',
-  comunidad:  'from-sky-400    to-blue-500',
+  liderazgo:  'from-summer-pink to-summer-lavender',
+  bienestar:  'from-summer-teal   to-cyan-500',
+  innovacion: 'from-summer-yellow  to-orange-500',
+  comunidad:  'from-summer-sky    to-blue-500',
 };
 
 /** Participant-safe gradients — no fuchsia (admin colour) */
 export const CAT_GRADIENTS_PARTICIPANT: Record<string, string> = {
   liderazgo:  'from-violet-500 to-indigo-600',
-  bienestar:  'from-teal-400   to-cyan-500',
-  innovacion: 'from-amber-400  to-orange-500',
-  comunidad:  'from-sky-400    to-blue-500',
+  bienestar:  'from-summer-teal   to-cyan-500',
+  innovacion: 'from-summer-yellow  to-orange-500',
+  comunidad:  'from-summer-sky    to-blue-500',
 };
 
 export const FALLBACKS = [
-  'from-fuchsia-500 to-purple-600',
-  'from-teal-400 to-cyan-500',
-  'from-amber-400 to-orange-500',
-  'from-sky-400 to-blue-500',
+  'from-summer-pink to-summer-lavender',
+  'from-summer-teal to-cyan-500',
+  'from-summer-yellow to-orange-500',
+  'from-summer-sky to-blue-500',
 ];
 
 const FALLBACKS_PARTICIPANT = [
   'from-violet-500 to-indigo-600',
-  'from-teal-400 to-cyan-500',
-  'from-amber-400 to-orange-500',
-  'from-sky-400 to-blue-500',
+  'from-summer-teal to-cyan-500',
+  'from-summer-yellow to-orange-500',
+  'from-summer-sky to-blue-500',
 ];
 
 export function categoryGradient(category?: string, isParticipant = false): string {
@@ -45,9 +45,9 @@ export function categoryGradient(category?: string, isParticipant = false): stri
 /* ─── Category → left-border (compact cards) ─────────── */
 export const CAT_BORDER_PARTICIPANT: Record<string, string> = {
   liderazgo:  'border-l-violet-500',
-  bienestar:  'border-l-teal-400',
-  innovacion: 'border-l-amber-400',
-  comunidad:  'border-l-sky-400',
+  bienestar:  'border-l-summer-teal',
+  innovacion: 'border-l-summer-yellow',
+  comunidad:  'border-l-summer-sky',
 };
 
 /* ─── Compact card (dashboard preview) ───────────────── */
@@ -107,7 +107,7 @@ export function JourneyCardCompact({
           </div>
           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-sky-400 to-teal-500 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-summer-sky to-summer-teal rounded-full transition-all duration-700"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -125,8 +125,8 @@ export function JourneyCardCompact({
           <button
             onClick={onContinue}
             className="shrink-0 flex items-center gap-1 text-xs font-bold
-                       text-sky-600 bg-sky-50 border border-sky-100
-                       px-3 py-1.5 rounded-xl hover:bg-sky-100 transition-colors"
+                       text-summer-sky bg-summer-sky/10 border border-summer-sky
+                       px-3 py-1.5 rounded-xl hover:bg-summer-sky transition-colors"
           >
             Continuar <ArrowRight size={12} />
           </button>
@@ -231,8 +231,8 @@ export function JourneyCard({
 
         {/* CTA */}
         {isDone ? (
-          <div className="text-center text-xs font-semibold text-teal-600 bg-teal-50
-                          rounded-xl py-2 border border-teal-100">
+          <div className="text-center text-xs font-semibold text-summer-teal bg-summer-teal/10
+                          rounded-xl py-2 border border-summer-teal">
             ✓ Journey completado
           </div>
         ) : (

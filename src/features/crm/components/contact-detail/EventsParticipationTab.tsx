@@ -367,7 +367,7 @@ export function EventsParticipationTab({ userId, isSuperAdmin }: Props) {
               size="sm"
               disabled={!selectedEventId || submitting}
               onClick={handleSubmit}
-              className="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white"
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender hover:from-summer-pink hover:to-summer-lavender text-white"
             >
               {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Agregar

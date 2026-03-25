@@ -108,7 +108,7 @@ function EditableText({ icon, label, value, fieldKey, contactId, onSaved, type =
             </p>
             <button
               onClick={start}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-summer-pink"
             >
               <Pencil className="h-3 w-3" />
             </button>
@@ -190,7 +190,7 @@ function EditableSelect({ icon, label, value, fieldKey, options, contactId, onSa
             </p>
             <button
               onClick={start}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-summer-pink"
             >
               <Pencil className="h-3 w-3" />
             </button>
@@ -256,7 +256,7 @@ function EditableLocation({ contact, contactId, onSaved }: EditableLocationProps
               onChange={setDraft}
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={save} disabled={saving} className="h-7 text-xs bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white">
+              <Button size="sm" onClick={save} disabled={saving} className="h-7 text-xs bg-gradient-to-r from-summer-pink to-summer-lavender text-white">
                 {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
                 Guardar
               </Button>
@@ -272,7 +272,7 @@ function EditableLocation({ contact, contactId, onSaved }: EditableLocationProps
             </p>
             <button
               onClick={start}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-fuchsia-600"
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-summer-pink"
             >
               <Pencil className="h-3 w-3" />
             </button>
@@ -470,7 +470,7 @@ function AccountActions({
             size="sm"
             onClick={onToggleAdmin}
             disabled={togglingAdmin || user.id === currentUser?.id}
-            className={user.is_platform_admin ? 'border-purple-200 text-purple-700' : ''}
+            className={user.is_platform_admin ? 'border-summer-lavender text-summer-lavender' : ''}
           >
             {togglingAdmin ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

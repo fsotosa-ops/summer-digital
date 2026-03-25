@@ -12,11 +12,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface TypeCfg { icon: ElementType; borderCls: string; iconGradient: string; label: string }
 
 const TYPE_CFG: Record<ApiResourceType, TypeCfg> = {
-  video:     { icon: Play,        borderCls: 'border-l-blue-400',   iconGradient: 'from-sky-400 to-blue-500',      label: 'Video'     },
-  podcast:   { icon: Headphones,  borderCls: 'border-l-violet-400', iconGradient: 'from-violet-400 to-purple-500', label: 'Podcast'   },
-  pdf:       { icon: FileText,    borderCls: 'border-l-amber-400',  iconGradient: 'from-amber-400 to-orange-500',  label: 'PDF'       },
+  video:     { icon: Play,        borderCls: 'border-l-blue-400',   iconGradient: 'from-summer-sky to-blue-500',      label: 'Video'     },
+  podcast:   { icon: Headphones,  borderCls: 'border-l-violet-400', iconGradient: 'from-violet-400 to-summer-lavender', label: 'Podcast'   },
+  pdf:       { icon: FileText,    borderCls: 'border-l-summer-yellow',  iconGradient: 'from-summer-yellow to-orange-500',  label: 'PDF'       },
   capsula:   { icon: Zap,         borderCls: 'border-l-violet-500', iconGradient: 'from-violet-400 to-indigo-500', label: 'Cápsula'   },
-  actividad: { icon: CheckSquare, borderCls: 'border-l-teal-400',   iconGradient: 'from-teal-400 to-cyan-500',     label: 'Actividad' },
+  actividad: { icon: CheckSquare, borderCls: 'border-l-summer-teal',   iconGradient: 'from-summer-teal to-cyan-500',     label: 'Actividad' },
 };
 
 /* ─── Compact resource card ──────────────────────────── */
@@ -51,13 +51,13 @@ function ResourceCardCompact({ resource }: { resource: ApiResourceParticipantRea
       {/* Right side */}
       <div className="shrink-0 flex items-center gap-2">
         {resource.points_on_completion > 0 && !resource.is_consumed && unlocked && (
-          <span className="text-[10px] font-bold text-teal-600 bg-teal-50
-                           border border-teal-100 px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-bold text-summer-teal bg-summer-teal/10
+                           border border-summer-teal px-1.5 py-0.5 rounded-full">
             +{resource.points_on_completion}pts
           </span>
         )}
         {unlocked
-          ? <ArrowRight size={14} className="text-sky-500" />
+          ? <ArrowRight size={14} className="text-summer-sky" />
           : <Lock size={13} className="text-slate-300" />}
       </div>
     </div>
@@ -85,12 +85,12 @@ export function ResourcesFeedWidget() {
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
 
       {/* ── Accent stripe ─────────────────────────────── */}
-      <div className="h-[2px] bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
+      <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
 
       {/* ── Header ────────────────────────────────────── */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-sky-500 to-teal-500
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
                           flex items-center justify-center shadow-sm shrink-0">
             <BookOpen size={16} className="text-white" />
           </div>
@@ -100,7 +100,7 @@ export function ResourcesFeedWidget() {
           </div>
         </div>
         <Link href="/resources">
-          <button className="flex items-center gap-1.5 bg-gradient-to-r from-sky-500 to-teal-500
+          <button className="flex items-center gap-1.5 bg-gradient-to-r from-summer-sky to-summer-teal
                              text-white text-xs font-bold px-3 py-1.5 rounded-xl
                              hover:opacity-90 transition-opacity shadow-sm shrink-0">
             Ver todos <ArrowRight size={11} />

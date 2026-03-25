@@ -59,14 +59,14 @@ const STATUS_OPTIONS: { value: ApiAccountStatus; label: string }[] = [
 const STATUS_COLORS: Record<ApiAccountStatus, string> = {
   active: 'bg-emerald-50 text-emerald-700 border-emerald-100/50',
   suspended: 'bg-rose-50 text-rose-700 border-rose-100/50',
-  pending_verification: 'bg-amber-50 text-amber-700 border-amber-100/50',
+  pending_verification: 'bg-summer-yellow/10 text-summer-yellow border-summer-yellow/50',
   deleted: 'bg-slate-50 text-slate-700 border-slate-100/50',
 };
 
 const CRM_STATUS_COLORS: Record<ApiContactStatus, string> = {
   active: 'bg-emerald-50 text-emerald-700 border-emerald-100/50',
   inactive: 'bg-slate-50 text-slate-700 border-slate-100/50',
-  risk: 'bg-amber-50 text-amber-700 border-amber-100/50',
+  risk: 'bg-summer-yellow/10 text-summer-yellow border-summer-yellow/50',
 };
 
 const CRM_STATUS_LABELS: Record<ApiContactStatus, string> = {
@@ -464,7 +464,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                       </TableCell>
                       <TableCell>
                         {u.is_platform_admin ? (
-                          <Badge className="bg-purple-100 text-purple-800 text-xs">
+                          <Badge className="bg-summer-lavender text-summer-lavender text-xs">
                             <Shield className="h-3 w-3 mr-1" />
                             Admin
                           </Badge>
@@ -484,7 +484,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                           disabled={togglingAdmin === u.id || u.id === currentUser?.id}
                           className={
                             u.is_platform_admin
-                              ? 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                              ? 'text-summer-lavender hover:text-summer-lavender hover:bg-summer-lavender/10'
                               : 'text-slate-400 hover:text-slate-600'
                           }
                         >

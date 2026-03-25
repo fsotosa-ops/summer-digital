@@ -214,8 +214,8 @@ function LoginContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Elementos Decorativos */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-fuchsia-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-summer-pink/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-summer-sky/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
@@ -271,7 +271,7 @@ function LoginContent() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
+                  className="w-full bg-gradient-to-r from-summer-pink to-summer-pink hover:from-summer-pink hover:to-summer-pink border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Ingresando...' : 'Iniciar Sesión'}
@@ -306,7 +306,7 @@ function LoginContent() {
                 <div className="text-center">
                   <Dialog open={recoveryOpen} onOpenChange={setRecoveryOpen}>
                     <DialogTrigger asChild>
-                      <button type="button" className="text-sm text-slate-500 hover:text-fuchsia-600 underline transition-colors">
+                      <button type="button" className="text-sm text-slate-500 hover:text-summer-pink underline transition-colors">
                         ¿Olvidaste tu contraseña?
                       </button>
                     </DialogTrigger>
@@ -433,7 +433,7 @@ function LoginContent() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
+                    className="w-full bg-gradient-to-r from-summer-pink to-summer-pink hover:from-summer-pink hover:to-summer-pink border-0 text-white shadow-md transition-transform hover:-translate-y-0.5"
                     disabled={isLoading || !validatePassword(registerPassword).valid}
                   >
                     {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}

@@ -27,7 +27,7 @@ const TYPE_CONFIG: Record<ApiResourceType, { label: string; icon: React.ElementT
   video:     { label: 'Video',     icon: Video,      color: 'text-blue-600 bg-blue-50 border-blue-100',   activeBtn: 'from-blue-500 to-blue-600'   },
   podcast:   { label: 'Podcast',   icon: Headphones, color: 'text-violet-600 bg-violet-50 border-violet-100', activeBtn: 'from-violet-500 to-violet-600' },
   pdf:       { label: 'PDF',       icon: FileText,   color: 'text-red-600 bg-red-50 border-red-100',      activeBtn: 'from-red-500 to-red-600'     },
-  capsula:   { label: 'Cápsula',   icon: Lightbulb,  color: 'text-amber-600 bg-amber-50 border-amber-100', activeBtn: 'from-amber-500 to-amber-600' },
+  capsula:   { label: 'Cápsula',   icon: Lightbulb,  color: 'text-summer-yellow bg-summer-yellow/10 border-summer-yellow', activeBtn: 'from-summer-yellow to-summer-yellow' },
   actividad: { label: 'Actividad', icon: Zap,        color: 'text-emerald-600 bg-emerald-50 border-emerald-100', activeBtn: 'from-emerald-500 to-emerald-600' },
 };
 
@@ -93,10 +93,10 @@ export default function ResourcesPage() {
 
       {/* ── Page hero ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-sky-500 via-teal-400 to-cyan-400" />
+        <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 to-teal-500
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
                             flex items-center justify-center shadow-sm shrink-0">
               <BookOpen size={20} className="text-white" />
             </div>
@@ -109,7 +109,7 @@ export default function ResourcesPage() {
           {!isLoading && !error && resources.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
-                               bg-sky-50 border border-sky-100 text-sky-700">
+                               bg-summer-sky/10 border border-summer-sky text-summer-sky">
                 <BookOpen size={11} /> {unlocked} disponibles
               </span>
               <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
@@ -130,7 +130,7 @@ export default function ResourcesPage() {
             className={cn(
               'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
               !orgFilter
-                ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             )}
           >
@@ -143,7 +143,7 @@ export default function ResourcesPage() {
               className={cn(
                 'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
                 orgFilter === org.id
-                  ? 'bg-sky-500 border-sky-500 text-white shadow-sm'
+                  ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               )}
             >
@@ -155,11 +155,11 @@ export default function ResourcesPage() {
 
       {/* ── All-locked diagnostic banner ─────────────────── */}
       {allLocked && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
-          <Info size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 bg-summer-yellow/10 border border-summer-yellow rounded-2xl p-4 text-sm text-summer-yellow">
+          <Info size={18} className="text-summer-yellow shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Todos los recursos están bloqueados</p>
-            <p className="text-xs text-amber-700 mt-0.5">
+            <p className="text-xs text-summer-yellow mt-0.5">
               Completa las actividades requeridas para desbloquearlos, o contacta a tu administrador
               para confirmar que los recursos están asignados y publicados para tu organización.
             </p>
@@ -175,7 +175,7 @@ export default function ResourcesPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
               typeFilter === 'all'
-                ? 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-sm'
+                ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
@@ -218,7 +218,7 @@ export default function ResourcesPage() {
       {/* ── Content ────────────────────────────────────────── */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-sky-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-summer-sky" />
         </div>
       ) : error ? (
         /* ── Error state ───────────────────────────────────── */
@@ -241,9 +241,9 @@ export default function ResourcesPage() {
         /* ── Empty state ───────────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-16 px-6
                         bg-white rounded-2xl border border-slate-100 shadow-sm text-center">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-100 to-teal-100
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-summer-sky to-summer-teal
                           flex items-center justify-center shadow-sm mb-4">
-            <BookOpen size={24} className="text-sky-500" />
+            <BookOpen size={24} className="text-summer-sky" />
           </div>
           {typeFilter !== 'all' ? (
             <>
@@ -256,7 +256,7 @@ export default function ResourcesPage() {
               <button
                 onClick={() => setTypeFilter('all')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                           bg-gradient-to-r from-sky-500 to-teal-500 text-white hover:opacity-90 transition-opacity"
+                           bg-gradient-to-r from-summer-sky to-summer-teal text-white hover:opacity-90 transition-opacity"
               >
                 Ver todos los recursos
               </button>
@@ -333,7 +333,7 @@ export default function ResourcesPage() {
                       {cfg.label}
                     </span>
                     {resource.points_on_completion > 0 && !isConsumed && (
-                      <span className="text-xs font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold text-summer-sky bg-summer-sky/10 border border-summer-sky px-2 py-0.5 rounded-full">
                         +{resource.points_on_completion} pts
                       </span>
                     )}
@@ -349,7 +349,7 @@ export default function ResourcesPage() {
                   {isLocked && resource.lock_reasons.length > 0 && (
                     <div className="space-y-1">
                       {resource.lock_reasons.map((reason, i) => (
-                        <p key={i} className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg flex items-center gap-1">
+                        <p key={i} className="text-xs text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-1 rounded-lg flex items-center gap-1">
                           <Lock className="h-3 w-3 flex-shrink-0" />
                           {reason}
                         </p>
@@ -377,7 +377,7 @@ export default function ResourcesPage() {
                       <button
                         onClick={() => router.push(`/resources/${resource.id}`)}
                         className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
-                                   bg-gradient-to-r from-sky-500 to-teal-500 text-white
+                                   bg-gradient-to-r from-summer-sky to-summer-teal text-white
                                    text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
                       >
                         Acceder

@@ -236,7 +236,7 @@ export default function ProfilePage() {
       {/* ══════════════════════════════════════════════════
           HERO BANNER
       ══════════════════════════════════════════════════ */}
-      <div className={`bg-gradient-to-r ${isParticipantView ? 'from-sky-500 via-teal-500 to-cyan-600' : 'from-fuchsia-500 via-purple-600 to-violet-700'} rounded-2xl overflow-hidden shadow-sm`}>
+      <div className={`bg-gradient-to-r ${isParticipantView ? 'from-summer-sky via-summer-teal to-cyan-600' : 'from-summer-pink via-summer-lavender to-violet-700'} rounded-2xl overflow-hidden shadow-sm`}>
         <div className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
 
@@ -330,7 +330,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className={`flex items-center gap-1.5 bg-white ${isParticipantView ? 'text-sky-700' : 'text-fuchsia-700'} font-semibold text-sm px-4 py-2 rounded-xl hover:bg-white/90 transition-colors`}
+                    className={`flex items-center gap-1.5 bg-white ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} font-semibold text-sm px-4 py-2 rounded-xl hover:bg-white/90 transition-colors`}
                   >
                     {saving
                       ? <Loader2 size={14} className="animate-spin" />
@@ -568,17 +568,17 @@ export default function ProfilePage() {
                     <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">
                       Puntos totales
                     </p>
-                    <p className={`text-3xl font-bold ${isParticipantView ? 'text-sky-600' : 'text-fuchsia-600'} tabular-nums mt-0.5`}>
+                    <p className={`text-3xl font-bold ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} tabular-nums mt-0.5`}>
                       {totalPoints}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 ${isParticipantView ? 'bg-sky-50 text-sky-700 border-sky-100' : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100'} text-xs font-semibold rounded-full border`}>
+                  <span className={`px-3 py-1 ${isParticipantView ? 'bg-summer-sky/10 text-summer-sky border-summer-sky' : 'bg-summer-pink/10 text-summer-pink border-summer-pink'} text-xs font-semibold rounded-full border`}>
                     {currentLevelName}
                   </span>
                 </div>
                 <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full bg-gradient-to-r ${isParticipantView ? 'from-sky-500 to-teal-500' : 'from-fuchsia-500 to-purple-600'} rounded-full transition-all duration-700`}
+                    className={`h-full bg-gradient-to-r ${isParticipantView ? 'from-summer-sky to-summer-teal' : 'from-summer-pink to-summer-lavender'} rounded-full transition-all duration-700`}
                     style={{ width: `${Math.min(progressPercent, 100)}%` }}
                   />
                 </div>
@@ -588,7 +588,7 @@ export default function ProfilePage() {
                     <strong className="text-slate-600">{summary.next_level.name}</strong>
                   </p>
                 ) : summary?.current_level && !summary?.next_level ? (
-                  <p className={`text-xs ${isParticipantView ? 'text-sky-600' : 'text-fuchsia-600'} font-semibold mt-1.5`}>
+                  <p className={`text-xs ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} font-semibold mt-1.5`}>
                     Nivel máximo alcanzado
                   </p>
                 ) : totalPoints > 0 ? (
@@ -613,7 +613,7 @@ export default function ProfilePage() {
                     {badges.map((userReward) => (
                       <div
                         key={userReward.id}
-                        className="flex items-center gap-2 bg-amber-50 border border-amber-100
+                        className="flex items-center gap-2 bg-summer-yellow/10 border border-summer-yellow
                                    rounded-xl px-3 py-2"
                         title={userReward.reward?.description ?? ''}
                       >
@@ -621,9 +621,9 @@ export default function ProfilePage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={userReward.reward.icon_url} alt="" className="h-4 w-4" />
                         ) : (
-                          <Award className="h-4 w-4 text-amber-500" />
+                          <Award className="h-4 w-4 text-summer-yellow" />
                         )}
-                        <span className="text-sm font-medium text-amber-700">
+                        <span className="text-sm font-medium text-summer-yellow">
                           {userReward.reward?.name ?? 'Insignia'}
                         </span>
                       </div>
@@ -655,7 +655,7 @@ export default function ProfilePage() {
                            activity.type === 'profile_completed'  ? 'Perfil completado'  :
                            activity.type}
                         </span>
-                        <span className={`text-sm font-bold ${isParticipantView ? 'text-sky-600' : 'text-fuchsia-600'} tabular-nums`}>
+                        <span className={`text-sm font-bold ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} tabular-nums`}>
                           +{activity.points_awarded} pts
                         </span>
                       </div>

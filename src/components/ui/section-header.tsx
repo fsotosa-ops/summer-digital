@@ -13,12 +13,12 @@ export function SectionHeader({ title, description, icon, action, className }: S
   return (
     <div
       className={cn(
-        'rounded-xl shadow-sm bg-gradient-to-r from-sky-100 via-purple-100 to-amber-50 px-6 py-4 flex items-center justify-between',
+        'rounded-xl shadow-sm bg-gradient-to-r from-summer-sky via-summer-lavender to-summer-yellow/10 px-6 py-4 flex items-center justify-between',
         className
       )}
     >
       <div className="flex items-center gap-3">
-        {icon && <div className="text-purple-500">{icon}</div>}
+        {icon && <div className="text-summer-lavender">{icon}</div>}
         <div>
           <h2 className="font-semibold text-slate-800">{title}</h2>
           {description && <p className="text-sm text-slate-500">{description}</p>}

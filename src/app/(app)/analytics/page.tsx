@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-teal-600 mb-3" />
+            <Loader2 className="h-8 w-8 animate-spin text-summer-teal mb-3" />
             <p className="text-slate-500">Cargando dashboard...</p>
           </div>
         )}

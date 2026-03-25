@@ -89,11 +89,11 @@ export function ActivityTab({
 
         {/* Points */}
         {gamification && (
-          <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 text-center">
-            <p className="text-2xl font-bold text-amber-600">
+          <div className="p-4 bg-summer-yellow/10 rounded-lg border border-summer-yellow text-center">
+            <p className="text-2xl font-bold text-summer-yellow">
               {gamification.total_points}
             </p>
-            <p className="text-[11px] text-amber-500 uppercase tracking-wider">
+            <p className="text-[11px] text-summer-yellow uppercase tracking-wider">
               Puntos totales
             </p>
           </div>
@@ -101,15 +101,15 @@ export function ActivityTab({
 
         {/* Level */}
         {gamification && (
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-center">
-            <p className="text-sm font-bold text-purple-600">
+          <div className="p-4 bg-summer-lavender/10 rounded-lg border border-summer-lavender text-center">
+            <p className="text-sm font-bold text-summer-lavender">
               {gamification.current_level?.name || 'Sin nivel'}
             </p>
-            <p className="text-[11px] text-purple-500 uppercase tracking-wider">
+            <p className="text-[11px] text-summer-lavender uppercase tracking-wider">
               Nivel actual
             </p>
             {gamification.points_to_next_level != null && (
-              <p className="text-[10px] text-purple-400 mt-0.5">
+              <p className="text-[10px] text-summer-lavender mt-0.5">
                 {gamification.points_to_next_level} pts al siguiente
               </p>
             )}
@@ -129,7 +129,7 @@ export function ActivityTab({
               <Badge
                 key={r.id}
                 variant="outline"
-                className="bg-teal-50 text-teal-700 border-teal-200"
+                className="bg-summer-teal/10 text-summer-teal border-summer-teal"
               >
                 {r.reward?.name || 'Reward'}
               </Badge>
@@ -194,7 +194,7 @@ export function ActivityTab({
                       <div className="flex items-center gap-2 flex-1 max-w-xs">
                         <div className="w-full bg-slate-200 rounded-full h-1.5">
                           <div
-                            className="bg-teal-500 h-1.5 rounded-full transition-all"
+                            className="bg-summer-teal h-1.5 rounded-full transition-all"
                             style={{ width: `${enrollment.progress_percentage}%` }}
                           />
                         </div>
@@ -320,7 +320,7 @@ export function ActivityTab({
 
                           {/* Points */}
                           {step.points_earned > 0 && (
-                            <span className="text-xs text-amber-600 font-medium shrink-0">
+                            <span className="text-xs text-summer-yellow font-medium shrink-0">
                               +{step.points_earned} pts
                             </span>
                           )}

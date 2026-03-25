@@ -8,7 +8,7 @@ export function NewsWidget() {
   return (
     <div className="bg-white rounded-3xl shadow-xl border-none overflow-hidden">
       {/* Sticky header with subtle pastel gradient */}
-      <div className="sticky top-0 z-10 bg-gradient-to-r from-sky-50 via-purple-50 to-amber-50 px-6 py-4 border-b border-slate-100/60">
+      <div className="sticky top-0 z-10 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 px-6 py-4 border-b border-slate-100/60">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-slate-800">Anuncios y Novedades</h3>
           <Badge

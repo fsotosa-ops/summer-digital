@@ -518,7 +518,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 {STATUS_OPTIONS.find((s) => s.value === user.status)?.label || 'Activo'}
               </Badge>
               {user.is_platform_admin && (
-                <Badge className="bg-purple-100 text-purple-800">
+                <Badge className="bg-summer-lavender text-summer-lavender">
                   <Shield className="h-3 w-3 mr-1" />
                   Platform Admin
                 </Badge>
@@ -714,7 +714,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                           <Button
                             onClick={handleSaveCrm}
                             disabled={savingCrm}
-                            className="bg-teal-600 hover:bg-teal-700 h-9"
+                            className="bg-summer-teal hover:bg-summer-teal h-9"
                           >
                             {savingCrm ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -834,7 +834,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                                 size="sm"
                                 onClick={handleToggleAdmin}
                                 disabled={togglingAdmin || user.id === currentUser?.id}
-                                className={user.is_platform_admin ? 'border-purple-200 text-purple-700' : ''}
+                                className={user.is_platform_admin ? 'border-summer-lavender text-summer-lavender' : ''}
                               >
                                 {togglingAdmin ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -995,7 +995,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                               size="sm"
                               onClick={handleAddToOrg}
                               disabled={addingOrg || !selectedOrgId}
-                              className="bg-teal-600 hover:bg-teal-700 h-8"
+                              className="bg-summer-teal hover:bg-summer-teal h-8"
                             >
                               {addingOrg && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
                               Agregar
@@ -1056,7 +1056,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                               size="sm"
                               onClick={handleCreateNote}
                               disabled={savingNote || !newNoteContent.trim()}
-                              className="bg-teal-600 hover:bg-teal-700 h-8"
+                              className="bg-summer-teal hover:bg-summer-teal h-8"
                             >
                               {savingNote && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
                               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -1135,7 +1135,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                               size="sm"
                               onClick={handleCreateTask}
                               disabled={savingTask || !newTaskTitle.trim()}
-                              className="bg-teal-600 hover:bg-teal-700 h-8"
+                              className="bg-summer-teal hover:bg-summer-teal h-8"
                             >
                               {savingTask ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1257,11 +1257,11 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
                           {/* Points */}
                           {gamification && (
-                            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 text-center">
-                              <p className="text-2xl font-bold text-amber-600">
+                            <div className="p-4 bg-summer-yellow/10 rounded-lg border border-summer-yellow text-center">
+                              <p className="text-2xl font-bold text-summer-yellow">
                                 {gamification.total_points}
                               </p>
-                              <p className="text-[11px] text-amber-500 uppercase tracking-wider">
+                              <p className="text-[11px] text-summer-yellow uppercase tracking-wider">
                                 Puntos totales
                               </p>
                             </div>
@@ -1269,15 +1269,15 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
                           {/* Level */}
                           {gamification && (
-                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-center">
-                              <p className="text-sm font-bold text-purple-600">
+                            <div className="p-4 bg-summer-lavender/10 rounded-lg border border-summer-lavender text-center">
+                              <p className="text-sm font-bold text-summer-lavender">
                                 {gamification.current_level?.name || 'Sin nivel'}
                               </p>
-                              <p className="text-[11px] text-purple-500 uppercase tracking-wider">
+                              <p className="text-[11px] text-summer-lavender uppercase tracking-wider">
                                 Nivel actual
                               </p>
                               {gamification.points_to_next_level != null && (
-                                <p className="text-[10px] text-purple-400 mt-0.5">
+                                <p className="text-[10px] text-summer-lavender mt-0.5">
                                   {gamification.points_to_next_level} pts al siguiente
                                 </p>
                               )}
@@ -1297,7 +1297,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                                 <Badge
                                   key={r.id}
                                   variant="outline"
-                                  className="bg-teal-50 text-teal-700 border-teal-200"
+                                  className="bg-summer-teal/10 text-summer-teal border-summer-teal"
                                 >
                                   {r.reward?.name || 'Reward'}
                                 </Badge>
@@ -1364,7 +1364,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                                         <div className="flex items-center gap-2 flex-1 max-w-xs">
                                           <div className="w-full bg-slate-200 rounded-full h-1.5">
                                             <div
-                                              className="bg-teal-500 h-1.5 rounded-full transition-all"
+                                              className="bg-summer-teal h-1.5 rounded-full transition-all"
                                               style={{ width: `${enrollment.progress_percentage}%` }}
                                             />
                                           </div>
@@ -1447,7 +1447,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
                                             {/* Points */}
                                             {step.points_earned > 0 && (
-                                              <span className="text-xs text-amber-600 font-medium shrink-0">
+                                              <span className="text-xs text-summer-yellow font-medium shrink-0">
                                                 +{step.points_earned} pts
                                               </span>
                                             )}
@@ -1536,7 +1536,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
             <Button
               onClick={handleSaveEdit}
               disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-summer-teal hover:bg-summer-teal"
             >
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Guardar

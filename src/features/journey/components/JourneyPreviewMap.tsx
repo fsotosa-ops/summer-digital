@@ -70,7 +70,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title={node.title} />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<Play className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<Play className="h-10 w-10 text-summer-teal opacity-50" />} />
         );
 
       case 'typeform':
@@ -80,7 +80,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<FileText className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<FileText className="h-10 w-10 text-summer-teal opacity-50" />} />
         );
 
       case 'pdf':
@@ -90,7 +90,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title="PDF" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<FileDown className="h-10 w-10 text-summer-teal opacity-50" />} />
         );
 
       case 'presentation':
@@ -100,19 +100,19 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               allowFullScreen title="Presentación" />
           </div>
         ) : (
-          <PreviewPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-teal-400 opacity-50" />} />
+          <PreviewPlaceholder node={node} icon={<Presentation className="h-10 w-10 text-summer-teal opacity-50" />} />
         );
 
       case 'kahoot':
         return (
-          <Card className="border-purple-200 bg-purple-50">
+          <Card className="border-summer-lavender bg-summer-lavender/10">
             <CardContent className="flex flex-col items-center gap-4 pt-6">
-              <Gamepad2 className="h-12 w-12 text-purple-500" />
-              <p className="text-sm text-purple-700 text-center">
+              <Gamepad2 className="h-12 w-12 text-summer-lavender" />
+              <p className="text-sm text-summer-lavender text-center">
                 Este quiz interactivo se abre en una nueva pestaña.
               </p>
               {embedSrc && (
-                <Button asChild className="bg-purple-600 hover:bg-purple-700">
+                <Button asChild className="bg-summer-lavender hover:bg-summer-lavender">
                   <a href={embedSrc} target="_blank" rel="noopener noreferrer">
                     Abrir Kahoot <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
@@ -128,9 +128,9 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
             node={node}
             icon={
               node.type === 'quiz' ? <span className="text-4xl">?</span> :
-              node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-amber-400 opacity-50" /> :
+              node.type === 'workshop' ? <UsersIcon className="h-10 w-10 text-summer-yellow opacity-50" /> :
               node.type === 'challenge' ? <Star className="h-10 w-10 text-yellow-500 opacity-50" /> :
-              <Play className="h-10 w-10 text-teal-400 opacity-50" />
+              <Play className="h-10 w-10 text-summer-teal opacity-50" />
             }
           />
         );
@@ -143,15 +143,15 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
   return (
     <div className="space-y-4">
       {/* Preview Banner */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 flex items-center justify-between">
+      <div className="bg-summer-lavender/10 border border-summer-lavender rounded-lg px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-purple-500" />
-          <span className="text-sm font-medium text-purple-800">
+          <div className="w-2 h-2 rounded-full bg-summer-lavender" />
+          <span className="text-sm font-medium text-summer-lavender">
             Modo Vista Previa — Los cambios no se guardan
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={resetSimulation} className="text-purple-700 border-purple-300 hover:bg-purple-100">
+          <Button variant="outline" size="sm" onClick={resetSimulation} className="text-summer-lavender border-summer-lavender hover:bg-summer-lavender">
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
             Reiniciar
           </Button>
@@ -172,7 +172,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
         </div>
         <div className="w-full bg-slate-100 rounded-full h-2">
           <div
-            className="bg-teal-500 h-2 rounded-full transition-all duration-500"
+            className="bg-summer-teal h-2 rounded-full transition-all duration-500"
             style={{ width: `${journey.progress}%` }}
           />
         </div>
@@ -187,8 +187,8 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
 
         {/* Success message at 100% */}
         {journey.progress === 100 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-teal-50 border border-teal-200 rounded-lg px-6 py-3 shadow-lg">
-            <p className="text-teal-800 font-semibold text-center">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-summer-teal/10 border border-summer-teal rounded-lg px-6 py-3 shadow-lg">
+            <p className="text-summer-teal font-semibold text-center">
               Journey completado al 100%
             </p>
           </div>
@@ -255,7 +255,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
             selectedNode?.type && ['typeform', 'video', 'pdf', 'presentation'].includes(selectedNode.type) && "sm:max-w-2xl"
           )}>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl text-teal-800">
+              <DialogTitle className="flex items-center gap-2 text-xl text-summer-teal">
                 {selectedNode?.title}
               </DialogTitle>
               <DialogDescription className="text-base text-slate-600 pt-2">
@@ -271,12 +271,12 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
               {selectedNode?.status === 'available' ? (
                 <Button
                   onClick={() => selectedNode && simulateComplete(selectedNode.id)}
-                  className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+                  className="w-full sm:w-auto bg-summer-lavender hover:bg-summer-lavender text-white"
                 >
                   Simular Completar
                 </Button>
               ) : selectedNode?.status === 'completed' ? (
-                <Button variant="outline" className="w-full sm:w-auto border-teal-200 text-teal-700 bg-teal-50">
+                <Button variant="outline" className="w-full sm:w-auto border-summer-teal text-summer-teal bg-summer-teal/10">
                   <Check className="mr-2 h-4 w-4" /> Completado
                 </Button>
               ) : (
@@ -309,9 +309,9 @@ function PreviewPlaceholder({ node, icon }: { node: JourneyNode; icon: React.Rea
 
 function NodeButton({ node, onClick }: { node: JourneyNode; onClick: () => void }) {
   const statusColors = {
-    completed: "bg-teal-500 text-white shadow-teal-200",
-    "in-progress": "bg-amber-400 text-amber-900 shadow-amber-200 animate-pulse-slow",
-    available: "bg-white text-teal-600 border-2 border-teal-500",
+    completed: "bg-summer-teal text-white shadow-summer-teal",
+    "in-progress": "bg-summer-yellow text-summer-yellow shadow-summer-yellow animate-pulse-slow",
+    available: "bg-white text-summer-teal border-2 border-summer-teal",
     locked: "bg-slate-200 text-slate-400",
   };
 

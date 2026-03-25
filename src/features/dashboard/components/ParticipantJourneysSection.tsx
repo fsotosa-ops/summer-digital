@@ -66,7 +66,7 @@ export function ParticipantJourneysSection() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-sky-400 via-teal-400 to-cyan-400 px-5 py-4"
+        className="bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400 px-5 py-4"
       >
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -85,8 +85,8 @@ export function ParticipantJourneysSection() {
             <motion.button
               whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.9)' }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-1.5 bg-white text-sky-600
-                               hover:bg-sky-50 shadow-sm border border-white/60
+              className="flex items-center gap-1.5 bg-white text-summer-sky
+                               hover:bg-summer-sky/10 shadow-sm border border-white/60
                                text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
             >
               Ver todo <ArrowRight size={12} />
@@ -98,13 +98,13 @@ export function ParticipantJourneysSection() {
       {/* ── Title row ───────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
         <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-          <Map size={14} className="text-sky-500" /> Mi aprendizaje
+          <Map size={14} className="text-summer-sky" /> Mi aprendizaje
         </h3>
         {!isLoading && activeJourneys.length > 0 && (
           <div className="flex items-center gap-2">
             {extraCount > 0 && (
-              <span className="text-[11px] font-bold text-sky-700 bg-sky-50
-                               border border-sky-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-summer-sky bg-summer-sky/10
+                               border border-summer-sky px-2 py-0.5 rounded-full">
                 +{extraCount} más
               </span>
             )}
@@ -137,8 +137,8 @@ export function ParticipantJourneysSection() {
             <p className="text-xs text-slate-400 mb-4">Explora el catálogo para comenzar.</p>
             <button
               onClick={() => router.push('/journey')}
-              className="text-xs text-sky-600 font-semibold border border-sky-200
-                         px-4 py-2 rounded-xl hover:bg-sky-50 transition-colors"
+              className="text-xs text-summer-sky font-semibold border border-summer-sky
+                         px-4 py-2 rounded-xl hover:bg-summer-sky/10 transition-colors"
             >
               Explorar journeys
             </button>
@@ -165,8 +165,8 @@ export function ParticipantJourneysSection() {
               <Link href="/journey">
                 <motion.div
                   whileHover={{ x: 5 }}
-                  className="text-center py-2 text-xs font-semibold text-sky-600
-                                  hover:text-sky-700 transition-colors cursor-pointer"
+                  className="text-center py-2 text-xs font-semibold text-summer-sky
+                                  hover:text-summer-sky transition-colors cursor-pointer"
                 >
                   Ver {extraCount} journey{extraCount > 1 ? 's' : ''} más →
                 </motion.div>
@@ -180,9 +180,9 @@ export function ParticipantJourneysSection() {
           <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-                <Compass size={12} className="text-amber-500" /> Disponibles para ti
+                <Compass size={12} className="text-summer-yellow" /> Disponibles para ti
               </p>
-              <Link href="/journey" className="text-[10px] text-sky-500 hover:underline">
+              <Link href="/journey" className="text-[10px] text-summer-sky hover:underline">
                 Ver todos
               </Link>
             </div>
@@ -206,7 +206,7 @@ export function ParticipantJourneysSection() {
                     onClick={() => handleEnroll(j.id)}
                     disabled={enrollingId === j.id}
                     className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold
-                               bg-gradient-to-r from-amber-400 to-orange-500 text-white
+                               bg-gradient-to-r from-summer-yellow to-orange-500 text-white
                                hover:opacity-90 transition-opacity disabled:opacity-60"
                   >
                     {enrollingId === j.id
