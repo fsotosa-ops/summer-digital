@@ -36,6 +36,7 @@ const ROLE_LABELS: Record<string, string> = {
 export function Dashboard() {
   const { user, viewMode } = useAuthStore();
   const [gamSummary, setGamSummary] = useState<ApiUserPointsSummary | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     gamificationService.getUserSummary()
@@ -57,11 +58,11 @@ export function Dashboard() {
   const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
 
   // Hero card color tokens — participant vs admin
-  const heroGradient   = isParticipantView ? 'from-summer-sky to-summer-teal'                      : 'from-summer-pink to-summer-lavender';
-  const levelBadge     = isParticipantView ? 'bg-summer-sky/10 text-summer-sky border-summer-sky'          : 'bg-summer-pink/10 text-summer-pink border-summer-pink';
-  const progressBar    = isParticipantView ? 'from-summer-sky to-summer-teal'                       : 'from-summer-pink to-summer-lavender';
-  const maxLevelText   = isParticipantView ? 'text-summer-teal'                                  : 'text-summer-pink';
-  const cardHoverBorder = isParticipantView ? 'hover:border-summer-sky'                          : 'hover:border-summer-pink';
+  const heroGradient   = isParticipantView ? 'from-summer-yellow to-summer-orange'                      : 'from-summer-pink to-summer-lavender';
+  const levelBadge     = isParticipantView ? 'bg-summer-yellow/10 text-summer-orange border-summer-yellow' : 'bg-summer-pink/10 text-summer-pink border-summer-pink';
+  const progressBar    = isParticipantView ? 'from-summer-yellow to-summer-orange'                       : 'from-summer-pink to-summer-lavender';
+  const maxLevelText   = isParticipantView ? 'text-summer-orange'                                  : 'text-summer-pink';
+  const cardHoverBorder = isParticipantView ? 'hover:border-summer-orange'                          : 'hover:border-summer-pink';
 
   const displayPts    = gamSummary?.total_points   ?? user.oasisScore;
   const levelName     = gamSummary?.current_level?.name ?? user.rank ?? '—';
@@ -85,9 +86,9 @@ export function Dashboard() {
               <div className="w-20 h-20 rounded-2xl bg-white/20 border-2 border-white/30
                               flex items-center justify-center text-white font-bold text-3xl
                               overflow-hidden">
-                {user.avatarUrl
+                {user.avatarUrl && !imgError
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
                   : initials}
               </div>
               {/* Score */}
@@ -151,7 +152,7 @@ export function Dashboard() {
               </div>
 
               {/* Hint */}
-              <p className={`text-[11px] text-slate-300 ${isParticipantView ? 'group-hover:text-summer-sky' : 'group-hover:text-summer-pink'} transition-colors
+              <p className={`text-[11px] text-slate-300 ${isParticipantView ? 'group-hover:text-summer-orange' : 'group-hover:text-summer-pink'} transition-colors
                             flex items-center gap-1`}>
                 <Pencil size={10} /> Ver y editar perfil
               </p>

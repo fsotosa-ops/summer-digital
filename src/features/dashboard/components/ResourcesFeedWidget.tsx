@@ -85,12 +85,12 @@ export function ResourcesFeedWidget() {
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
 
       {/* ── Accent stripe ─────────────────────────────── */}
-      <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
+      <div className="h-[2px] bg-gradient-to-r from-summer-yellow via-summer-orange to-orange-500" />
 
       {/* ── Header ────────────────────────────────────── */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-summer-yellow to-summer-orange
                           flex items-center justify-center shadow-sm shrink-0">
             <BookOpen size={16} className="text-white" />
           </div>
@@ -100,7 +100,7 @@ export function ResourcesFeedWidget() {
           </div>
         </div>
         <Link href="/resources">
-          <button className="flex items-center gap-1.5 bg-gradient-to-r from-summer-sky to-summer-teal
+          <button className="flex items-center gap-1.5 bg-gradient-to-r from-summer-yellow to-summer-orange
                              text-white text-xs font-bold px-3 py-1.5 rounded-xl
                              hover:opacity-90 transition-opacity shadow-sm shrink-0">
             Ver todos <ArrowRight size={11} />

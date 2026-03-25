@@ -228,7 +228,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (hasChildren && filteredChildren.length === 0) return null;
 
     const activeGradient = isParticipantTheme
-      ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-slate-900 font-bold'
+      ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-slate-900 font-bold'
       : 'bg-gradient-to-r from-summer-pink to-summer-pink text-white';
 
     if (hasChildren) {
@@ -255,7 +255,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   onClick={() => router.push(child.href)}
                   className={cn(
                     dropdownItem,
-                    childActive && (isParticipantTheme ? 'bg-summer-sky/10 text-summer-sky' : 'bg-white/5 text-white')
+                    childActive && (isParticipantTheme ? 'bg-summer-yellow/10 text-summer-orange' : 'bg-white/5 text-white')
                   )}
                 >
                   <child.icon size={15} className="mr-2" />
@@ -297,7 +297,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (hasChildren && filteredChildren.length === 0) return null;
 
     const activePill = isParticipantTheme
-      ? 'from-summer-sky to-summer-teal'
+      ? 'from-summer-yellow to-summer-orange'
       : 'from-summer-pink to-summer-pink';
 
     if (hasChildren) {
@@ -401,13 +401,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       {/* Participant mode accent stripe — only for admin switching modes */}
       {isParticipantMode && (
-        <div className="h-1 bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400 sticky top-0 z-[51]" />
+        <div className="h-1 bg-gradient-to-r from-summer-yellow via-summer-orange to-orange-500 sticky top-0 z-[51]" />
       )}
 
         <header className={cn(
           'sticky top-0 z-50 h-16 flex items-center gap-4 px-4 md:px-6 transition-all duration-500',
           isParticipantTheme
-            ? 'summer-glass border-b border-summer-sky/50'
+            ? 'summer-glass border-b border-summer-yellow/50'
             : 'summer-glass-dark'
         )}>
   
@@ -432,7 +432,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Participant mode badge — only for admin switching modes */}
         {isParticipantMode && (
-          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-summer-sky text-slate-900 border border-summer-sky">
+          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-summer-yellow text-slate-900 border border-summer-yellow">
             Participante
           </span>
         )}
@@ -454,7 +454,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               className={cn(
                 'flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-semibold transition-all duration-200',
                 isParticipantMode
-                  ? 'bg-summer-sky border-summer-sky text-white hover:bg-summer-sky shadow-sm shadow-summer-sky/25'
+                  ? 'bg-summer-orange border-summer-orange text-white hover:bg-summer-orange shadow-sm shadow-summer-orange/25'
                   : 'border-white/10 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
               )}
             >
@@ -473,7 +473,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <button className={cn(
                 'h-9 w-9 rounded-full overflow-hidden border transition-colors focus:outline-none',
                 isParticipantTheme
-                  ? 'border-summer-sky hover:border-summer-sky'
+                  ? 'border-summer-orange hover:border-summer-orange'
                   : 'border-white/10 hover:border-white/30'
               )}>
                 {user.avatarUrl && !avatarError ? (
@@ -534,15 +534,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               className={cn(
                 'w-[300px] sm:w-[340px] p-0',
                 isParticipantTheme
-                  ? 'bg-white border-r border-summer-sky'
+                  ? 'bg-white border-r border-summer-yellow'
                   : 'bg-neutral-950 border-r border-white/5'
               )}
             >
               {/* Stripe at top of sheet — only for admin switching modes */}
               {isParticipantMode && (
-                <div className="h-1 bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
+                <div className="h-1 bg-gradient-to-r from-summer-yellow via-summer-orange to-orange-500" />
               )}
-              <SheetHeader className={cn('p-4', isParticipantTheme ? 'border-b border-summer-sky' : 'border-b border-white/5')}>
+              <SheetHeader className={cn('p-4', isParticipantTheme ? 'border-b border-summer-yellow' : 'border-b border-white/5')}>
                 <SheetTitle className={cn('text-left font-bold text-xl', isParticipantTheme ? 'text-slate-900' : 'text-white')}>
                   Menú
                 </SheetTitle>
@@ -552,13 +552,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </nav>
               {/* Mobile: mode toggle (admin only) */}
               {isAdminUser && (
-                <div className={cn('px-4 pb-2', isParticipantMode ? 'border-t border-summer-sky pt-3' : 'border-t border-white/5 pt-3')}>
+                <div className={cn('px-4 pb-2', isParticipantMode ? 'border-t border-summer-yellow pt-3' : 'border-t border-white/5 pt-3')}>
                   <button
                     onClick={handleModeSwitch}
                     className={cn(
                       'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors',
                       isParticipantMode
-                        ? 'bg-summer-sky text-white hover:bg-summer-sky'
+                        ? 'bg-summer-orange text-white hover:bg-summer-orange'
                         : 'border border-white/10 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
                     )}
                   >
@@ -568,7 +568,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </div>
               )}
               {/* Mobile: User profile + actions */}
-              <div className={cn('p-4', isParticipantTheme ? 'border-t border-summer-sky' : 'border-t border-white/5')}>
+              <div className={cn('p-4', isParticipantTheme ? 'border-t border-summer-yellow' : 'border-t border-white/5')}>
                 <div className="flex items-center gap-3 mb-3">
                   {user.avatarUrl && !avatarError ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -576,7 +576,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       src={user.avatarUrl}
                       alt={user.name}
                       onError={() => setAvatarError(true)}
-                      className={cn('h-10 w-10 rounded-full object-cover border', isParticipantTheme ? 'border-summer-sky' : 'border-white/10')}
+                      className={cn('h-10 w-10 rounded-full object-cover border', isParticipantTheme ? 'border-summer-orange' : 'border-white/10')}
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center border border-white/10">
