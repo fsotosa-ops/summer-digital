@@ -69,8 +69,6 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
   useEffect(() => {
     if (!orgId) return;
 
-    setLoading(true);
-
     Promise.allSettled([
       crmService.getStats(orgId),
       adminService.listJourneys(orgId),
