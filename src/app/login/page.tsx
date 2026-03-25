@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import Image from 'next/image';
 import { AlertCircle, CheckCircle2, Circle } from 'lucide-react';
 import { SESSION_KEYS } from '@/lib/utils';
 import { PASSWORD_RULES, validatePassword } from '@/lib/password-validation';
@@ -183,7 +182,7 @@ function LoginContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <Image src="/logo-summerup.png" alt="Summer UP" width={180} height={48} className="h-12 w-auto mx-auto" priority />
+          <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
           <p className="text-slate-500">
             {isNavigating ? 'Preparando tu espacio...' : 'Cargando...'}
           </p>
@@ -201,7 +200,7 @@ function LoginContent() {
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <Image src="/logo-summerup.png" alt="Summer UP" width={180} height={48} className="h-12 w-auto mx-auto" priority />
+          <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
           <p className="text-slate-500">Plataforma de bienestar y desarrollo</p>
         </div>
 
@@ -461,7 +460,7 @@ export default function LoginPage() {
       fallback={
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <Image src="/logo-summerup.png" alt="Summer UP" width={180} height={48} className="h-12 w-auto mx-auto" priority />
+            <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
             <p className="text-slate-500">Cargando...</p>
           </div>
         </div>
