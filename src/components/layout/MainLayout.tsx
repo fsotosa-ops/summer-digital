@@ -633,14 +633,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <main className="flex-1 min-w-0 bg-slate-50">
         {/* Participant mode banner — only for admin switching modes */}
         {isParticipantMode && (
-          <div className="bg-summer-sky px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-slate-900 text-sm font-bold">
+          <div className="bg-slate-900 border-b border-summer-yellow/20 px-4 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-summer-yellow text-sm font-bold">
               <ArrowLeftRight size={14} />
               <span>Modo Participante activo — tu progreso y actividades son reales</span>
             </div>
             <button
               onClick={handleModeSwitch}
-              className="text-xs font-bold text-slate-900 bg-white/40 hover:bg-white/60 px-3 py-1 rounded-lg transition-colors shrink-0"
+              className="text-xs font-bold text-slate-900 bg-summer-yellow hover:bg-[#EADF2A] px-3 py-1 rounded-lg transition-colors shrink-0"
             >
               Salir del modo
             </button>

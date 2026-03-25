@@ -81,7 +81,7 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
 
 const NONE = '__none__';
 
-const WIZARD_BG = 'bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10';
+const WIZARD_BG = 'bg-gradient-to-br from-summer-yellow/10 via-white to-summer-orange/10';
 
 // ─── Types ──────────────────────────────────────────────────────
 interface JourneyWizardProps {
@@ -357,8 +357,8 @@ export function JourneyWizard({
             className={cn(
               'px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-150',
               currentValue === opt.value
-                ? 'border-summer-sky bg-summer-sky/10 text-summer-sky scale-[1.03] shadow-sm'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-summer-sky hover:bg-summer-sky/10/60'
+                ? 'border-summer-orange bg-summer-yellow/10 text-summer-orange scale-[1.03] shadow-sm'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-summer-orange hover:bg-summer-yellow/10/60'
             )}
           >
             {opt.label}
@@ -430,7 +430,7 @@ export function JourneyWizard({
           type="date"
           value={value}
           onChange={e => handleDraftChange(fieldName, e.target.value)}
-          className="h-14 text-base border-slate-200 focus:border-summer-sky focus-visible:ring-summer-sky/20"
+          className="h-14 text-base border-slate-200 focus:border-summer-orange focus-visible:ring-summer-yellow/20"
         />
       );
     }
@@ -454,7 +454,7 @@ export function JourneyWizard({
             else handleCompleteStep();
           }
         }}
-        className="h-14 text-base border-slate-200 focus:border-summer-sky focus-visible:ring-summer-sky/20"
+        className="h-14 text-base border-slate-200 focus:border-summer-orange focus-visible:ring-summer-yellow/20"
       />
     );
   };
@@ -473,13 +473,13 @@ export function JourneyWizard({
         className="w-full max-w-lg"
       >
         <div className="text-center mb-8">
-          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-sky to-summer-teal flex items-center justify-center mx-auto mb-3">
+          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-yellow to-summer-orange flex items-center justify-center mx-auto mb-3">
             {node.type === 'video'
               ? <Video className="h-10 w-10 text-white" />
               : <FileText className="h-10 w-10 text-white" />
             }
           </div>
-          <div className="h-1 w-12 bg-gradient-to-r from-summer-sky to-summer-teal rounded-full mx-auto mt-2 mb-6" />
+          <div className="h-1 w-12 bg-gradient-to-r from-summer-yellow to-summer-orange rounded-full mx-auto mt-2 mb-6" />
           <h2 className="text-2xl font-bold text-slate-800">{node.title}</h2>
           {node.description && (
             <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">{node.description}</p>
@@ -511,7 +511,7 @@ export function JourneyWizard({
             className={cn(
               'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
               !isSaving
-                ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             )}
           >
@@ -554,10 +554,10 @@ export function JourneyWizard({
       >
         {/* Step context badge */}
         <div className="text-center mb-5">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-summer-sky to-summer-teal flex items-center justify-center mx-auto mb-2">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-summer-yellow to-summer-orange flex items-center justify-center mx-auto mb-2">
             <User className="h-6 w-6 text-white" />
           </div>
-          <p className="text-xs font-semibold text-summer-sky uppercase tracking-wider">{node.title}</p>
+          <p className="text-xs font-semibold text-summer-orange uppercase tracking-wider">{node.title}</p>
           {node.description && fieldIndex === 0 && (
             <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">{node.description}</p>
           )}
@@ -582,8 +582,8 @@ export function JourneyWizard({
               <div className="space-y-5">
                 {FieldIcon && (
                   <div className="flex justify-center">
-                    <div className="h-16 w-16 rounded-2xl bg-summer-sky/10 flex items-center justify-center">
-                      <FieldIcon className="h-8 w-8 text-summer-sky" />
+                    <div className="h-16 w-16 rounded-2xl bg-summer-yellow/10 flex items-center justify-center">
+                      <FieldIcon className="h-8 w-8 text-summer-orange" />
                     </div>
                   </div>
                 )}
@@ -621,7 +621,7 @@ export function JourneyWizard({
               className={cn(
                 'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
                 fieldFilled && !(isLastField && isSaving)
-                  ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                  ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               )}
             >
@@ -655,7 +655,7 @@ export function JourneyWizard({
         transition={{ duration: 0.4, ease: 'easeOut' }}
         className={`fixed inset-0 z-[100] ${WIZARD_BG} flex items-center justify-center`}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-summer-sky" />
+        <Loader2 className="h-8 w-8 animate-spin text-summer-orange" />
       </motion.div>
     );
   }
@@ -682,11 +682,11 @@ export function JourneyWizard({
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Perfil Completo</h1>
           <p className="text-slate-500 mb-6">
-            Ganaste <span className="font-bold text-summer-sky">+{xpTotal} XP</span> por completar tu onboarding.
+            Ganaste <span className="font-bold text-summer-orange">+{xpTotal} XP</span> por completar tu onboarding.
           </p>
           <button
             onClick={onBack}
-            className="bg-gradient-to-r from-summer-sky to-summer-teal text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
+            className="bg-gradient-to-r from-summer-yellow to-summer-orange text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
             Continuar
           </button>
@@ -719,7 +719,7 @@ export function JourneyWizard({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.1, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className="h-20 w-20 rounded-full bg-summer-teal flex items-center justify-center shadow-xl"
+              className="h-20 w-20 rounded-full bg-summer-orange flex items-center justify-center shadow-xl"
             >
               <Check className="h-10 w-10 text-white" />
             </motion.div>
@@ -749,9 +749,9 @@ export function JourneyWizard({
               className={cn(
                 'h-2.5 rounded-full transition-all duration-300',
                 node.status === 'completed'
-                  ? 'w-2.5 bg-summer-teal'
+                  ? 'w-2.5 bg-summer-orange'
                   : node.status === 'available'
-                  ? 'w-8 bg-summer-sky'
+                  ? 'w-8 bg-summer-yellow'
                   : 'w-2.5 bg-slate-200'
               )}
             />
@@ -762,7 +762,7 @@ export function JourneyWizard({
       {/* Progress bar */}
       <div className="h-1.5 bg-slate-100 flex-shrink-0">
         <motion.div
-          className="h-full bg-gradient-to-r from-summer-sky to-summer-teal"
+          className="h-full bg-gradient-to-r from-summer-yellow to-summer-orange"
           animate={{ width: `${progressPct}%` }}
           transition={{ type: 'spring', stiffness: 80, damping: 20 }}
         />
@@ -798,7 +798,7 @@ export function JourneyWizard({
             <p className="text-slate-500 mb-6">Tu perfil está completo.</p>
             <button
               onClick={onBack}
-              className="bg-gradient-to-r from-summer-sky to-summer-teal text-white font-semibold px-8 py-3 rounded-xl"
+              className="bg-gradient-to-r from-summer-yellow to-summer-orange text-white font-semibold px-8 py-3 rounded-xl"
             >
               Ir al inicio
             </button>

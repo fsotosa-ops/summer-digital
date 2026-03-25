@@ -93,10 +93,10 @@ export default function ResourcesPage() {
 
       {/* ── Page hero ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-[2px] bg-gradient-to-r from-summer-sky via-summer-teal to-cyan-400" />
+        <div className="h-[2px] bg-gradient-to-r from-summer-yellow via-summer-orange to-red-400" />
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-sky to-summer-teal
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-summer-yellow to-summer-orange
                             flex items-center justify-center shadow-sm shrink-0">
               <BookOpen size={20} className="text-white" />
             </div>
@@ -109,7 +109,7 @@ export default function ResourcesPage() {
           {!isLoading && !error && resources.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
-                               bg-summer-sky/10 border border-summer-sky text-summer-sky">
+                               bg-summer-orange/10 border border-summer-orange text-summer-orange">
                 <BookOpen size={11} /> {unlocked} disponibles
               </span>
               <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
@@ -130,7 +130,7 @@ export default function ResourcesPage() {
             className={cn(
               'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
               !orgFilter
-                ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
+                ? 'bg-summer-orange border-summer-orange text-white shadow-sm'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
             )}
           >
@@ -143,7 +143,7 @@ export default function ResourcesPage() {
               className={cn(
                 'text-xs font-medium px-3 py-1 rounded-full border transition-colors',
                 orgFilter === org.id
-                  ? 'bg-summer-sky border-summer-sky text-white shadow-sm'
+                  ? 'bg-summer-orange border-summer-orange text-white shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
               )}
             >
@@ -175,7 +175,7 @@ export default function ResourcesPage() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
               typeFilter === 'all'
-                ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white shadow-sm'
+                ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-sm'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
@@ -218,7 +218,7 @@ export default function ResourcesPage() {
       {/* ── Content ────────────────────────────────────────── */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-summer-sky" />
+          <Loader2 className="h-8 w-8 animate-spin text-summer-orange" />
         </div>
       ) : error ? (
         /* ── Error state ───────────────────────────────────── */
@@ -241,9 +241,9 @@ export default function ResourcesPage() {
         /* ── Empty state ───────────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-16 px-6
                         bg-white rounded-2xl border border-slate-100 shadow-sm text-center">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-summer-sky to-summer-teal
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-summer-yellow to-summer-orange
                           flex items-center justify-center shadow-sm mb-4">
-            <BookOpen size={24} className="text-summer-sky" />
+            <BookOpen size={24} className="text-white" />
           </div>
           {typeFilter !== 'all' ? (
             <>
@@ -256,7 +256,7 @@ export default function ResourcesPage() {
               <button
                 onClick={() => setTypeFilter('all')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                           bg-gradient-to-r from-summer-sky to-summer-teal text-white hover:opacity-90 transition-opacity"
+                           bg-gradient-to-r from-summer-yellow to-summer-orange text-white hover:opacity-90 transition-opacity"
               >
                 Ver todos los recursos
               </button>
@@ -290,7 +290,7 @@ export default function ResourcesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  'bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow',
+                  'bg-white rounded-2xl border border-slate-100 shadow-sm shadow-slate-200/50 overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300',
                   isLocked && 'opacity-75'
                 )}
               >
@@ -333,7 +333,7 @@ export default function ResourcesPage() {
                       {cfg.label}
                     </span>
                     {resource.points_on_completion > 0 && !isConsumed && (
-                      <span className="text-xs font-bold text-summer-sky bg-summer-sky/10 border border-summer-sky px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold text-summer-orange bg-summer-orange/10 border border-summer-orange px-2 py-0.5 rounded-full">
                         +{resource.points_on_completion} pts
                       </span>
                     )}
@@ -377,7 +377,7 @@ export default function ResourcesPage() {
                       <button
                         onClick={() => router.push(`/resources/${resource.id}`)}
                         className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
-                                   bg-gradient-to-r from-summer-sky to-summer-teal text-white
+                                   bg-gradient-to-r from-summer-yellow to-summer-orange text-white
                                    text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
                       >
                         Acceder
