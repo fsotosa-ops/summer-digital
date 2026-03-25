@@ -20,6 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function UserProfileCard({ user }: UserProfileCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const isIncomplete = user.oasisScore === 0;
   const initials = user.name
@@ -39,7 +40,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
         {/* Centered content */}
         <div className="relative z-10 flex flex-col items-center text-center gap-3">
           {/* Avatar */}
-          {user.avatarUrl ? (
+          {user.avatarUrl && !imgError ? (
             <div className="relative h-20 w-20 rounded-full overflow-hidden border-2 border-white/10 ring-2 ring-summer-sky/30 drop-shadow">
               <Image
                 src={user.avatarUrl}
@@ -47,6 +48,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
                 fill
                 className="object-cover"
                 sizes="80px"
+                onError={() => setImgError(true)}
               />
             </div>
           ) : (

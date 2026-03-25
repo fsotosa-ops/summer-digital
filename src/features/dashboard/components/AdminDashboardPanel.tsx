@@ -34,28 +34,28 @@ const QUICK_ACTIONS = [
     description: 'Sube videos, PDFs y cápsulas',
     href: '/admin/resources',
     icon: BookOpen,
-    gradient: 'from-summer-sky to-blue-500',
+    gradient: 'from-summer-sky to-cyan-500',
   },
   {
     label: 'CRM',
     description: 'Gestiona contactos y pipeline',
     href: '/crm',
     icon: Users,
-    gradient: 'from-summer-teal to-cyan-500',
+    gradient: 'from-summer-teal to-emerald-500',
   },
   {
     label: 'Gamificación',
     description: 'Puntos, rangos y recompensas',
     href: '/admin/gamification',
     icon: Trophy,
-    gradient: 'from-summer-yellow to-orange-500',
+    gradient: 'from-summer-yellow to-summer-orange',
   },
   {
     label: 'Analítica',
     description: 'Métricas y reportes de la plataforma',
     href: '/analytics',
     icon: TrendingUp,
-    gradient: 'from-emerald-400 to-green-500',
+    gradient: 'from-summer-teal to-summer-sky',
   },
 ];
 
@@ -97,9 +97,9 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
 
   const KPI_CARDS = [
     { label: 'Usuarios Activos', sub: 'Total registrados', icon: Users,     border: 'border-summer-pink', iconGradient: 'from-summer-pink to-summer-lavender', value: stats.users },
-    { label: 'Journeys',         sub: 'Publicados',        icon: Route,     border: 'border-summer-sky',     iconGradient: 'from-summer-sky to-blue-600',       value: stats.journeys },
-    { label: 'Recursos',         sub: 'Disponibles',       icon: Layers,    border: 'border-summer-teal',    iconGradient: 'from-summer-teal to-cyan-600',       value: stats.resources },
-    { label: 'Completados',      sub: 'Total acumulado',   icon: BarChart3, border: 'border-summer-yellow',   iconGradient: 'from-summer-yellow to-orange-500',    value: stats.completions },
+    { label: 'Journeys',         sub: 'Publicados',        icon: Route,     border: 'border-summer-sky',     iconGradient: 'from-summer-sky to-cyan-500',       value: stats.journeys },
+    { label: 'Recursos',         sub: 'Disponibles',       icon: Layers,    border: 'border-summer-teal',    iconGradient: 'from-summer-teal to-emerald-500',       value: stats.resources },
+    { label: 'Completados',      sub: 'Total acumulado',   icon: BarChart3, border: 'border-summer-yellow',   iconGradient: 'from-summer-yellow to-summer-orange',    value: stats.completions },
   ];
 
   return (
@@ -147,7 +147,7 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
                   </motion.p>
                 )}
                 <p className="text-sm font-medium text-slate-600 mt-1">{stat.label}</p>
-                <p className="text-xs text-slate-400">{stat.sub}</p>
+                <p className="text-xs text-slate-500">{stat.sub}</p>
               </div>
             </motion.div>
           );
@@ -177,7 +177,7 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
                       </div>
                       <div>
                         <p className="font-semibold text-slate-800 text-sm">{action.label}</p>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{action.description}</p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{action.description}</p>
                       </div>
                     </div>
                   </Link>

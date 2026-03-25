@@ -202,6 +202,14 @@
     0 0 40px rgba(255, 137, 0, 0.2);
 }
 
+/* ── Solid white stroke outline for logos on dark backgrounds ── */
+.logo-outline-white {
+  filter: drop-shadow(0px 1px 0px white) 
+          drop-shadow(0px -1px 0px white) 
+          drop-shadow(1px 0px 0px white) 
+          drop-shadow(-1px 0px 0px white);
+}
+
 /* ── Font utility classes ── */
 .font-titles {
   font-family: var(--font-titles);

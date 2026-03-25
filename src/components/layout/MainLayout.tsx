@@ -79,6 +79,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [onboardingChecking, setOnboardingChecking] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
   const isParticipantMode = isAdminUser && viewMode === 'participant';
@@ -227,7 +228,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (hasChildren && filteredChildren.length === 0) return null;
 
     const activeGradient = isParticipantTheme
-      ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-white'
+      ? 'bg-gradient-to-r from-summer-sky to-summer-teal text-slate-900 font-bold'
       : 'bg-gradient-to-r from-summer-pink to-summer-pink text-white';
 
     if (hasChildren) {
@@ -423,7 +424,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               priority
               className={cn(
                 "h-12 transition-all duration-300",
-                !isParticipantTheme && "drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                !isParticipantTheme && "logo-outline-white"
               )}
               style={{ width: 'auto' }}
             />
@@ -431,7 +432,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Participant mode badge — only for admin switching modes */}
         {isParticipantMode && (
-          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-summer-sky text-summer-sky border border-summer-sky">
+          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-summer-sky text-slate-900 border border-summer-sky">
             Participante
           </span>
         )}
@@ -475,9 +476,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   ? 'border-summer-sky hover:border-summer-sky'
                   : 'border-white/10 hover:border-white/30'
               )}>
-                {user.avatarUrl ? (
+                {user.avatarUrl && !avatarError ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+                  <img src={user.avatarUrl} alt={user.name} onError={() => setAvatarError(true)} className="h-full w-full object-cover" />
                 ) : (
                   <div className="h-full w-full bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center">
                     <span className="text-xs font-semibold text-white">
@@ -569,11 +570,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               {/* Mobile: User profile + actions */}
               <div className={cn('p-4', isParticipantTheme ? 'border-t border-summer-sky' : 'border-t border-white/5')}>
                 <div className="flex items-center gap-3 mb-3">
-                  {user.avatarUrl ? (
+                  {user.avatarUrl && !avatarError ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={user.avatarUrl}
                       alt={user.name}
+                      onError={() => setAvatarError(true)}
                       className={cn('h-10 w-10 rounded-full object-cover border', isParticipantTheme ? 'border-summer-sky' : 'border-white/10')}
                     />
                   ) : (
@@ -632,13 +634,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* Participant mode banner — only for admin switching modes */}
         {isParticipantMode && (
           <div className="bg-summer-sky px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-white text-sm font-medium">
+            <div className="flex items-center gap-2 text-slate-900 text-sm font-bold">
               <ArrowLeftRight size={14} />
               <span>Modo Participante activo — tu progreso y actividades son reales</span>
             </div>
             <button
               onClick={handleModeSwitch}
-              className="text-xs font-semibold text-white bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors shrink-0"
+              className="text-xs font-bold text-slate-900 bg-white/40 hover:bg-white/60 px-3 py-1 rounded-lg transition-colors shrink-0"
             >
               Salir del modo
             </button>
