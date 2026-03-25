@@ -39,12 +39,7 @@ import { UserRole } from '@/types';
 import { Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
 
-const ROLE_LABELS: Record<string, string> = {
-  SuperAdmin: 'Super Administrador',
-  Admin: 'Administrador',
-  Participant: 'Participante',
-  Subscriber: 'Suscriptor',
-};
+
 
 interface NavItem {
   label: string;
@@ -481,6 +476,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   : 'border-white/10 hover:border-white/30'
               )}>
                 {user.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
                   <div className="h-full w-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center">
@@ -574,6 +570,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <div className={cn('p-4', isParticipantTheme ? 'border-t border-sky-100' : 'border-t border-white/5')}>
                 <div className="flex items-center gap-3 mb-3">
                   {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={user.avatarUrl}
                       alt={user.name}
