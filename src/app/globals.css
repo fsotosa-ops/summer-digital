@@ -28,6 +28,15 @@
   --color-summer-black: #000000;
   --color-summer-white: #ffffff;
 
+  /* ── Temporary Oasis Aliases ── */
+  --color-oasis-blue: var(--color-summer-sky);
+  --color-oasis-pink: var(--color-summer-pink);
+  --color-oasis-yellow: var(--color-summer-yellow);
+  --color-oasis-orange: var(--color-summer-orange);
+  --color-oasis-purple: var(--color-summer-lavender);
+  --color-oasis-teal: var(--color-summer-teal);
+  --color-oasis-light: var(--color-summer-white);
+
   /* ── Shadcn semantic aliases mapped to brand ── */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

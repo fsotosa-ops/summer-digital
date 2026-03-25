@@ -146,7 +146,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
               className="w-24 h-24 rounded-3xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-2xl"
             >
-              <span className="text-4xl font-bold text-white">O</span>
+              <span className="text-4xl font-bold text-white">S</span>
             </motion.div>
 
             <motion.div
@@ -218,7 +218,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               <span className="text-5xl">🏆</span>
             </motion.div>
             <h1 className="text-4xl font-bold text-slate-800">¡Nivel 1 Alcanzado!</h1>
-            <p className="text-xl text-teal-600 font-semibold mt-2">Oasis desbloqueado</p>
+            <p className="text-xl text-teal-600 font-semibold mt-2">Summer UP desbloqueado</p>
             <p className="text-slate-500 text-lg mt-2">Estás listo para explorar la plataforma</p>
           </motion.div>
         )}

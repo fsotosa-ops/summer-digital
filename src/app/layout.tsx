@@ -25,7 +25,7 @@ const anton = Anton({
 export const metadata: Metadata = {
   title: "Summer UP",
   description: "Summer UP — Tu plataforma de experiencias",
-  icons: { icon: "/favicon.png" },
+  icons: { icon: "/[FS]Favicon_1.png" },
 };
 
 export default function RootLayout({
