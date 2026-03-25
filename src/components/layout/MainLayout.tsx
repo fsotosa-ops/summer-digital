@@ -426,7 +426,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               width={180}
               height={48}
               priority
-              className="h-12 transition-all duration-300"
+              className={cn(
+                "h-12 transition-all duration-300",
+                !isParticipantTheme && "drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+              )}
               style={{ width: 'auto' }}
             />
           </Link>

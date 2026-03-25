@@ -75,31 +75,31 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #FF299D;
-  --primary-foreground: #000000;
+  --primary: 328 100% 58%;
+  --primary-foreground: 0 0% 0%;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: #76D0E4;
-  --accent-foreground: #000000;
+  --accent: 191 66% 68%;
+  --accent-foreground: 0 0% 0%;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: #FF299D;
-  --chart-1: #FF299D;
-  --chart-2: #76D0E4;
-  --chart-3: #E0FF00;
-  --chart-4: #FF8900;
-  --chart-5: #E05CFF;
+  --ring: 328 100% 58%;
+  --chart-1: 328 100% 58%;
+  --chart-2: 191 66% 68%;
+  --chart-3: 67 100% 50%;
+  --chart-4: 32 100% 50%;
+  --chart-5: 288 100% 68%;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #FF299D;
-  --sidebar-primary-foreground: #000000;
+  --sidebar-primary: 328 100% 58%;
+  --sidebar-primary-foreground: 0 0% 0%;
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: #FF299D;
+  --sidebar-ring: 328 100% 58%;
 
   /* ── Brand Font Variables ── */
   --font-primary: "Montserrat", sans-serif;
@@ -209,24 +209,24 @@
    Applied via [data-theme="admin"] on the admin layout wrapper
    ══════════════════════════════════════════════════════════ */
 [data-theme="admin"] {
-  --primary: #00B38B;
-  --primary-foreground: #ffffff;
-  --accent: #000000;
-  --accent-foreground: #ffffff;
-  --ring: #00B38B;
-  --chart-1: #00B38B;
-  --chart-2: #000000;
-  --chart-3: #76D0E4;
-  --chart-4: #E05CFF;
-  --chart-5: #FF8900;
-  --sidebar: #000000;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #00B38B;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1a1a1a;
-  --sidebar-accent-foreground: #ffffff;
+  --primary: 167 100% 35%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 0 0% 0%;
+  --accent-foreground: 0 0% 100%;
+  --ring: 167 100% 35%;
+  --chart-1: 167 100% 35%;
+  --chart-2: 0 0% 0%;
+  --chart-3: 191 66% 68%;
+  --chart-4: 288 100% 68%;
+  --chart-5: 32 100% 50%;
+  --sidebar: 0 0% 0%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 167 100% 35%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 10%;
+  --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-border: rgba(255,255,255,0.1);
-  --sidebar-ring: #00B38B;
+  --sidebar-ring: 167 100% 35%;
 }
 
 .admin-gradient {

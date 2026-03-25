@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
@@ -57,14 +58,30 @@ function LoginContent() {
     }
   }, [joinEventId]);
 
-  // Efecto 2: Hidratación segura de Zustand
+  // Efecto 2: Hidratación segura de Zustand con fallback
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
       setHydrated(true);
       return;
     }
+
+    const checkHydration = setInterval(() => {
+      if (useAuthStore.persist.hasHydrated()) {
+        setHydrated(true);
+        clearInterval(checkHydration);
+      }
+    }, 100);
+
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
-    return unsub;
+    
+    // Timeout fallback de 2.5 seg para evitar quedarse pegado si falla
+    const fallback = setTimeout(() => { setHydrated(true); }, 2500);
+
+    return () => {
+      unsub?.();
+      clearInterval(checkHydration);
+      clearTimeout(fallback);
+    };
   }, []);
 
   // Efecto 2.5: Procesar hash fragments de Supabase
@@ -82,12 +99,10 @@ function LoginContent() {
 
       if (!accessToken || !refreshToken) return;
 
-      // Limpiar hash de la URL inmediatamente
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-
       // Recovery: guardar tokens y redirigir a página de cambio de contraseña
       if (type === 'recovery') {
         apiClient.setTokens(accessToken, refreshToken);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
         router.push('/reset-password');
         return;
       }
@@ -97,9 +112,13 @@ function LoginContent() {
         apiClient.setTokens(accessToken, refreshToken);
         const profile = await authService.getUserProfile();
         setUser(profile); // Efecto 3 se encarga de redirigir a /dashboard
+        // Limpiamos el hash SOLO tras comprobar que todo salió bien
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       } catch {
-        // Si falla, el usuario puede hacer login manual
+        // Si falla, el usuario puede hacer login manual y no se purga de una vez la url si no que falla visiblemente? 
+        // En este punto, no iniciamos sesión.
         apiClient.clearTokens();
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     };
 
@@ -182,7 +201,7 @@ function LoginContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
+          <Image src="/logo-summerup.png" alt="Summer UP" width={200} height={60} className="h-12 w-auto mx-auto object-contain" priority />
           <p className="text-slate-500">
             {isNavigating ? 'Preparando tu espacio...' : 'Cargando...'}
           </p>
@@ -200,7 +219,7 @@ function LoginContent() {
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
+          <Image src="/logo-summerup.png" alt="Summer UP" width={200} height={60} className="h-12 w-auto mx-auto object-contain" priority />
           <p className="text-slate-500">Plataforma de bienestar y desarrollo</p>
         </div>
 
@@ -460,7 +479,7 @@ export default function LoginPage() {
       fallback={
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center">
           <div className="text-center space-y-2">
-            <img src="/logo-summerup.png" alt="Summer UP" className="h-12 w-auto mx-auto" />
+            <Image src="/logo-summerup.png" alt="Summer UP" width={200} height={60} className="h-12 w-auto mx-auto object-contain" />
             <p className="text-slate-500">Cargando...</p>
           </div>
         </div>
