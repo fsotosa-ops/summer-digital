@@ -227,9 +227,14 @@ export interface ApiJourneyTrackingRead {
   category?: string | null;
   is_active: boolean;
   total_steps: number;
+  /**
+   * Nueva semántica: total = asistentes del evento (registered/attended).
+   * En el bucket unassigned mantiene la lógica legacy (filas reales en enrollments).
+   */
   total_enrollments: number;
   active_enrollments: number;
   completed_enrollments: number;
+  not_started_enrollments: number;
   /** Decimal 0-1 */
   completion_rate: number;
 }
@@ -252,6 +257,21 @@ export interface ApiOrgTrackingResponse {
   total_unique_enrolled_users: number;
   total_enrollments: number;
   unassigned_journeys: ApiJourneyTrackingRead[];
+}
+
+export interface ApiJourneyEnrolleeRead {
+  user_id: string;
+  /** null si el usuario asistió al evento pero nunca creó una enrollment row. */
+  enrollment_id: string | null;
+  full_name: string | null;
+  email: string | null;
+  /** Lectura del funnel computada por el backend. */
+  status: 'not_started' | 'active' | 'completed' | string;
+  progress_percentage: number;
+  current_step_index: number;
+  /** null si not_started → cae al registered_at de la asistencia. */
+  started_at: string | null;
+  completed_at: string | null;
 }
 
 export interface ApiJourneyCreate {

@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { organizationService } from '@/services/organization.service';
 import { crmService } from '@/services/crm.service';
@@ -17,6 +16,7 @@ import {
   ApiOrgTrackingResponse,
   ApiEventTrackingRead,
   ApiJourneyTrackingRead,
+  ApiJourneyEnrolleeRead,
 } from '@/types/api.types';
 import { EventsTab } from '@/features/crm/tabs/EventsTab';
 import { MiniProgress } from '@/components/MiniProgress';
@@ -80,6 +80,8 @@ import {
   Calendar,
   Route,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -267,7 +269,6 @@ interface Props {
 }
 
 export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
-  const router = useRouter();
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
@@ -319,6 +320,9 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingLoaded, setTrackingLoaded] = useState(false);
 
+  // Drilldown a inscritos: contexto activo del EnrolleesDialog (null = cerrado)
+  const [enrolleesCtx, setEnrolleesCtx] = useState<EnrolleesContext | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   // Load CRM profile + members when org changes
@@ -329,6 +333,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       setEventsLoaded(false);
       setTracking(null);
       setTrackingLoaded(false);
+      setEnrolleesCtx(null);
       return;
     }
     setProfileLoading(true);
@@ -881,10 +886,9 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                     ) : (
                       <JourneyTrackingView
                         tracking={tracking}
-                        onJourneyClick={(id) => {
-                          onClose();
-                          router.push(`/admin/journeys/${id}`);
-                        }}
+                        onEnrolleesClick={(journey, eventId, eventName, mode) =>
+                          setEnrolleesCtx({ journey, eventId, eventName, mode })
+                        }
                       />
                     )}
                   </TabsContent>
@@ -895,6 +899,15 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      {/* Enrollees Dialog (drilldown desde el tab Journeys) */}
+      {enrolleesCtx && (
+        <EnrolleesDialog
+          orgId={org.id}
+          context={enrolleesCtx}
+          onClose={() => setEnrolleesCtx(null)}
+        />
+      )}
 
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -1021,17 +1034,32 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
 
 // ── JourneyTrackingView ──────────────────────────────────────────────────────
 // Vista del tab Journeys del CRM dialog. Muestra la jerarquía Org → Evento →
-// Journeys con stats scoped a los miembros activos de la org. El header aclara
-// la diferencia entre miembros, usuarios únicos inscritos y total de
-// inscripciones (un mismo usuario puede contar varias veces si está en
-// múltiples journeys).
+// Journeys con stats scoped a los miembros activos de la org. Las tarjetas de
+// evento son colapsables (default cerradas) y las celdas Inscritos/Completados
+// son botones que abren el EnrolleesDialog con el drilldown a usuarios.
+
+type EnrolleesMode = 'all' | 'not_started' | 'active' | 'completed';
+
+type EnrolleesContext = {
+  journey: ApiJourneyTrackingRead;
+  eventId: string | null;
+  eventName: string | null;
+  mode: EnrolleesMode;
+};
+
+type OnEnrolleesClick = (
+  journey: ApiJourneyTrackingRead,
+  eventId: string | null,
+  eventName: string | null,
+  mode: EnrolleesMode,
+) => void;
 
 function JourneyTrackingView({
   tracking,
-  onJourneyClick,
+  onEnrolleesClick,
 }: {
   tracking: ApiOrgTrackingResponse;
-  onJourneyClick: (journeyId: string) => void;
+  onEnrolleesClick: OnEnrolleesClick;
 }) {
   const eventsWithJourneys = tracking.events.filter((e) => e.journeys.length > 0);
   const hasContent = eventsWithJourneys.length > 0 || tracking.unassigned_journeys.length > 0;
@@ -1039,16 +1067,16 @@ function JourneyTrackingView({
   const stats: { label: string; value: number; color: 'fuchsia' | 'lavender' | 'amber' | 'teal'; hint?: string }[] = [
     { label: 'Miembros activos', value: tracking.total_members, color: 'fuchsia' },
     {
-      label: 'Inscritos únicos',
+      label: 'Asistentes con journeys',
       value: tracking.total_unique_enrolled_users,
       color: 'lavender',
-      hint: 'Usuarios distintos con al menos un journey',
+      hint: 'Usuarios únicos asistentes a eventos que tienen journeys asignados',
     },
     {
-      label: 'Inscripciones totales',
+      label: 'Asignaciones potenciales',
       value: tracking.total_enrollments,
       color: 'amber',
-      hint: 'Suma de inscripciones — un usuario puede contar varias veces si está en múltiples journeys',
+      hint: 'Suma de (asistentes × journeys del evento) — la base máxima del funnel',
     },
     { label: 'Eventos con journeys', value: eventsWithJourneys.length, color: 'teal' },
   ];
@@ -1086,14 +1114,14 @@ function JourneyTrackingView({
             <TrackingEventCard
               key={event.event_id}
               event={event}
-              onJourneyClick={onJourneyClick}
+              onEnrolleesClick={onEnrolleesClick}
             />
           ))}
 
           {tracking.unassigned_journeys.length > 0 && (
             <UnassignedJourneysCard
               journeys={tracking.unassigned_journeys}
-              onJourneyClick={onJourneyClick}
+              onEnrolleesClick={onEnrolleesClick}
             />
           )}
         </>
@@ -1102,72 +1130,149 @@ function JourneyTrackingView({
   );
 }
 
+// Header colapsable reutilizable: chevron + título + badge opcional + resumen
+function CollapsibleHeader({
+  open,
+  onToggle,
+  icon,
+  title,
+  badge,
+  meta,
+  summary,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  icon: React.ReactNode;
+  title: string;
+  badge?: React.ReactNode;
+  meta?: React.ReactNode;
+  summary: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="w-full bg-slate-50/60 border-b border-slate-100 px-4 py-3 text-left
+                 hover:bg-slate-100/70 transition-colors"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+          )}
+          {icon}
+          <h4 className="text-sm font-semibold text-slate-800 truncate">{title}</h4>
+          {badge}
+        </div>
+        <div className="flex items-center gap-3 text-[11px] text-slate-500 sm:justify-end">
+          {meta}
+          <span className="text-slate-400 whitespace-nowrap">{summary}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function TrackingEventCard({
   event,
-  onJourneyClick,
+  onEnrolleesClick,
 }: {
   event: ApiEventTrackingRead;
-  onJourneyClick: (journeyId: string) => void;
+  onEnrolleesClick: OnEnrolleesClick;
 }) {
+  const [open, setOpen] = useState(false);
   const dateRange = formatDateRange(event.start_date, event.end_date);
+  // Bajo la nueva semántica: total_enrollments = asistentes del evento, idéntico
+  // para todos los journeys del mismo evento (por construcción del backend).
+  const attendeeCount = event.journeys[0]?.total_enrollments ?? 0;
+  const totalCompleted = event.journeys.reduce((s, j) => s + j.completed_enrollments, 0);
+  const summary = `${event.journeys.length} journeys · ${attendeeCount} asistentes · ${totalCompleted} completados`;
+
   return (
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="bg-slate-50/60 border-b border-slate-100 px-4 py-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-            <h4 className="text-sm font-semibold text-slate-800 truncate">{event.event_name}</h4>
-            <Badge
-              variant="outline"
-              className={cn('text-[10px] font-semibold', eventStatusClasses(event.event_status))}
-            >
-              {eventStatusLabel(event.event_status)}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-slate-500">
+      <CollapsibleHeader
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        icon={<Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
+        title={event.event_name}
+        badge={
+          <Badge
+            variant="outline"
+            className={cn('text-[10px] font-semibold', eventStatusClasses(event.event_status))}
+          >
+            {eventStatusLabel(event.event_status)}
+          </Badge>
+        }
+        meta={
+          <>
             {dateRange && <span>{dateRange}</span>}
             {event.location && (
               <span className="flex items-center gap-1">
                 <MapPin size={10} /> {event.location}
               </span>
             )}
-          </div>
-        </div>
-      </div>
-      <JourneysTable journeys={event.journeys} onJourneyClick={onJourneyClick} />
+          </>
+        }
+        summary={summary}
+      />
+      {open && (
+        <JourneysTable
+          journeys={event.journeys}
+          eventId={event.event_id}
+          eventName={event.event_name}
+          onEnrolleesClick={onEnrolleesClick}
+        />
+      )}
     </div>
   );
 }
 
 function UnassignedJourneysCard({
   journeys,
-  onJourneyClick,
+  onEnrolleesClick,
 }: {
   journeys: ApiJourneyTrackingRead[];
-  onJourneyClick: (journeyId: string) => void;
+  onEnrolleesClick: OnEnrolleesClick;
 }) {
+  const [open, setOpen] = useState(false);
+  const totalEnrolled = journeys.reduce((s, j) => s + j.total_enrollments, 0);
+  const totalCompleted = journeys.reduce((s, j) => s + j.completed_enrollments, 0);
+  const summary = `${journeys.length} journeys · ${totalEnrolled} inscritos · ${totalCompleted} completados`;
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="bg-slate-50/60 border-b border-slate-100 px-4 py-3 flex items-start gap-2">
-        <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-        <div>
-          <h4 className="text-sm font-semibold text-slate-700">Sin evento asignado</h4>
-          <p className="text-[11px] text-slate-400">
-            Estos journeys están asignados a la organización pero no a ningún evento
-          </p>
-        </div>
-      </div>
-      <JourneysTable journeys={journeys} onJourneyClick={onJourneyClick} />
+      <CollapsibleHeader
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        icon={<AlertCircle className="h-4 w-4 text-slate-400 shrink-0" />}
+        title="Sin evento asignado"
+        summary={summary}
+      />
+      {open && (
+        <JourneysTable
+          journeys={journeys}
+          eventId={null}
+          eventName={null}
+          onEnrolleesClick={onEnrolleesClick}
+        />
+      )}
     </div>
   );
 }
 
 function JourneysTable({
   journeys,
-  onJourneyClick,
+  eventId,
+  eventName,
+  onEnrolleesClick,
 }: {
   journeys: ApiJourneyTrackingRead[];
-  onJourneyClick: (journeyId: string) => void;
+  eventId: string | null;
+  eventName: string | null;
+  onEnrolleesClick: OnEnrolleesClick;
 }) {
   if (journeys.length === 0) {
     return (
@@ -1191,11 +1296,7 @@ function JourneysTable({
         {journeys.map((j) => {
           const pct = j.total_enrollments > 0 ? Math.round(j.completion_rate * 100) : 0;
           return (
-            <TableRow
-              key={j.id}
-              className="cursor-pointer hover:bg-summer-pink/5 transition-colors"
-              onClick={() => onJourneyClick(j.id)}
-            >
+            <TableRow key={j.id} className="hover:bg-transparent">
               <TableCell className="pl-4">
                 <p className="font-medium text-sm text-slate-800">{j.title}</p>
                 <p className="text-[11px] text-slate-400">/{j.slug}</p>
@@ -1215,12 +1316,33 @@ function JourneysTable({
               <TableCell className="text-center text-sm text-slate-600">
                 {j.total_steps}
               </TableCell>
-              <TableCell className="text-center text-sm text-slate-600">
-                {j.total_enrollments}
+              <TableCell className="text-center">
+                <button
+                  type="button"
+                  disabled={j.total_enrollments === 0}
+                  onClick={() => onEnrolleesClick(j, eventId, eventName, 'all')}
+                  className="text-sm font-medium text-summer-lavender hover:text-summer-pink hover:underline
+                             disabled:text-slate-400 disabled:no-underline disabled:cursor-default"
+                >
+                  {j.total_enrollments}
+                </button>
+                {j.total_enrollments > 0 && (
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                    {j.not_started_enrollments} sin iniciar · {j.active_enrollments} en curso
+                  </p>
+                )}
               </TableCell>
               <TableCell className="pr-4">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-sm text-slate-600">{j.completed_enrollments}</span>
+                  <button
+                    type="button"
+                    disabled={j.completed_enrollments === 0}
+                    onClick={() => onEnrolleesClick(j, eventId, eventName, 'completed')}
+                    className="text-sm font-medium text-summer-lavender hover:text-summer-pink hover:underline
+                               disabled:text-slate-600 disabled:no-underline disabled:cursor-default"
+                  >
+                    {j.completed_enrollments}
+                  </button>
                   {j.total_enrollments > 0 && <MiniProgress pct={pct} />}
                 </div>
               </TableCell>
@@ -1229,5 +1351,155 @@ function JourneysTable({
         })}
       </TableBody>
     </Table>
+  );
+}
+
+// ── EnrolleesDialog ──────────────────────────────────────────────────────────
+// Sub-dialog que muestra los inscritos de un journey scoped a un evento (o
+// "sin evento" para los unassigned). Hace una sola fetch al backend con todos
+// los enrollees del (journey, event); los tabs filtran client-side.
+
+function EnrolleesDialog({
+  orgId,
+  context,
+  onClose,
+}: {
+  orgId: string;
+  context: EnrolleesContext;
+  onClose: () => void;
+}) {
+  const { journey, eventId, eventName, mode } = context;
+  type Tab = 'all' | 'not_started' | 'active' | 'completed';
+  const [tab, setTab] = useState<Tab>(mode === 'all' ? 'all' : (mode as Tab));
+  const [enrollees, setEnrollees] = useState<ApiJourneyEnrolleeRead[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    adminService
+      .listJourneyEnrollees(orgId, journey.id, { eventId: eventId ?? undefined })
+      .then((data) => {
+        if (!cancelled) setEnrollees(data);
+      })
+      .catch(() => {
+        if (!cancelled) setEnrollees([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, journey.id, eventId]);
+
+  const filtered = useMemo(() => {
+    if (!enrollees) return [];
+    const base = tab === 'all' ? enrollees : enrollees.filter((e) => e.status === tab);
+    // Sort: completed > active > not_started; dentro de cada bucket por progress desc.
+    const rank: Record<string, number> = { completed: 0, active: 1, not_started: 2 };
+    return [...base].sort((a, b) => {
+      const ra = rank[a.status] ?? 3;
+      const rb = rank[b.status] ?? 3;
+      if (ra !== rb) return ra - rb;
+      return (b.progress_percentage || 0) - (a.progress_percentage || 0);
+    });
+  }, [enrollees, tab]);
+
+  const counts = useMemo(
+    () => ({
+      all: enrollees?.length ?? 0,
+      not_started: enrollees?.filter((e) => e.status === 'not_started').length ?? 0,
+      active: enrollees?.filter((e) => e.status === 'active').length ?? 0,
+      completed: enrollees?.filter((e) => e.status === 'completed').length ?? 0,
+    }),
+    [enrollees],
+  );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold">{journey.title}</DialogTitle>
+          <DialogDescription className="text-xs">
+            {eventName ? `Asistentes de ${eventName}` : 'Inscritos (sin evento asignado)'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
+            <TabsTrigger value="not_started">No iniciado ({counts.not_started})</TabsTrigger>
+            <TabsTrigger value="active">En progreso ({counts.active})</TabsTrigger>
+            <TabsTrigger value="completed">Completado ({counts.completed})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <ScrollArea className="max-h-[60vh] mt-2 pr-2">
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-10 text-sm text-slate-400">
+              <Users className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+              No hay usuarios en esta vista
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {filtered.map((e) => (
+                <EnrolleeRow key={e.user_id} enrollee={e} />
+              ))}
+            </ul>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EnrolleeRow({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
+  const initial = (enrollee.full_name || enrollee.email || '?').charAt(0).toUpperCase();
+  // progress_percentage ya viene en rango 0-100 desde el backend (ver
+  // journeys.calculate_enrollment_progress) — no multiplicar otra vez.
+  const pct = Math.round(enrollee.progress_percentage || 0);
+  // Funnel state computado por backend: not_started | active | completed.
+  const statusBadge =
+    enrollee.status === 'completed'
+      ? 'bg-green-100 text-green-700 border-green-200'
+      : enrollee.status === 'active'
+      ? 'bg-summer-lavender/10 text-summer-lavender border-summer-lavender'
+      : enrollee.status === 'not_started'
+      ? 'bg-slate-100 text-slate-500 border-slate-200'
+      : 'bg-slate-100 text-slate-600 border-slate-200';
+  const statusLabel =
+    enrollee.status === 'active'
+      ? 'En progreso'
+      : enrollee.status === 'completed'
+      ? 'Completado'
+      : enrollee.status === 'not_started'
+      ? 'No iniciado'
+      : enrollee.status;
+  return (
+    <li className="flex items-center gap-4 py-3 px-2">
+      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender
+                      text-white flex items-center justify-center text-sm font-semibold shrink-0">
+        {initial}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-slate-800 truncate">
+          {enrollee.full_name || '—'}
+        </p>
+        <p className="text-xs text-slate-400 truncate">{enrollee.email || '—'}</p>
+      </div>
+      {/* Columna derecha: badge de estado arriba, barra de progreso abajo.
+          Width fijo para que ni el badge "Abandonado" ni MiniProgress se corten. */}
+      <div className="flex flex-col items-end gap-1.5 shrink-0 w-32">
+        <Badge variant="outline" className={cn('text-[10px] whitespace-nowrap', statusBadge)}>
+          {statusLabel}
+        </Badge>
+        <MiniProgress pct={pct} />
+      </div>
+    </li>
   );
 }

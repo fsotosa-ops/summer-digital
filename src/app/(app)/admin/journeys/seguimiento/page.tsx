@@ -126,7 +126,7 @@ export default function JourneyTrackingPage() {
             <div>
               <h1 className="text-lg font-bold text-slate-800 leading-tight">Seguimiento de Journeys</h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Inscripciones y completados por evento de cada organización
+                Funnel de asistentes por evento: no iniciado, en progreso y completado
               </p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function JourneyTrackingPage() {
           {[
             { label: 'Eventos', value: totalEvents, color: 'fuchsia' },
             { label: 'Journeys asignados', value: totalJourneyAssignments, color: 'lavender' },
-            { label: 'Inscripciones', value: totalEnrollments, color: 'amber' },
+            { label: 'Asignaciones potenciales', value: totalEnrollments, color: 'amber' },
             { label: 'Completados', value: totalCompleted, color: 'teal' },
           ].map(({ label, value, color }) => (
             <div
@@ -310,8 +310,13 @@ function EventCard({
                     <TableCell className="text-center text-sm text-slate-600">
                       {j.total_steps}
                     </TableCell>
-                    <TableCell className="text-center text-sm text-slate-600">
-                      {j.total_enrollments}
+                    <TableCell className="text-center">
+                      <p className="text-sm text-slate-600">{j.total_enrollments}</p>
+                      {j.total_enrollments > 0 && (
+                        <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                          {j.not_started_enrollments} sin iniciar · {j.active_enrollments} en curso
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex flex-col items-center gap-1">

@@ -3,6 +3,7 @@ import {
   ApiJourneyAdminRead,
   ApiJourneyCreate,
   ApiJourneyUpdate,
+  ApiJourneyEnrolleeRead,
   ApiJourneyOrganizationsResponse,
   ApiMemberResponse,
   ApiMemberUpdate,
@@ -67,6 +68,23 @@ class AdminService {
 
   async listOrgTracking(orgId: string): Promise<ApiOrgTrackingResponse> {
     return apiClient.get<ApiOrgTrackingResponse>(`/journeys/${orgId}/admin/tracking`);
+  }
+
+  async listJourneyEnrollees(
+    orgId: string,
+    journeyId: string,
+    options?: {
+      eventId?: string | null;
+      status?: 'not_started' | 'active' | 'completed' | null;
+    },
+  ): Promise<ApiJourneyEnrolleeRead[]> {
+    const params = new URLSearchParams();
+    if (options?.eventId) params.set('event_id', options.eventId);
+    if (options?.status) params.set('status', options.status);
+    const qs = params.toString();
+    return apiClient.get<ApiJourneyEnrolleeRead[]>(
+      `/journeys/${orgId}/admin/tracking/journeys/${journeyId}/enrollees${qs ? `?${qs}` : ''}`,
+    );
   }
 
   // --- Member Management ---
