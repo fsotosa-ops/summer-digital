@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { organizationService } from '@/services/organization.service';
 import { crmService } from '@/services/crm.service';
 import { adminService } from '@/services/admin.service';
+import { eventService } from '@/services/event.service';
 import {
   ApiOrganization,
   ApiCrmOrgProfile,
@@ -17,6 +18,7 @@ import {
   ApiEventTrackingRead,
   ApiJourneyTrackingRead,
   ApiJourneyEnrolleeRead,
+  ApiEvent,
 } from '@/types/api.types';
 import { EventsTab } from '@/features/crm/tabs/EventsTab';
 import { MiniProgress } from '@/components/MiniProgress';
@@ -82,6 +84,8 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
+  Search,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -289,6 +293,28 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
   const [members, setMembers] = useState<ApiMemberResponse[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
+  // Eventos por miembro: mapa user_id → [{event_id, event_name, attendance_id, status}]
+  // Se carga junto con `members` para mostrar la columna "Eventos" inline.
+  type MemberEventEntry = {
+    event_id: string;
+    event_name: string;
+    attendance_id: string;
+    status: string;
+  };
+  const [orgEvents, setOrgEvents] = useState<ApiEvent[]>([]);
+  const [eventsByMember, setEventsByMember] = useState<Record<string, MemberEventEntry[]>>({});
+  const [attendeeProfiles, setAttendeeProfiles] = useState<
+    Record<string, { full_name: string | null; email: string | null }>
+  >({});
+  const [memberEventsLoading, setMemberEventsLoading] = useState(false);
+  const [promotingUserId, setPromotingUserId] = useState<string | null>(null);
+
+  // Assign event dialog (desde el row de un miembro sin eventos)
+  const [assignEventOpen, setAssignEventOpen] = useState(false);
+  const [assignEventMember, setAssignEventMember] = useState<ApiMemberResponse | null>(null);
+  const [assignEventId, setAssignEventId] = useState<string>('');
+  const [assigningEvent, setAssigningEvent] = useState(false);
+
   // Member management
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
@@ -325,17 +351,22 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Load CRM profile + members when org changes
+  // Reset all org-scoped state on every org change (incluso de orgA → orgB
+  // sin pasar por null), luego dispara la carga del perfil CRM.
   useEffect(() => {
-    if (!org) {
-      setCrmProfile(null);
-      setMembers([]);
-      setEventsLoaded(false);
-      setTracking(null);
-      setTrackingLoaded(false);
-      setEnrolleesCtx(null);
-      return;
-    }
+    setCrmProfile(null);
+    setMembers([]);
+    setOrgEvents([]);
+    setEventsByMember({});
+    setAttendeeProfiles({});
+    setEventsLoaded(false);
+    setTracking(null);
+    setTrackingLoaded(false);
+    setEnrolleesCtx(null);
+    setError(null);
+
+    if (!org) return;
+
     setProfileLoading(true);
     crmService.getOrgProfile(org.id)
       .then(setCrmProfile)
@@ -366,6 +397,132 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       setMembersLoading(false);
     }
   }, []);
+
+  // Carga eventos de la org + asistencias para construir el mapa user_id → events.
+  // Se preloadea on-mount junto con loadMembers cuando cambia el `org`. Las
+  // queries de attendances corren en paralelo (Promise.all) para no bloquear.
+  const loadMemberEvents = useCallback(async (orgId: string) => {
+    setMemberEventsLoading(true);
+    try {
+      const events = await eventService.listOrgEvents(orgId);
+      setOrgEvents(events);
+      if (events.length === 0) {
+        setEventsByMember({});
+        setAttendeeProfiles({});
+        return;
+      }
+      let failedCount = 0;
+      const attResults = await Promise.all(
+        events.map((ev) =>
+          eventService
+            .listAttendances(orgId, ev.id)
+            .then((rows) => ({ event: ev, rows }))
+            .catch((err) => {
+              console.error(`listAttendances failed for event ${ev.id}:`, err);
+              failedCount += 1;
+              return { event: ev, rows: [] as Awaited<ReturnType<typeof eventService.listAttendances>> };
+            }),
+        ),
+      );
+      if (failedCount > 0) {
+        toast.error(
+          `No se pudo cargar la asistencia de ${failedCount} evento${failedCount !== 1 ? 's' : ''}`,
+        );
+      }
+      const map: Record<string, MemberEventEntry[]> = {};
+      const profiles: Record<string, { full_name: string | null; email: string | null }> = {};
+      for (const { event, rows } of attResults) {
+        for (const a of rows) {
+          if (!map[a.user_id]) map[a.user_id] = [];
+          map[a.user_id].push({
+            event_id: event.id,
+            event_name: event.name,
+            attendance_id: a.id,
+            status: a.status,
+          });
+          // Capture profile for non-member attendees (so they appear in the unified list)
+          if (!profiles[a.user_id]) {
+            profiles[a.user_id] = {
+              full_name: a.user_full_name ?? null,
+              email: a.user_email ?? null,
+            };
+          }
+        }
+      }
+      setEventsByMember(map);
+      setAttendeeProfiles(profiles);
+    } catch (err) {
+      console.error('loadMemberEvents fatal error:', err);
+      setEventsByMember({});
+      setAttendeeProfiles({});
+    } finally {
+      setMemberEventsLoading(false);
+    }
+  }, []);
+
+  // Preload de members + events on-mount (y en cada cambio de org). Antes
+  // estaba en `onValueChange` del tab Miembros, pero Radix sólo dispara
+  // ese callback al CAMBIAR de tab — no en mount ni al cambiar de org sin
+  // cerrar el diálogo. Resultado: al ir de orgA → orgB la columna Eventos
+  // quedaba vacía porque nadie volvía a llamar a loadMemberEvents.
+  useEffect(() => {
+    if (!org) return;
+    loadMembers(org.id);
+    loadMemberEvents(org.id);
+  }, [org, loadMembers, loadMemberEvents]);
+
+  // Asignar un evento a un miembro desde la fila (registra una attendance).
+  const handleAssignEvent = async () => {
+    if (!org || !assignEventMember || !assignEventId) return;
+    setAssigningEvent(true);
+    try {
+      const att = await eventService.registerAttendance(org.id, assignEventId, {
+        user_id: assignEventMember.user_id,
+      });
+      const ev = orgEvents.find((e) => e.id === assignEventId);
+      if (ev) {
+        setEventsByMember((prev) => ({
+          ...prev,
+          [assignEventMember.user_id]: [
+            ...(prev[assignEventMember.user_id] || []),
+            { event_id: ev.id, event_name: ev.name, attendance_id: att.id, status: att.status },
+          ],
+        }));
+      }
+      toast.success(`Asignado a ${ev?.name || 'evento'}`);
+      setAssignEventOpen(false);
+      setAssignEventMember(null);
+      setAssignEventId('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al asignar evento');
+    } finally {
+      setAssigningEvent(false);
+    }
+  };
+
+  const openAssignEvent = (member: ApiMemberResponse) => {
+    setAssignEventMember(member);
+    setAssignEventId('');
+    setAssignEventOpen(true);
+  };
+
+  // Promueve un asistente no-miembro a miembro de la org (rol participante por defecto).
+  const handlePromoteAttendee = async (userId: string, email: string | null) => {
+    if (!org || !email) {
+      toast.error('No se puede agregar: el asistente no tiene email asociado');
+      return;
+    }
+    setPromotingUserId(userId);
+    try {
+      const m = await organizationService.addMember(org.id, { email, role: 'participante' });
+      setMembers((prev) => [...prev, m]);
+      toast.success(`${email} agregado como miembro`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al agregar miembro');
+    } finally {
+      setPromotingUserId(null);
+    }
+  };
 
   // CRM profile field saver (upsert a single field)
   const saveProfileField = async (field: keyof ApiCrmOrgProfile, val: string | null) => {
@@ -477,6 +634,40 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
     }
   };
 
+  // Lista unificada de "personas" — miembros de la org + asistentes que aún no
+  // son miembros. Esto resuelve la inconsistencia con el tab Journeys (cuyo
+  // funnel cuenta TODOS los asistentes al evento, sean o no miembros).
+  type PersonRow =
+    | { kind: 'member'; member: ApiMemberResponse; userId: string }
+    | {
+        kind: 'attendee';
+        userId: string;
+        fullName: string | null;
+        email: string | null;
+      };
+
+  const peopleRows = useMemo<PersonRow[]>(() => {
+    const memberIds = new Set(members.map((m) => m.user_id));
+    const memberRows: PersonRow[] = members.map((m) => ({
+      kind: 'member',
+      member: m,
+      userId: m.user_id,
+    }));
+    const attendeeRows: PersonRow[] = [];
+    for (const [userId, profile] of Object.entries(attendeeProfiles)) {
+      if (memberIds.has(userId)) continue;
+      attendeeRows.push({
+        kind: 'attendee',
+        userId,
+        fullName: profile.full_name,
+        email: profile.email,
+      });
+    }
+    return [...memberRows, ...attendeeRows];
+  }, [members, attendeeProfiles]);
+
+  const nonMemberAttendeeCount = peopleRows.filter((p) => p.kind === 'attendee').length;
+
   if (!org) return null;
 
   const orgTypeLabel = ORG_TYPES.find((t) => t.value === org.type)?.label || org.type;
@@ -533,7 +724,6 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
             defaultValue="perfil"
             className="flex-1 flex flex-col overflow-hidden"
             onValueChange={(v) => {
-              if (v === 'miembros' && members.length === 0) loadMembers(org.id);
               if (v === 'eventos' && !eventsLoaded) setEventsLoaded(true);
               if (v === 'journeys' && !trackingLoaded) {
                 setTrackingLoaded(true);
@@ -717,6 +907,11 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                         <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                           <Users className="h-4 w-4" />
                           {members.length} miembro{members.length !== 1 ? 's' : ''}
+                          {nonMemberAttendeeCount > 0 && (
+                            <span className="text-xs font-normal text-slate-400">
+                              · {nonMemberAttendeeCount} asistente{nonMemberAttendeeCount !== 1 ? 's' : ''} sin membresía
+                            </span>
+                          )}
                         </h3>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
@@ -738,7 +933,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                         <div className="flex justify-center py-8">
                           <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                         </div>
-                      ) : members.length === 0 ? (
+                      ) : peopleRows.length === 0 ? (
                         <div className="text-center py-12 text-slate-500 text-sm">
                           <Users className="h-10 w-10 mx-auto text-slate-300 mb-3" />
                           No hay miembros en esta organización
@@ -751,11 +946,86 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                 <TableHead>Usuario</TableHead>
                                 <TableHead>Rol</TableHead>
                                 <TableHead>Estado</TableHead>
+                                <TableHead>Eventos</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {members.map((member) => (
+                              {peopleRows.map((person) => person.kind === 'attendee' ? (
+                                <TableRow key={`att-${person.userId}`} className="bg-summer-yellow/5">
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-summer-yellow to-summer-pink/70 flex items-center justify-center shrink-0">
+                                        <span className="text-white text-[10px] font-semibold">
+                                          {(person.fullName || person.email || '?')
+                                            .split(' ')
+                                            .slice(0, 2)
+                                            .map((n) => n[0])
+                                            .join('')
+                                            .toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-sm flex items-center gap-1.5">
+                                          <span className="truncate">{person.fullName || 'Sin nombre'}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-500 truncate">
+                                          {person.email || person.userId}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell colSpan={2}>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] bg-summer-yellow/10 border-summer-yellow text-amber-700"
+                                    >
+                                      No es miembro · sólo asistencia
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {(eventsByMember[person.userId]?.length ?? 0) > 0 && (
+                                      <div className="flex flex-wrap gap-1 max-w-[260px]">
+                                        {eventsByMember[person.userId].slice(0, 3).map((ev) => (
+                                          <Badge
+                                            key={ev.attendance_id}
+                                            variant="outline"
+                                            className="text-[10px] bg-summer-lavender/5 border-summer-lavender/30 text-summer-lavender max-w-[140px] truncate"
+                                            title={`${ev.event_name} · ${ev.status}`}
+                                          >
+                                            <span className="truncate">{ev.event_name}</span>
+                                          </Badge>
+                                        ))}
+                                        {eventsByMember[person.userId].length > 3 && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] bg-slate-50 border-slate-200 text-slate-500"
+                                          >
+                                            +{eventsByMember[person.userId].length - 3}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-[11px] gap-1 border-dashed border-summer-pink/40 text-summer-pink hover:bg-summer-pink/5 hover:border-summer-pink"
+                                      onClick={() => handlePromoteAttendee(person.userId, person.email)}
+                                      disabled={!person.email || promotingUserId === person.userId}
+                                      title={person.email ? 'Agregar a la organización' : 'Sin email — no se puede agregar'}
+                                    >
+                                      {promotingUserId === person.userId ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <UserPlus2 className="h-3 w-3" />
+                                      )}
+                                      Agregar
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ) : (() => { const member = person.member; return (
                                 <TableRow key={member.id}>
                                   <TableCell>
                                     <div className="flex items-center gap-2">
@@ -817,6 +1087,53 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
+                                  <TableCell>
+                                    {memberEventsLoading ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-300" />
+                                    ) : (eventsByMember[member.user_id]?.length ?? 0) > 0 ? (
+                                      <div className="flex flex-wrap gap-1 max-w-[260px]">
+                                        {eventsByMember[member.user_id].slice(0, 3).map((ev) => (
+                                          <Badge
+                                            key={ev.attendance_id}
+                                            variant="outline"
+                                            className="text-[10px] bg-summer-lavender/5 border-summer-lavender/30 text-summer-lavender max-w-[140px] truncate"
+                                            title={`${ev.event_name} · ${ev.status}`}
+                                          >
+                                            <span className="truncate">{ev.event_name}</span>
+                                          </Badge>
+                                        ))}
+                                        {eventsByMember[member.user_id].length > 3 && (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-[10px] bg-slate-50 border-slate-200 text-slate-500"
+                                          >
+                                            +{eventsByMember[member.user_id].length - 3}
+                                          </Badge>
+                                        )}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 px-1.5 text-[10px] text-slate-400 hover:text-summer-pink"
+                                          onClick={() => openAssignEvent(member)}
+                                          disabled={orgEvents.length === 0}
+                                          title="Asignar otro evento"
+                                        >
+                                          + evento
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-[11px] gap-1 border-dashed text-slate-500 hover:text-summer-pink hover:border-summer-pink"
+                                        onClick={() => openAssignEvent(member)}
+                                        disabled={orgEvents.length === 0}
+                                      >
+                                        <Calendar className="h-3 w-3" />
+                                        {orgEvents.length === 0 ? 'Sin eventos en la org' : 'Asignar evento'}
+                                      </Button>
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">
                                       {isSuperAdmin && (
@@ -853,7 +1170,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                     </div>
                                   </TableCell>
                                 </TableRow>
-                              ))}
+                              ); })())}
                             </TableBody>
                           </Table>
                         </div>
@@ -1026,6 +1343,76 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign event to member */}
+      <Dialog
+        open={assignEventOpen}
+        onOpenChange={(o) => {
+          setAssignEventOpen(o);
+          if (!o) {
+            setAssignEventMember(null);
+            setAssignEventId('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar evento</DialogTitle>
+            <DialogDescription>
+              {assignEventMember
+                ? `Selecciona un evento para ${assignEventMember.user?.full_name || assignEventMember.user?.email || 'este miembro'}`
+                : 'Selecciona un evento'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {(() => {
+              const taken = new Set(
+                (assignEventMember && eventsByMember[assignEventMember.user_id]?.map((e) => e.event_id)) || [],
+              );
+              const available = orgEvents.filter((e) => !taken.has(e.id));
+              if (available.length === 0) {
+                return (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500">
+                    {orgEvents.length === 0
+                      ? 'Esta organización no tiene eventos creados.'
+                      : 'Este usuario ya está asignado a todos los eventos disponibles.'}
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-1.5">
+                  <Label>Evento</Label>
+                  <Select value={assignEventId} onValueChange={setAssignEventId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un evento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {available.map((ev) => (
+                        <SelectItem key={ev.id} value={ev.id}>
+                          {ev.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignEventOpen(false)} disabled={assigningEvent}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAssignEvent}
+              disabled={!assignEventId || assigningEvent}
+              className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white"
+            >
+              {assigningEvent ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
+              Asignar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -1355,9 +1742,23 @@ function JourneysTable({
 }
 
 // ── EnrolleesDialog ──────────────────────────────────────────────────────────
-// Sub-dialog que muestra los inscritos de un journey scoped a un evento (o
-// "sin evento" para los unassigned). Hace una sola fetch al backend con todos
-// los enrollees del (journey, event); los tabs filtran client-side.
+// Sub-dialog que muestra los asistentes/inscritos de un journey en el contexto
+// de un evento (o "sin evento" para los unassigned). Una sola fetch al backend;
+// tabs, búsqueda y export CSV operan client-side sobre los datos cargados.
+//
+// Modelo de buckets (consistente con backend `list_org_tracking`):
+//   asistentes (todos)  = base del funnel: filas en crm.event_attendances
+//                         con status registered/attended para el evento.
+//   inscritos           = asistentes con fila en journeys.enrollments
+//                       = en_progreso + completados
+//   no_iniciados        = asistentes - inscritos (= sin enrollment row)
+//   en_progreso         = enrollment.status='active'
+//   completados         = enrollment.status='completed'
+
+function escapeCsvCell(val: string | number | null | undefined): string {
+  const s = val == null ? '' : String(val);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 function EnrolleesDialog({
   orgId,
@@ -1373,6 +1774,7 @@ function EnrolleesDialog({
   const [tab, setTab] = useState<Tab>(mode === 'all' ? 'all' : (mode as Tab));
   const [enrollees, setEnrollees] = useState<ApiJourneyEnrolleeRead[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -1393,10 +1795,30 @@ function EnrolleesDialog({
     };
   }, [orgId, journey.id, eventId]);
 
+  // Conteos por bucket — derivados del set completo (no afectados por search)
+  const counts = useMemo(() => {
+    const all = enrollees?.length ?? 0;
+    const not_started = enrollees?.filter((e) => e.status === 'not_started').length ?? 0;
+    const active = enrollees?.filter((e) => e.status === 'active').length ?? 0;
+    const completed = enrollees?.filter((e) => e.status === 'completed').length ?? 0;
+    return { all, enrolled: active + completed, not_started, active, completed };
+  }, [enrollees]);
+
+  // Lista visible: filtro por tab + búsqueda + ordenamiento
   const filtered = useMemo(() => {
     if (!enrollees) return [];
-    const base = tab === 'all' ? enrollees : enrollees.filter((e) => e.status === tab);
-    // Sort: completed > active > not_started; dentro de cada bucket por progress desc.
+    let base = tab === 'all' ? enrollees : enrollees.filter((e) => e.status === tab);
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      base = base.filter(
+        (e) =>
+          (e.full_name || '').toLowerCase().includes(q) ||
+          (e.email || '').toLowerCase().includes(q),
+      );
+    }
+
+    // Sort: completed > active > not_started; dentro del bucket por progress desc.
     const rank: Record<string, number> = { completed: 0, active: 1, not_started: 2 };
     return [...base].sort((a, b) => {
       const ra = rank[a.status] ?? 3;
@@ -1404,55 +1826,167 @@ function EnrolleesDialog({
       if (ra !== rb) return ra - rb;
       return (b.progress_percentage || 0) - (a.progress_percentage || 0);
     });
-  }, [enrollees, tab]);
+  }, [enrollees, tab, search]);
 
-  const counts = useMemo(
-    () => ({
-      all: enrollees?.length ?? 0,
-      not_started: enrollees?.filter((e) => e.status === 'not_started').length ?? 0,
-      active: enrollees?.filter((e) => e.status === 'active').length ?? 0,
-      completed: enrollees?.filter((e) => e.status === 'completed').length ?? 0,
-    }),
-    [enrollees],
-  );
+  const handleExport = () => {
+    if (filtered.length === 0) return;
+    const headers = [
+      'Nombre',
+      'Email',
+      'Estado',
+      'Progreso (%)',
+      'Step actual',
+      'Inicio',
+      'Completado',
+    ];
+    const statusEsLabel = (s: string) =>
+      s === 'completed' ? 'Completado' : s === 'active' ? 'En progreso' : 'No iniciado';
+    const dateOrEmpty = (iso?: string | null) =>
+      iso ? new Date(iso).toISOString().slice(0, 10) : '';
+    const rows = filtered.map((e) => [
+      escapeCsvCell(e.full_name),
+      escapeCsvCell(e.email),
+      escapeCsvCell(statusEsLabel(e.status)),
+      escapeCsvCell(Math.round(e.progress_percentage || 0)),
+      escapeCsvCell(e.current_step_index || 0),
+      escapeCsvCell(dateOrEmpty(e.started_at)),
+      escapeCsvCell(dateOrEmpty(e.completed_at)),
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    // Add BOM so Excel recognizes UTF-8 (acentos, ñ)
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const tabSuffix = tab === 'all' ? 'todos' : tab;
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${journey.slug || 'journey'}_${tabSuffix}_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`CSV exportado (${filtered.length} usuarios)`);
+  };
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl w-[calc(100vw-2rem)] sm:w-full p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
-          <DialogTitle className="text-lg font-semibold">{journey.title}</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+      <DialogContent className="w-[96vw] max-w-[1400px] p-0 gap-0 overflow-hidden">
+        {/* Header con breakdown como subtítulo (sin tarjetas redundantes) */}
+        <DialogHeader className="px-6 pt-6 pb-5 border-b border-slate-100">
+          <DialogTitle className="text-lg font-semibold text-slate-800 truncate">
+            {journey.title}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 mt-0.5">
             {eventName ? `Asistentes de ${eventName}` : 'Inscritos (sin evento asignado)'}
           </DialogDescription>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 mt-3">
+            <span className="font-semibold text-slate-700 tabular-nums">{counts.all}</span>
+            <span className="text-slate-400">asistentes</span>
+            <span className="text-slate-300">·</span>
+            <span className="font-semibold text-slate-700 tabular-nums">{counts.enrolled}</span>
+            <span className="text-slate-400">inscritos</span>
+            <span className="text-slate-300">·</span>
+            <span className="font-semibold text-slate-700 tabular-nums">{counts.not_started}</span>
+            <span className="text-slate-400">sin enrollment</span>
+          </div>
         </DialogHeader>
 
-        <div className="px-6 pt-4">
+        {/* Toolbar: tabs + search + export en una sola fila */}
+        <div className="px-6 py-4 border-b border-slate-100 space-y-3">
           <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-            <TabsList className="grid grid-cols-4 w-full h-11">
-              <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="not_started">No iniciado ({counts.not_started})</TabsTrigger>
-              <TabsTrigger value="active">En progreso ({counts.active})</TabsTrigger>
-              <TabsTrigger value="completed">Completado ({counts.completed})</TabsTrigger>
+            <TabsList className="inline-flex h-11 w-full justify-start gap-1.5 bg-slate-100/70 p-1.5 rounded-lg">
+              <TabsTrigger
+                value="all"
+                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+              >
+                Todos
+                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.all})</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="not_started"
+                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+              >
+                No iniciados
+                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.not_started})</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="active"
+                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+              >
+                En progreso
+                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.active})</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="completed"
+                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+              >
+                Completados
+                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.completed})</span>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre o email"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 pl-9 text-sm"
+              />
+            </div>
+            <div className="flex-1 hidden sm:block" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              className="h-9 gap-1.5 shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Exportar CSV
+            </Button>
+          </div>
         </div>
 
-        <ScrollArea className="max-h-[70vh] mt-2 px-6 pb-6">
+        {/* Tabla de usuarios */}
+        <ScrollArea className="max-h-[68vh] px-6 py-4">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-10 text-sm text-slate-400">
+            <div className="text-center py-12 text-sm text-slate-400">
               <Users className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-              No hay usuarios en esta vista
+              {search.trim() ? 'Sin resultados para esta búsqueda' : 'No hay usuarios en esta vista'}
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {filtered.map((e) => (
-                <EnrolleeRow key={e.user_id} enrollee={e} />
-              ))}
-            </ul>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-100">
+                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+                    Usuario
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+                    Estado
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium w-[200px]">
+                    Progreso
+                  </TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium text-right whitespace-nowrap">
+                    Inicio
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((e) => (
+                  <EnrolleeRow key={e.user_id} enrollee={e} />
+                ))}
+              </TableBody>
+            </Table>
           )}
         </ScrollArea>
       </DialogContent>
@@ -1462,52 +1996,64 @@ function EnrolleesDialog({
 
 function EnrolleeRow({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
   const initial = (enrollee.full_name || enrollee.email || '?').charAt(0).toUpperCase();
-  // progress_percentage ya viene en rango 0-100 desde el backend (ver
-  // journeys.calculate_enrollment_progress) — no multiplicar otra vez.
+  // progress_percentage ya viene en rango 0-100 desde el backend.
   const pct = Math.round(enrollee.progress_percentage || 0);
-  // Funnel state computado por backend: not_started | active | completed.
   const statusBadge =
     enrollee.status === 'completed'
       ? 'bg-green-100 text-green-700 border-green-200'
       : enrollee.status === 'active'
       ? 'bg-summer-lavender/10 text-summer-lavender border-summer-lavender'
-      : enrollee.status === 'not_started'
-      ? 'bg-slate-100 text-slate-500 border-slate-200'
-      : 'bg-slate-100 text-slate-600 border-slate-200';
+      : 'bg-slate-100 text-slate-500 border-slate-200';
   const statusLabel =
     enrollee.status === 'active'
       ? 'En progreso'
       : enrollee.status === 'completed'
       ? 'Completado'
-      : enrollee.status === 'not_started'
-      ? 'No iniciado'
-      : enrollee.status;
+      : 'No iniciado';
+  const startedAt = enrollee.started_at
+    ? new Date(enrollee.started_at).toLocaleDateString('es-CL', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—';
+
   return (
-    <li className="flex items-center gap-4 py-3 px-2">
-      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender
-                      text-white flex items-center justify-center text-sm font-semibold shrink-0">
-        {initial}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-800 truncate">
-          {enrollee.full_name || '—'}
-        </p>
-        <p className="text-xs text-slate-400 truncate">{enrollee.email || '—'}</p>
-      </div>
-      {/* Columna derecha: badge de estado arriba; barra de progreso debajo
-          SOLO si hay enrollment real. Para `not_started` (sin enrollment) se
-          muestra un dash, para diferenciar visualmente de `active 0%` (que sí
-          tiene enrollment, sólo no ha avanzado). */}
-      <div className="flex flex-col items-end gap-1.5 shrink-0 w-36">
+    <TableRow className="hover:bg-slate-50/40 border-slate-100">
+      <TableCell className="py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender
+                          text-white flex items-center justify-center text-xs font-semibold shrink-0">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-800 truncate">
+              {enrollee.full_name || '—'}
+            </p>
+            <p className="text-xs text-slate-400 truncate">{enrollee.email || '—'}</p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
         <Badge variant="outline" className={cn('text-[10px] whitespace-nowrap', statusBadge)}>
           {statusLabel}
         </Badge>
+      </TableCell>
+      <TableCell>
         {enrollee.status === 'not_started' ? (
-          <span className="text-[10px] text-slate-300 italic">sin actividad</span>
+          <span className="text-xs text-slate-300 italic">sin actividad</span>
         ) : (
-          <MiniProgress pct={pct} />
+          <div className="flex items-center gap-2">
+            <MiniProgress pct={pct} />
+            <span className="text-xs text-slate-500 tabular-nums w-9 text-right shrink-0">
+              {pct}%
+            </span>
+          </div>
         )}
-      </div>
-    </li>
+      </TableCell>
+      <TableCell className="text-right text-xs text-slate-500 whitespace-nowrap">
+        {startedAt}
+      </TableCell>
+    </TableRow>
   );
 }
