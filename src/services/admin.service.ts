@@ -6,6 +6,7 @@ import {
   ApiJourneyOrganizationsResponse,
   ApiMemberResponse,
   ApiMemberUpdate,
+  ApiOrgTrackingResponse,
   ApiStepAdminRead,
   ApiStepCreate,
   ApiStepUpdate,
@@ -60,6 +61,12 @@ class AdminService {
       `/journeys/${orgId}/admin/journeys/${journeyId}/templates/onboarding/steps`,
       {},
     );
+  }
+
+  // --- Tracking jerárquico Org → Evento → Journeys ---
+
+  async listOrgTracking(orgId: string): Promise<ApiOrgTrackingResponse> {
+    return apiClient.get<ApiOrgTrackingResponse>(`/journeys/${orgId}/admin/tracking`);
   }
 
   // --- Member Management ---
