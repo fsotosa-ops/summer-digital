@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { organizationService } from '@/services/organization.service';
 import { crmService } from '@/services/crm.service';
@@ -13,9 +14,19 @@ import {
   ApiMemberRole,
   ApiMembershipStatus,
   ApiBulkMemberResultItem,
-  ApiJourneyAdminRead,
+  ApiOrgTrackingResponse,
+  ApiEventTrackingRead,
+  ApiJourneyTrackingRead,
 } from '@/types/api.types';
 import { EventsTab } from '@/features/crm/tabs/EventsTab';
+import { MiniProgress } from '@/components/MiniProgress';
+import {
+  eventStatusLabel,
+  eventStatusClasses,
+  categoryBadgeClasses,
+  formatDateRange,
+} from '@/lib/journey-tracking-helpers';
+import { cn } from '@/lib/utils';
 import { ORG_TYPES } from '@/lib/constants/crm-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +79,7 @@ import {
   X,
   Calendar,
   Route,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -255,6 +267,7 @@ interface Props {
 }
 
 export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
+  const router = useRouter();
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
@@ -301,10 +314,10 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
   // Events tab lazy-load
   const [eventsLoaded, setEventsLoaded] = useState(false);
 
-  // Journeys tab
-  const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
-  const [journeysLoading, setJourneysLoading] = useState(false);
-  const [journeysLoaded, setJourneysLoaded] = useState(false);
+  // Journeys tab — usa el endpoint de tracking jerárquico (Org → Evento → Journeys)
+  const [tracking, setTracking] = useState<ApiOrgTrackingResponse | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingLoaded, setTrackingLoaded] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -314,8 +327,8 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       setCrmProfile(null);
       setMembers([]);
       setEventsLoaded(false);
-      setJourneys([]);
-      setJourneysLoaded(false);
+      setTracking(null);
+      setTrackingLoaded(false);
       return;
     }
     setProfileLoading(true);
@@ -325,15 +338,15 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       .finally(() => setProfileLoading(false));
   }, [org]);
 
-  const loadJourneys = useCallback(async (orgId: string) => {
-    setJourneysLoading(true);
+  const loadTracking = useCallback(async (orgId: string) => {
+    setTrackingLoading(true);
     try {
-      const list = await adminService.listJourneys(orgId);
-      setJourneys(list);
+      const data = await adminService.listOrgTracking(orgId);
+      setTracking(data);
     } catch {
       // non-critical
     } finally {
-      setJourneysLoading(false);
+      setTrackingLoading(false);
     }
   }, []);
 
@@ -517,9 +530,9 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
             onValueChange={(v) => {
               if (v === 'miembros' && members.length === 0) loadMembers(org.id);
               if (v === 'eventos' && !eventsLoaded) setEventsLoaded(true);
-              if (v === 'journeys' && !journeysLoaded) {
-                setJourneysLoaded(true);
-                loadJourneys(org.id);
+              if (v === 'journeys' && !trackingLoaded) {
+                setTrackingLoaded(true);
+                loadTracking(org.id);
               }
             }}
           >
@@ -856,51 +869,23 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
 
                   {/* ───── Tab: Journeys ───── */}
                   <TabsContent value="journeys" className="mt-0">
-                    {journeysLoading ? (
+                    {trackingLoading ? (
                       <div className="flex justify-center py-12">
                         <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                       </div>
-                    ) : journeys.length === 0 ? (
+                    ) : !tracking ? (
                       <div className="text-center py-12 text-slate-500 text-sm">
                         <Route className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                        No hay journeys asignados a esta organización
+                        No se pudo cargar el seguimiento
                       </div>
                     ) : (
-                      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50/60">
-                              <TableHead>Título</TableHead>
-                              <TableHead>Estado</TableHead>
-                              <TableHead>Inscritos</TableHead>
-                              <TableHead>Completado</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {journeys.map((j) => (
-                              <TableRow key={j.id}>
-                                <TableCell className="font-medium">{j.title}</TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={j.is_active
-                                      ? 'bg-green-100 text-green-700 border-green-200'
-                                      : 'bg-slate-100 text-slate-600 border-slate-200'}
-                                  >
-                                    {j.is_active ? 'Activo' : 'Inactivo'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-slate-600">
-                                  {j.total_enrollments}
-                                </TableCell>
-                                <TableCell className="text-slate-600">
-                                  {`${Math.round(j.completion_rate * 100)}%`}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <JourneyTrackingView
+                        tracking={tracking}
+                        onJourneyClick={(id) => {
+                          onClose();
+                          router.push(`/admin/journeys/${id}`);
+                        }}
+                      />
                     )}
                   </TabsContent>
 
@@ -1031,5 +1016,218 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// ── JourneyTrackingView ──────────────────────────────────────────────────────
+// Vista del tab Journeys del CRM dialog. Muestra la jerarquía Org → Evento →
+// Journeys con stats scoped a los miembros activos de la org. El header aclara
+// la diferencia entre miembros, usuarios únicos inscritos y total de
+// inscripciones (un mismo usuario puede contar varias veces si está en
+// múltiples journeys).
+
+function JourneyTrackingView({
+  tracking,
+  onJourneyClick,
+}: {
+  tracking: ApiOrgTrackingResponse;
+  onJourneyClick: (journeyId: string) => void;
+}) {
+  const eventsWithJourneys = tracking.events.filter((e) => e.journeys.length > 0);
+  const hasContent = eventsWithJourneys.length > 0 || tracking.unassigned_journeys.length > 0;
+
+  const stats: { label: string; value: number; color: 'fuchsia' | 'lavender' | 'amber' | 'teal'; hint?: string }[] = [
+    { label: 'Miembros activos', value: tracking.total_members, color: 'fuchsia' },
+    {
+      label: 'Inscritos únicos',
+      value: tracking.total_unique_enrolled_users,
+      color: 'lavender',
+      hint: 'Usuarios distintos con al menos un journey',
+    },
+    {
+      label: 'Inscripciones totales',
+      value: tracking.total_enrollments,
+      color: 'amber',
+      hint: 'Suma de inscripciones — un usuario puede contar varias veces si está en múltiples journeys',
+    },
+    { label: 'Eventos con journeys', value: eventsWithJourneys.length, color: 'teal' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header de stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {stats.map(({ label, value, color, hint }) => (
+          <div
+            key={label}
+            title={hint}
+            className={cn(
+              'bg-white rounded-xl border shadow-sm p-3',
+              color === 'fuchsia' && 'border-summer-pink',
+              color === 'lavender' && 'border-summer-lavender',
+              color === 'amber' && 'border-summer-yellow',
+              color === 'teal' && 'border-summer-teal',
+            )}
+          >
+            <p className="text-lg font-bold text-slate-800 leading-none">{value}</p>
+            <p className="text-[11px] text-slate-400 mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {!hasContent ? (
+        <div className="text-center py-12 text-slate-500 text-sm bg-white rounded-xl border border-slate-100 shadow-sm">
+          <Route className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+          Esta organización no tiene journeys asignados
+        </div>
+      ) : (
+        <>
+          {eventsWithJourneys.map((event) => (
+            <TrackingEventCard
+              key={event.event_id}
+              event={event}
+              onJourneyClick={onJourneyClick}
+            />
+          ))}
+
+          {tracking.unassigned_journeys.length > 0 && (
+            <UnassignedJourneysCard
+              journeys={tracking.unassigned_journeys}
+              onJourneyClick={onJourneyClick}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TrackingEventCard({
+  event,
+  onJourneyClick,
+}: {
+  event: ApiEventTrackingRead;
+  onJourneyClick: (journeyId: string) => void;
+}) {
+  const dateRange = formatDateRange(event.start_date, event.end_date);
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-slate-50/60 border-b border-slate-100 px-4 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <h4 className="text-sm font-semibold text-slate-800 truncate">{event.event_name}</h4>
+            <Badge
+              variant="outline"
+              className={cn('text-[10px] font-semibold', eventStatusClasses(event.event_status))}
+            >
+              {eventStatusLabel(event.event_status)}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-slate-500">
+            {dateRange && <span>{dateRange}</span>}
+            {event.location && (
+              <span className="flex items-center gap-1">
+                <MapPin size={10} /> {event.location}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <JourneysTable journeys={event.journeys} onJourneyClick={onJourneyClick} />
+    </div>
+  );
+}
+
+function UnassignedJourneysCard({
+  journeys,
+  onJourneyClick,
+}: {
+  journeys: ApiJourneyTrackingRead[];
+  onJourneyClick: (journeyId: string) => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-slate-50/60 border-b border-slate-100 px-4 py-3 flex items-start gap-2">
+        <AlertCircle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+        <div>
+          <h4 className="text-sm font-semibold text-slate-700">Sin evento asignado</h4>
+          <p className="text-[11px] text-slate-400">
+            Estos journeys están asignados a la organización pero no a ningún evento
+          </p>
+        </div>
+      </div>
+      <JourneysTable journeys={journeys} onJourneyClick={onJourneyClick} />
+    </div>
+  );
+}
+
+function JourneysTable({
+  journeys,
+  onJourneyClick,
+}: {
+  journeys: ApiJourneyTrackingRead[];
+  onJourneyClick: (journeyId: string) => void;
+}) {
+  if (journeys.length === 0) {
+    return (
+      <p className="text-xs text-slate-400 italic px-4 py-4 text-center">
+        Sin journeys
+      </p>
+    );
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="pl-4">Journey</TableHead>
+          <TableHead>Categoría</TableHead>
+          <TableHead className="text-center">Steps</TableHead>
+          <TableHead className="text-center">Inscritos</TableHead>
+          <TableHead className="text-center pr-4">Completados</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {journeys.map((j) => {
+          const pct = j.total_enrollments > 0 ? Math.round(j.completion_rate * 100) : 0;
+          return (
+            <TableRow
+              key={j.id}
+              className="cursor-pointer hover:bg-summer-pink/5 transition-colors"
+              onClick={() => onJourneyClick(j.id)}
+            >
+              <TableCell className="pl-4">
+                <p className="font-medium text-sm text-slate-800">{j.title}</p>
+                <p className="text-[11px] text-slate-400">/{j.slug}</p>
+              </TableCell>
+              <TableCell>
+                {j.category ? (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-[11px]', categoryBadgeClasses(j.category))}
+                  >
+                    {j.category}
+                  </Badge>
+                ) : (
+                  <span className="text-slate-300 text-xs">—</span>
+                )}
+              </TableCell>
+              <TableCell className="text-center text-sm text-slate-600">
+                {j.total_steps}
+              </TableCell>
+              <TableCell className="text-center text-sm text-slate-600">
+                {j.total_enrollments}
+              </TableCell>
+              <TableCell className="pr-4">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-sm text-slate-600">{j.completed_enrollments}</span>
+                  {j.total_enrollments > 0 && <MiniProgress pct={pct} />}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }

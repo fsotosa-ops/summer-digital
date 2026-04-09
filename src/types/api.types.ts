@@ -214,7 +214,44 @@ export interface ApiJourneyAdminRead {
   total_enrollments: number;
   active_enrollments: number;
   completed_enrollments: number;
+  /** Decimal 0-1 (e.g., 0.6667 = 66.67%). UI multiplies by 100 to display. */
   completion_rate: number;
+}
+
+// --- Tracking jerárquico Org → Evento → Journey ---
+
+export interface ApiJourneyTrackingRead {
+  id: string;
+  title: string;
+  slug: string;
+  category?: string | null;
+  is_active: boolean;
+  total_steps: number;
+  total_enrollments: number;
+  active_enrollments: number;
+  completed_enrollments: number;
+  /** Decimal 0-1 */
+  completion_rate: number;
+}
+
+export interface ApiEventTrackingRead {
+  event_id: string;
+  event_name: string;
+  event_slug: string;
+  event_status: ApiEventStatus;
+  start_date?: string | null;
+  end_date?: string | null;
+  location?: string | null;
+  journeys: ApiJourneyTrackingRead[];
+}
+
+export interface ApiOrgTrackingResponse {
+  organization_id: string;
+  events: ApiEventTrackingRead[];
+  total_members: number;
+  total_unique_enrolled_users: number;
+  total_enrollments: number;
+  unassigned_journeys: ApiJourneyTrackingRead[];
 }
 
 export interface ApiJourneyCreate {
@@ -516,6 +553,32 @@ export interface ApiAttendanceResponse {
   notes?: string | null;
   user_email?: string | null;
   user_full_name?: string | null;
+}
+
+// Dashboard Summary (admin dashboard — live event control)
+
+export interface ApiEventDashboardSummaryItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: ApiEventStatus;
+  start_date?: string | null;
+  end_date?: string | null;
+  location?: string | null;
+  expected_participants?: number | null;
+  registered_count: number;
+  attended_count: number;
+  no_show_count: number;
+  modality_breakdown: Record<string, number>;
+}
+
+export interface ApiEventDashboardSummary {
+  live_events: ApiEventDashboardSummaryItem[];
+  upcoming_events: ApiEventDashboardSummaryItem[];
+  totals: {
+    total_registered: number;
+    total_attended: number;
+  };
 }
 
 export interface ApiStepProgressRead {
