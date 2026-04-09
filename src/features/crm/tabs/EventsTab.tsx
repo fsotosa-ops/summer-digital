@@ -868,7 +868,11 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                   .filter(Boolean);
                 const isCopied = copiedId === event.id;
                 return (
-                  <TableRow key={event.id} className="hover:bg-slate-50/80">
+                  <TableRow
+                    key={event.id}
+                    onClick={() => openEdit(event)}
+                    className="hover:bg-summer-pink/5 cursor-pointer transition-colors"
+                  >
                     <TableCell className="font-medium">{event.name}</TableCell>
                     <TableCell>
                       {eventPath ? (
@@ -877,7 +881,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                             {eventPath}
                           </code>
                           <button
-                            onClick={() => handleCopyUrl(event)}
+                            onClick={(e) => { e.stopPropagation(); handleCopyUrl(event); }}
                             title="Copiar URL completa"
                             className="text-slate-400 hover:text-summer-pink transition-colors"
                           >
@@ -912,7 +916,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openEdit(event)}
+                          onClick={(e) => { e.stopPropagation(); openEdit(event); }}
                           title="Editar evento"
                           className="text-slate-500 hover:text-summer-pink hover:bg-summer-pink/10"
                         >
@@ -922,7 +926,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
                           variant="ghost"
                           size="sm"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDelete(event.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(event.id); }}
                           disabled={deletingId === event.id}
                         >
                           {deletingId === event.id ? (
