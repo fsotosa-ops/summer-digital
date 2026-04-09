@@ -1418,24 +1418,26 @@ function EnrolleesDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-base font-semibold">{journey.title}</DialogTitle>
-          <DialogDescription className="text-xs">
+      <DialogContent className="max-w-5xl w-[calc(100vw-2rem)] sm:w-full p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100">
+          <DialogTitle className="text-lg font-semibold">{journey.title}</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
             {eventName ? `Asistentes de ${eventName}` : 'Inscritos (sin evento asignado)'}
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
-            <TabsTrigger value="not_started">No iniciado ({counts.not_started})</TabsTrigger>
-            <TabsTrigger value="active">En progreso ({counts.active})</TabsTrigger>
-            <TabsTrigger value="completed">Completado ({counts.completed})</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="px-6 pt-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+            <TabsList className="grid grid-cols-4 w-full h-11">
+              <TabsTrigger value="all">Todos ({counts.all})</TabsTrigger>
+              <TabsTrigger value="not_started">No iniciado ({counts.not_started})</TabsTrigger>
+              <TabsTrigger value="active">En progreso ({counts.active})</TabsTrigger>
+              <TabsTrigger value="completed">Completado ({counts.completed})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-        <ScrollArea className="max-h-[60vh] mt-2 pr-2">
+        <ScrollArea className="max-h-[70vh] mt-2 px-6 pb-6">
           {loading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
@@ -1492,13 +1494,19 @@ function EnrolleeRow({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
         </p>
         <p className="text-xs text-slate-400 truncate">{enrollee.email || '—'}</p>
       </div>
-      {/* Columna derecha: badge de estado arriba, barra de progreso abajo.
-          Width fijo para que ni el badge "Abandonado" ni MiniProgress se corten. */}
-      <div className="flex flex-col items-end gap-1.5 shrink-0 w-32">
+      {/* Columna derecha: badge de estado arriba; barra de progreso debajo
+          SOLO si hay enrollment real. Para `not_started` (sin enrollment) se
+          muestra un dash, para diferenciar visualmente de `active 0%` (que sí
+          tiene enrollment, sólo no ha avanzado). */}
+      <div className="flex flex-col items-end gap-1.5 shrink-0 w-36">
         <Badge variant="outline" className={cn('text-[10px] whitespace-nowrap', statusBadge)}>
           {statusLabel}
         </Badge>
-        <MiniProgress pct={pct} />
+        {enrollee.status === 'not_started' ? (
+          <span className="text-[10px] text-slate-300 italic">sin actividad</span>
+        ) : (
+          <MiniProgress pct={pct} />
+        )}
       </div>
     </li>
   );
