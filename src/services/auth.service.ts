@@ -1,12 +1,14 @@
 import { User } from '@/types';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, ApiError } from '@/lib/api-client';
 import { ApiLoginResponse, ApiUser, ApiOAuthUrlResponse } from '@/types/api.types';
 import { mapApiUserToUser } from '@/lib/mappers';
+import { syncSupabaseSession } from '@/lib/supabase';
 
 class AuthService {
   async login(email: string, password: string): Promise<User> {
     const response = await apiClient.post<ApiLoginResponse>('/auth/login', { email, password });
     apiClient.setTokens(response.access_token, response.refresh_token);
+    await syncSupabaseSession(response.access_token, response.refresh_token);
     return mapApiUserToUser(response.user);
   }
 
@@ -32,6 +34,7 @@ class AuthService {
   async handleOAuthCallback(code: string): Promise<User> {
     const response = await apiClient.get<ApiLoginResponse>(`/auth/callback?code=${code}`);
     apiClient.setTokens(response.access_token, response.refresh_token);
+    await syncSupabaseSession(response.access_token, response.refresh_token);
     return mapApiUserToUser(response.user);
   }
 
@@ -63,7 +66,12 @@ class AuthService {
     try {
       const apiUser = await apiClient.get<ApiUser>('/auth/users/me');
       return mapApiUserToUser(apiUser);
-    } catch {
+    } catch (error) {
+      // Re-throw 401: auth muerta, dejar que el circuit breaker maneje
+      if (error instanceof ApiError && error.status === 401) {
+        throw error;
+      }
+      // Otros errores (red, timeout) → mantener usuario cacheado
       return null;
     }
   }

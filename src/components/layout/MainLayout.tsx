@@ -36,8 +36,9 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/types';
-import { Toaster } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
+import { apiClient } from '@/lib/api-client';
 
 
 
@@ -94,6 +95,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     return unsub;
+  }, []);
+
+  // Registrar callback de auth failure — circuit breaker del apiClient
+  useEffect(() => {
+    apiClient.onAuthFailure(() => {
+      toast.error('Tu sesión ha expirado. Por favor inicia sesión de nuevo.', {
+        duration: 5000,
+      });
+      const { forceLogout } = useAuthStore.getState();
+      forceLogout();
+      // Hard redirect para limpiar todo el estado React
+      window.location.href = '/login?reason=session_expired';
+    });
   }, []);
 
   useEffect(() => {

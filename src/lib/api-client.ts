@@ -34,8 +34,23 @@ export class ApiError extends Error {
     // Promesa de refresh para deduplicación (Singleton de la promesa)
     private refreshPromise: Promise<void> | null = null;
 
+    // Circuit breaker: cuando auth falla irrecuperablemente, corta todas las requests
+    private isAuthDead = false;
+    private onAuthFailureCallback: (() => void) | null = null;
+
     private constructor() {
       this.baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    }
+
+    /**
+     * Endpoints públicos de auth que no requieren token.
+     */
+    private isPublicAuthEndpoint(endpoint: string): boolean {
+      return endpoint.includes('/auth/login') ||
+             endpoint.includes('/auth/register') ||
+             endpoint.includes('/auth/refresh') ||
+             endpoint.includes('/auth/callback') ||
+             endpoint.includes('/auth/password/recovery');
     }
 
     public static getInstance(): ApiClient {
@@ -46,10 +61,19 @@ export class ApiError extends Error {
     }
 
     /**
+     * Registra callback para fallo irrecuperable de auth.
+     * Se invoca una sola vez por fallo (guarded por isAuthDead).
+     */
+    public onAuthFailure(callback: () => void) {
+      this.onAuthFailureCallback = callback;
+    }
+
+    /**
      * Configura los tokens (llamado al hacer login o refresh exitoso)
      */
     public setTokens(accessToken: string, refreshToken: string) {
       this.accessToken = accessToken;
+      this.isAuthDead = false; // Reset circuit breaker con tokens válidos
       // Guardamos el refresh token en localStorage por persistencia
       if (typeof window !== 'undefined') {
         localStorage.setItem('refresh_token', refreshToken);
@@ -100,9 +124,21 @@ export class ApiError extends Error {
           // Asumimos que el backend devuelve { access_token, refresh_token }
           this.setTokens(data.access_token, data.refresh_token || refreshToken);
 
+          // Sincronizar sesión Supabase para mantener Realtime activo
+          try {
+            const { syncSupabaseSession } = await import('@/lib/supabase');
+            await syncSupabaseSession(data.access_token, data.refresh_token || refreshToken);
+          } catch {
+            // No bloquear el refresh si la sincronización de Supabase falla
+          }
+
         } catch (error) {
-          // Si el refresh falla, limpiamos tokens pero NO redirigimos aquí.
+          // Si el refresh falla, limpiamos tokens y activamos circuit breaker
           this.clearTokens();
+          if (!this.isAuthDead) {
+            this.isAuthDead = true;
+            this.onAuthFailureCallback?.();
+          }
           throw error;
         } finally {
           this.refreshPromise = null;
@@ -172,6 +208,11 @@ export class ApiError extends Error {
      * Método genérico para realizar peticiones HTTP
      */
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+      // Circuit breaker: si auth está muerta, no hacer requests (excepto endpoints públicos)
+      if (this.isAuthDead && !this.isPublicAuthEndpoint(endpoint)) {
+        throw new ApiError(401, 'Session expired', null);
+      }
+
       const url = `${this.baseUrl}${endpoint}`;
 
       // 1. Preparar Headers
@@ -187,14 +228,24 @@ export class ApiError extends Error {
       }
 
       // Auto-inyección de Authorization
-      if (!this.accessToken && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+      if (!this.accessToken && !this.isPublicAuthEndpoint(endpoint)) {
         const hasRefreshToken = typeof window !== 'undefined' && !!localStorage.getItem('refresh_token');
         if (hasRefreshToken) {
           try {
             await this.refreshAccessToken();
           } catch {
-            // Si falla, continuamos sin token (el 401 handler lo reintentará)
+            // Si auth está muerta, cortar inmediatamente
+            if (this.isAuthDead) {
+              throw new ApiError(401, 'Session expired', null);
+            }
           }
+        } else {
+          // Sin access token NI refresh token → auth muerta
+          if (!this.isAuthDead) {
+            this.isAuthDead = true;
+            this.onAuthFailureCallback?.();
+          }
+          throw new ApiError(401, 'Session expired', null);
         }
       }
       if (this.accessToken) {
@@ -209,9 +260,9 @@ export class ApiError extends Error {
       // 2. Ejecutar Request (with timeout + retry)
       let response = await this.fetchWithRetry(url, config);
 
-      // 3. Manejo de 401 (Unauthorized) y Refresh Automático
-      if (response.status === 401) {
-          if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+      // 3. Manejo de 401/403 (Unauthorized/Forbidden) y Refresh Automático
+      if (response.status === 401 || response.status === 403) {
+          if (!this.isPublicAuthEndpoint(endpoint)) {
               try {
                   await this.refreshAccessToken();
 
@@ -283,14 +334,28 @@ export class ApiError extends Error {
      * Reuses the same auth/refresh/retry logic as request<T>().
      */
     public async getRaw(endpoint: string, headers?: HeadersInit): Promise<Response> {
+      if (this.isAuthDead && !this.isPublicAuthEndpoint(endpoint)) {
+        throw new ApiError(401, 'Session expired', null);
+      }
+
       const url = `${this.baseUrl}${endpoint}`;
 
       const hdrs = new Headers(headers);
 
-      if (!this.accessToken) {
+      if (!this.accessToken && !this.isPublicAuthEndpoint(endpoint)) {
         const hasRefreshToken = typeof window !== 'undefined' && !!localStorage.getItem('refresh_token');
         if (hasRefreshToken) {
-          try { await this.refreshAccessToken(); } catch { /* continue */ }
+          try { await this.refreshAccessToken(); } catch {
+            if (this.isAuthDead) {
+              throw new ApiError(401, 'Session expired', null);
+            }
+          }
+        } else {
+          if (!this.isAuthDead) {
+            this.isAuthDead = true;
+            this.onAuthFailureCallback?.();
+          }
+          throw new ApiError(401, 'Session expired', null);
         }
       }
       if (this.accessToken) {

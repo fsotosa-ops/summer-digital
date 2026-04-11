@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { User } from '@/types';
 import { authService } from '@/services/auth.service';
 import { calculateRank } from '@/lib/gamification';
+import { supabase } from '@/lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -14,6 +15,7 @@ interface AuthState {
   requestPasswordRecovery: (email: string) => Promise<void>;
   setUser: (user: User) => void;
   logout: () => Promise<void>;
+  forceLogout: () => void;
   initializeSession: () => Promise<void>;
   addPoints: (points: number) => void;
   awardMedal: (medalId: string) => void;
@@ -73,6 +75,14 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         await authService.logout();
+        await supabase.auth.signOut();
+        set({ user: null, isLoading: false, error: null });
+      },
+
+      forceLogout: () => {
+        // Logout sincrónico para auth muerta — no llama al backend
+        // porque los tokens ya son inválidos
+        supabase.auth.signOut().catch(() => {});
         set({ user: null, isLoading: false, error: null });
       },
 

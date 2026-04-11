@@ -22,6 +22,7 @@ import {
 import { AlertCircle, CheckCircle2, Circle } from 'lucide-react';
 import { SESSION_KEYS } from '@/lib/utils';
 import { PASSWORD_RULES, validatePassword } from '@/lib/password-validation';
+import { toast, Toaster } from 'sonner';
 
 function LoginContent() {
   const router = useRouter();
@@ -83,6 +84,23 @@ function LoginContent() {
       clearTimeout(fallback);
     };
   }, []);
+
+  // Efecto: Mostrar toast si redirigido por sesión expirada
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'session_expired') {
+      const timer = setTimeout(() => {
+        toast.error('Tu sesión ha expirado. Por favor inicia sesión de nuevo.', {
+          duration: 6000,
+        });
+      }, 100);
+      // Limpiar URL para no re-mostrar en refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('reason');
+      window.history.replaceState(null, '', url.pathname + url.search);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   // Efecto 2.5: Procesar hash fragments de Supabase
   // Signup: /login#access_token=...&type=signup → auto-login
@@ -213,6 +231,7 @@ function LoginContent() {
   // --- Interfaz Principal (JSX intacto) ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <Toaster position="top-right" />
       {/* Elementos Decorativos */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-summer-pink/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-summer-sky/5 rounded-full blur-3xl pointer-events-none" />
