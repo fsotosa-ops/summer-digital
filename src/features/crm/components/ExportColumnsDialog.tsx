@@ -96,9 +96,14 @@ function dateOrEmpty(iso?: string | null): string {
   return iso ? new Date(iso).toISOString().slice(0, 10) : '';
 }
 
+/** Event-level enrollees ya traen status/progress como strings pre-formateados. */
+function isEventEnrollee(e: ExportableEnrollee): e is ApiEventEnrolleeRead {
+  return 'journeys' in e;
+}
+
 function getColumnValue(e: ExportableEnrollee, key: string): string {
   switch (key) {
-    case 'journeys': return ('journeys' in e ? e.journeys : '') ?? '';
+    case 'journeys': return isEventEnrollee(e) ? e.journeys : '';
     case 'full_name': return e.full_name ?? '';
     case 'email': return e.email ?? '';
     case 'first_name': return e.first_name ?? '';
@@ -112,11 +117,20 @@ function getColumnValue(e: ExportableEnrollee, key: string): string {
     case 'gender': return e.gender ?? '';
     case 'education_level': return e.education_level ?? '';
     case 'occupation': return e.occupation ?? '';
-    case 'status': return statusEsLabel(e.status);
-    case 'progress_percentage': return String(Math.round(e.progress_percentage || 0));
-    case 'current_step_index': return String(('current_step_index' in e ? e.current_step_index : 0) || 0);
-    case 'started_at': return dateOrEmpty(e.started_at);
-    case 'completed_at': return dateOrEmpty(e.completed_at);
+    case 'status':
+      // Event enrollees: ya viene como "Completado, En progreso"
+      // Journey enrollees: viene como código, hay que traducir
+      return isEventEnrollee(e) ? e.status : statusEsLabel(e.status);
+    case 'progress_percentage':
+      return isEventEnrollee(e)
+        ? String(e.progress_percentage)
+        : String(Math.round(e.progress_percentage || 0));
+    case 'current_step_index':
+      return isEventEnrollee(e) ? '' : String(('current_step_index' in e ? e.current_step_index : 0) || 0);
+    case 'started_at':
+      return isEventEnrollee(e) ? e.started_at : dateOrEmpty(e.started_at);
+    case 'completed_at':
+      return isEventEnrollee(e) ? e.completed_at : dateOrEmpty(e.completed_at);
     default: return '';
   }
 }

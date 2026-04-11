@@ -292,10 +292,14 @@ export interface ApiEventEnrolleeRead {
   email?: string | null;
   /** Títulos de journeys separados por coma. */
   journeys: string;
-  status: 'not_started' | 'active' | 'completed' | string;
-  progress_percentage: number;
-  started_at?: string | null;
-  completed_at?: string | null;
+  /** Valores por journey separados por coma: "Completado, En progreso" */
+  status: string;
+  /** Valores por journey separados por coma: "100, 60" */
+  progress_percentage: string;
+  /** Valores por journey separados por coma: "2024-01-15, 2024-02-01" */
+  started_at: string;
+  /** Valores por journey separados por coma: "2024-03-01, -" */
+  completed_at: string;
   // CRM contact data
   first_name?: string | null;
   last_name?: string | null;
