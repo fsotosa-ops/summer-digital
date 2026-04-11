@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ApiJourneyEnrolleeRead } from '@/types/api.types';
+import { ApiJourneyEnrolleeRead, ApiEventEnrolleeRead } from '@/types/api.types';
+
+export type ExportableEnrollee = ApiJourneyEnrolleeRead | ApiEventEnrolleeRead;
 import {
   Dialog,
   DialogContent,
@@ -61,6 +63,7 @@ const COLUMN_GROUPS: ColumnGroup[] = [
   {
     label: 'Progreso',
     columns: [
+      { key: 'journeys', label: 'Journeys' },
       { key: 'status', label: 'Estado', required: true },
       { key: 'progress_percentage', label: 'Progreso (%)', required: true },
       { key: 'current_step_index', label: 'Step actual' },
@@ -93,8 +96,9 @@ function dateOrEmpty(iso?: string | null): string {
   return iso ? new Date(iso).toISOString().slice(0, 10) : '';
 }
 
-function getColumnValue(e: ApiJourneyEnrolleeRead, key: string): string {
+function getColumnValue(e: ExportableEnrollee, key: string): string {
   switch (key) {
+    case 'journeys': return ('journeys' in e ? e.journeys : '') ?? '';
     case 'full_name': return e.full_name ?? '';
     case 'email': return e.email ?? '';
     case 'first_name': return e.first_name ?? '';
@@ -110,7 +114,7 @@ function getColumnValue(e: ApiJourneyEnrolleeRead, key: string): string {
     case 'occupation': return e.occupation ?? '';
     case 'status': return statusEsLabel(e.status);
     case 'progress_percentage': return String(Math.round(e.progress_percentage || 0));
-    case 'current_step_index': return String(e.current_step_index || 0);
+    case 'current_step_index': return String(('current_step_index' in e ? e.current_step_index : 0) || 0);
     case 'started_at': return dateOrEmpty(e.started_at);
     case 'completed_at': return dateOrEmpty(e.completed_at);
     default: return '';
@@ -133,12 +137,12 @@ function loadSavedColumns(): string[] {
 interface Props {
   open: boolean;
   onClose: () => void;
-  data: ApiJourneyEnrolleeRead[];
-  journeySlug: string;
+  data: ExportableEnrollee[];
+  filenamePrefix: string;
   statusFilter: string;
 }
 
-export function ExportColumnsDialog({ open, onClose, data, journeySlug, statusFilter }: Props) {
+export function ExportColumnsDialog({ open, onClose, data, filenamePrefix, statusFilter }: Props) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set(loadSavedColumns()));
 
   // Sync required keys on mount
@@ -180,7 +184,7 @@ export function ExportColumnsDialog({ open, onClose, data, journeySlug, statusFi
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `${journeySlug || 'journey'}_${statusFilter}_${stamp}.csv`;
+    a.download = `${filenamePrefix || 'export'}_${statusFilter}_${stamp}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

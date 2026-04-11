@@ -3,6 +3,7 @@ import {
   ApiJourneyAdminRead,
   ApiJourneyCreate,
   ApiJourneyUpdate,
+  ApiEventEnrolleeRead,
   ApiJourneyEnrolleeRead,
   ApiJourneyOrganizationsResponse,
   ApiMemberResponse,
@@ -84,6 +85,19 @@ class AdminService {
     const qs = params.toString();
     return apiClient.get<ApiJourneyEnrolleeRead[]>(
       `/journeys/${orgId}/admin/tracking/journeys/${journeyId}/enrollees${qs ? `?${qs}` : ''}`,
+    );
+  }
+
+  async listEventEnrollees(
+    orgId: string,
+    eventId: string,
+    options?: { status?: 'not_started' | 'active' | 'completed' | null },
+  ): Promise<ApiEventEnrolleeRead[]> {
+    const params = new URLSearchParams();
+    if (options?.status) params.set('status', options.status);
+    const qs = params.toString();
+    return apiClient.get<ApiEventEnrolleeRead[]>(
+      `/journeys/${orgId}/admin/tracking/events/${eventId}/enrollees${qs ? `?${qs}` : ''}`,
     );
   }
 

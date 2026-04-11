@@ -286,6 +286,30 @@ export interface ApiJourneyEnrolleeRead {
   occupation?: string | null;
 }
 
+export interface ApiEventEnrolleeRead {
+  user_id: string;
+  full_name?: string | null;
+  email?: string | null;
+  /** Títulos de journeys separados por coma. */
+  journeys: string;
+  status: 'not_started' | 'active' | 'completed' | string;
+  progress_percentage: number;
+  started_at?: string | null;
+  completed_at?: string | null;
+  // CRM contact data
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  education_level?: string | null;
+  occupation?: string | null;
+}
+
 export interface ApiJourneyCreate {
   title: string;
   slug: string;

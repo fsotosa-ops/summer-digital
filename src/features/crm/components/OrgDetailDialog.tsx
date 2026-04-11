@@ -18,6 +18,7 @@ import {
   ApiEventTrackingRead,
   ApiJourneyTrackingRead,
   ApiJourneyEnrolleeRead,
+  ApiEventEnrolleeRead,
   ApiEvent,
 } from '@/types/api.types';
 import { EventsTab } from '@/features/crm/tabs/EventsTab';
@@ -1213,6 +1214,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                     ) : (
                       <JourneyTrackingView
                         tracking={tracking}
+                        orgId={org.id}
                         onEnrolleesClick={(journey, eventId, eventName, mode) =>
                           setEnrolleesCtx({ journey, eventId, eventName, mode })
                         }
@@ -1446,9 +1448,11 @@ type OnEnrolleesClick = (
 
 function JourneyTrackingView({
   tracking,
+  orgId,
   onEnrolleesClick,
 }: {
   tracking: ApiOrgTrackingResponse;
+  orgId: string;
   onEnrolleesClick: OnEnrolleesClick;
 }) {
   const eventsWithJourneys = tracking.events.filter((e) => e.journeys.length > 0);
@@ -1504,6 +1508,7 @@ function JourneyTrackingView({
             <TrackingEventCard
               key={event.event_id}
               event={event}
+              orgId={orgId}
               onEnrolleesClick={onEnrolleesClick}
             />
           ))}
@@ -1568,18 +1573,37 @@ function CollapsibleHeader({
 
 function TrackingEventCard({
   event,
+  orgId,
   onEnrolleesClick,
 }: {
   event: ApiEventTrackingRead;
+  orgId: string;
   onEnrolleesClick: OnEnrolleesClick;
 }) {
   const [open, setOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [eventExportData, setEventExportData] = useState<ApiEventEnrolleeRead[] | null>(null);
+  const [showEventExport, setShowEventExport] = useState(false);
+
   const dateRange = formatDateRange(event.start_date, event.end_date);
   // Bajo la nueva semántica: total_enrollments = asistentes del evento, idéntico
   // para todos los journeys del mismo evento (por construcción del backend).
   const attendeeCount = event.journeys[0]?.total_enrollments ?? 0;
   const totalCompleted = event.journeys.reduce((s, j) => s + j.completed_enrollments, 0);
   const summary = `${event.journeys.length} journeys · ${attendeeCount} asistentes · ${totalCompleted} completados`;
+
+  const handleEventExport = async () => {
+    setExportLoading(true);
+    try {
+      const data = await adminService.listEventEnrollees(orgId, event.event_id);
+      setEventExportData(data);
+      setShowEventExport(true);
+    } catch {
+      toast.error('Error al cargar datos del evento');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
@@ -1609,11 +1633,40 @@ function TrackingEventCard({
         summary={summary}
       />
       {open && (
-        <JourneysTable
-          journeys={event.journeys}
-          eventId={event.event_id}
-          eventName={event.event_name}
-          onEnrolleesClick={onEnrolleesClick}
+        <>
+          <div className="flex items-center justify-end px-4 py-2 border-b border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleEventExport}
+              disabled={exportLoading || event.journeys.length === 0}
+              className="h-8 gap-1.5 text-xs"
+            >
+              {exportLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Exportar evento
+            </Button>
+          </div>
+          <JourneysTable
+            journeys={event.journeys}
+            eventId={event.event_id}
+            eventName={event.event_name}
+            onEnrolleesClick={onEnrolleesClick}
+          />
+        </>
+      )}
+
+      {showEventExport && eventExportData && (
+        <ExportColumnsDialog
+          open={showEventExport}
+          onClose={() => { setShowEventExport(false); setEventExportData(null); }}
+          data={eventExportData}
+          filenamePrefix={event.event_slug || event.event_name.toLowerCase().replace(/\s+/g, '-')}
+          statusFilter="todos"
         />
       )}
     </div>
@@ -1978,7 +2031,7 @@ function EnrolleesView({
           open={showExportDialog}
           onClose={() => setShowExportDialog(false)}
           data={filtered}
-          journeySlug={journey.slug}
+          filenamePrefix={journey.slug}
           statusFilter={tab === 'all' ? 'todos' : tab}
         />
       )}
@@ -2035,12 +2088,7 @@ function EnrolleeRow({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
         {enrollee.status === 'not_started' ? (
           <span className="text-xs text-slate-300 italic">sin actividad</span>
         ) : (
-          <div className="flex items-center gap-2">
-            <MiniProgress pct={pct} />
-            <span className="text-xs text-slate-500 tabular-nums w-9 text-right shrink-0">
-              {pct}%
-            </span>
-          </div>
+          <MiniProgress pct={pct} />
         )}
       </TableCell>
       <TableCell className="text-right text-xs text-slate-500 whitespace-nowrap">
@@ -2084,7 +2132,6 @@ function EnrolleeCard({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
           {enrollee.status !== 'not_started' && (
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <MiniProgress pct={pct} />
-              <span className="text-[11px] text-slate-500 tabular-nums shrink-0">{pct}%</span>
             </div>
           )}
         </div>
