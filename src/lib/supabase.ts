@@ -12,3 +12,11 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl || "https://missing.supabase.co", supabaseKey || "missing_key");
+
+/**
+ * Sincroniza la sesión del cliente Supabase frontend con los tokens del apiClient.
+ * Esto habilita Supabase Realtime con RLS basado en el usuario autenticado.
+ */
+export async function syncSupabaseSession(accessToken: string, refreshToken: string) {
+  await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+}
