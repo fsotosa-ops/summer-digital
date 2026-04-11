@@ -88,6 +88,7 @@ import {
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ExportColumnsDialog } from './ExportColumnsDialog';
 
 const ROLES: { value: ApiMemberRole; label: string }[] = [
   { value: 'owner', label: 'Owner' },
@@ -682,6 +683,15 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
         >
           <DialogTitle className="sr-only">Perfil de {org.name}</DialogTitle>
 
+          {/* ── Drilldown: Enrollees View (reemplaza el contenido del dialog) ── */}
+          {enrolleesCtx ? (
+            <EnrolleesView
+              orgId={org.id}
+              context={enrolleesCtx}
+              onBack={() => setEnrolleesCtx(null)}
+            />
+          ) : (
+          <>
           {/* Header — mismo gradiente que ContactDetailSheet */}
           <div className="shrink-0 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 border-b border-summer-lavender/50">
             <div className="flex items-center gap-4 px-6 pt-5 pb-4">
@@ -770,7 +780,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                   text-slate-500 hover:text-slate-700"
               >
                 <Route className="h-3.5 w-3.5" />
-                Journeys
+                Monitoreo
               </TabsTrigger>
             </TabsList>
 
@@ -1214,17 +1224,10 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </ScrollArea>
             </div>
           </Tabs>
+          </>
+          )}
         </DialogContent>
       </Dialog>
-
-      {/* Enrollees Dialog (drilldown desde el tab Journeys) */}
-      {enrolleesCtx && (
-        <EnrolleesDialog
-          orgId={org.id}
-          context={enrolleesCtx}
-          onClose={() => setEnrolleesCtx(null)}
-        />
-      )}
 
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -1741,7 +1744,7 @@ function JourneysTable({
   );
 }
 
-// ── EnrolleesDialog ──────────────────────────────────────────────────────────
+// ── EnrolleesView (drill-down inline, sin Dialog wrapper) ────────────────────
 // Sub-dialog que muestra los asistentes/inscritos de un journey en el contexto
 // de un evento (o "sin evento" para los unassigned). Una sola fetch al backend;
 // tabs, búsqueda y export CSV operan client-side sobre los datos cargados.
@@ -1755,19 +1758,14 @@ function JourneysTable({
 //   en_progreso         = enrollment.status='active'
 //   completados         = enrollment.status='completed'
 
-function escapeCsvCell(val: string | number | null | undefined): string {
-  const s = val == null ? '' : String(val);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-function EnrolleesDialog({
+function EnrolleesView({
   orgId,
   context,
-  onClose,
+  onBack,
 }: {
   orgId: string;
   context: EnrolleesContext;
-  onClose: () => void;
+  onBack: () => void;
 }) {
   const { journey, eventId, eventName, mode } = context;
   type Tab = 'all' | 'not_started' | 'active' | 'completed';
@@ -1775,6 +1773,7 @@ function EnrolleesDialog({
   const [enrollees, setEnrollees] = useState<ApiJourneyEnrolleeRead[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1828,132 +1827,103 @@ function EnrolleesDialog({
     });
   }, [enrollees, tab, search]);
 
-  const handleExport = () => {
-    if (filtered.length === 0) return;
-    const headers = [
-      'Nombre',
-      'Email',
-      'Estado',
-      'Progreso (%)',
-      'Step actual',
-      'Inicio',
-      'Completado',
-    ];
-    const statusEsLabel = (s: string) =>
-      s === 'completed' ? 'Completado' : s === 'active' ? 'En progreso' : 'No iniciado';
-    const dateOrEmpty = (iso?: string | null) =>
-      iso ? new Date(iso).toISOString().slice(0, 10) : '';
-    const rows = filtered.map((e) => [
-      escapeCsvCell(e.full_name),
-      escapeCsvCell(e.email),
-      escapeCsvCell(statusEsLabel(e.status)),
-      escapeCsvCell(Math.round(e.progress_percentage || 0)),
-      escapeCsvCell(e.current_step_index || 0),
-      escapeCsvCell(dateOrEmpty(e.started_at)),
-      escapeCsvCell(dateOrEmpty(e.completed_at)),
-    ]);
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    // Add BOM so Excel recognizes UTF-8 (acentos, ñ)
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const tabSuffix = tab === 'all' ? 'todos' : tab;
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `${journey.slug || 'journey'}_${tabSuffix}_${stamp}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`CSV exportado (${filtered.length} usuarios)`);
-  };
-
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[96vw] max-w-[1400px] p-0 gap-0 overflow-hidden">
-        {/* Header con breakdown como subtítulo (sin tarjetas redundantes) */}
-        <DialogHeader className="px-6 pt-6 pb-5 border-b border-slate-100">
-          <DialogTitle className="text-lg font-semibold text-slate-800 truncate">
-            {journey.title}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500 mt-0.5">
-            {eventName ? `Asistentes de ${eventName}` : 'Inscritos (sin evento asignado)'}
-          </DialogDescription>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 mt-3">
-            <span className="font-semibold text-slate-700 tabular-nums">{counts.all}</span>
-            <span className="text-slate-400">asistentes</span>
-            <span className="text-slate-300">·</span>
-            <span className="font-semibold text-slate-700 tabular-nums">{counts.enrolled}</span>
-            <span className="text-slate-400">inscritos</span>
-            <span className="text-slate-300">·</span>
-            <span className="font-semibold text-slate-700 tabular-nums">{counts.not_started}</span>
-            <span className="text-slate-400">sin enrollment</span>
-          </div>
-        </DialogHeader>
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Back + Header */}
+      <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 shrink-0">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 mb-2 -ml-0.5"
+        >
+          <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+          Volver a Monitoreo
+        </button>
+        <h2 className="text-base sm:text-lg font-semibold text-slate-800 truncate">
+          {journey.title}
+        </h2>
+        <p className="text-xs text-slate-500 mt-0.5 truncate">
+          {eventName ? `Asistentes de ${eventName}` : 'Inscritos (sin evento asignado)'}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 mt-2.5">
+          <span className="font-semibold text-slate-700 tabular-nums">{counts.all}</span>
+          <span className="text-slate-400">asistentes</span>
+          <span className="text-slate-300">·</span>
+          <span className="font-semibold text-slate-700 tabular-nums">{counts.enrolled}</span>
+          <span className="text-slate-400">inscritos</span>
+          <span className="text-slate-300">·</span>
+          <span className="font-semibold text-slate-700 tabular-nums">{counts.not_started}</span>
+          <span className="text-slate-400">sin enrollment</span>
+        </div>
+      </div>
 
-        {/* Toolbar: tabs + search + export en una sola fila */}
-        <div className="px-6 py-4 border-b border-slate-100 space-y-3">
+        {/* Toolbar: tabs + search + export */}
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 space-y-3 shrink-0">
           <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-            <TabsList className="inline-flex h-11 w-full justify-start gap-1.5 bg-slate-100/70 p-1.5 rounded-lg">
+            <TabsList className="inline-flex h-10 sm:h-11 w-full justify-start gap-1 sm:gap-1.5 bg-slate-100/70 p-1 sm:p-1.5 rounded-lg overflow-x-auto">
               <TabsTrigger
                 value="all"
-                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+                className="flex-1 h-7 sm:h-8 px-2 sm:px-4 text-[11px] sm:text-xs font-medium rounded-md whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
               >
                 Todos
-                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.all})</span>
+                <span className="ml-1 text-[10px] text-slate-400 tabular-nums">({counts.all})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="not_started"
-                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+                className="flex-1 h-7 sm:h-8 px-2 sm:px-4 text-[11px] sm:text-xs font-medium rounded-md whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
               >
-                No iniciados
-                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.not_started})</span>
+                <span className="hidden sm:inline">No iniciados</span>
+                <span className="sm:hidden">Sin iniciar</span>
+                <span className="ml-1 text-[10px] text-slate-400 tabular-nums">({counts.not_started})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="active"
-                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+                className="flex-1 h-7 sm:h-8 px-2 sm:px-4 text-[11px] sm:text-xs font-medium rounded-md whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
               >
-                En progreso
-                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.active})</span>
+                <span className="hidden sm:inline">En progreso</span>
+                <span className="sm:hidden">Activos</span>
+                <span className="ml-1 text-[10px] text-slate-400 tabular-nums">({counts.active})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
-                className="flex-1 h-8 px-4 text-xs font-medium rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
+                className="flex-1 h-7 sm:h-8 px-2 sm:px-4 text-[11px] sm:text-xs font-medium rounded-md whitespace-nowrap data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-800"
               >
-                Completados
-                <span className="ml-1.5 text-[10px] text-slate-400 tabular-nums">({counts.completed})</span>
+                <span className="hidden sm:inline">Completados</span>
+                <span className="sm:hidden">Listos</span>
+                <span className="ml-1 text-[10px] text-slate-400 tabular-nums">({counts.completed})</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative flex-1">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Buscar por nombre o email"
+                placeholder="Buscar..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-9 pl-9 text-sm"
               />
             </div>
-            <div className="flex-1 hidden sm:block" />
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleExport}
+              onClick={() => setShowExportDialog(true)}
               disabled={filtered.length === 0}
               className="h-9 gap-1.5 shrink-0"
             >
               <Download className="h-3.5 w-3.5" />
-              Exportar CSV
+              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="sm:hidden">CSV</span>
             </Button>
           </div>
         </div>
 
-        {/* Tabla de usuarios */}
-        <ScrollArea className="max-h-[68vh] px-6 py-4">
+        {/* Lista de usuarios — cards en móvil, tabla en desktop */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="px-4 sm:px-6 py-3 sm:py-4">
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
@@ -1964,33 +1934,55 @@ function EnrolleesDialog({
               {search.trim() ? 'Sin resultados para esta búsqueda' : 'No hay usuarios en esta vista'}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-slate-100">
-                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
-                    Usuario
-                  </TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
-                    Estado
-                  </TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium w-[200px]">
-                    Progreso
-                  </TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium text-right whitespace-nowrap">
-                    Inicio
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop: tabla */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-slate-100">
+                      <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+                        Usuario
+                      </TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+                        Estado
+                      </TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium w-[200px]">
+                        Progreso
+                      </TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wide text-slate-400 font-medium text-right whitespace-nowrap">
+                        Inicio
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((e) => (
+                      <EnrolleeRow key={e.user_id} enrollee={e} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: card list */}
+              <div className="md:hidden space-y-2">
                 {filtered.map((e) => (
-                  <EnrolleeRow key={e.user_id} enrollee={e} />
+                  <EnrolleeCard key={e.user_id} enrollee={e} />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
+          </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+
+      {showExportDialog && (
+        <ExportColumnsDialog
+          open={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          data={filtered}
+          journeySlug={journey.slug}
+          statusFilter={tab === 'all' ? 'todos' : tab}
+        />
+      )}
+    </div>
   );
 }
 
@@ -2055,5 +2047,48 @@ function EnrolleeRow({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
         {startedAt}
       </TableCell>
     </TableRow>
+  );
+}
+
+function EnrolleeCard({ enrollee }: { enrollee: ApiJourneyEnrolleeRead }) {
+  const initial = (enrollee.full_name || enrollee.email || '?').charAt(0).toUpperCase();
+  const pct = Math.round(enrollee.progress_percentage || 0);
+  const statusBadge =
+    enrollee.status === 'completed'
+      ? 'bg-green-100 text-green-700 border-green-200'
+      : enrollee.status === 'active'
+      ? 'bg-summer-lavender/10 text-summer-lavender border-summer-lavender'
+      : 'bg-slate-100 text-slate-500 border-slate-200';
+  const statusLabel =
+    enrollee.status === 'active'
+      ? 'En progreso'
+      : enrollee.status === 'completed'
+      ? 'Completado'
+      : 'No iniciado';
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-white">
+      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender
+                      text-white flex items-center justify-center text-xs font-semibold shrink-0">
+        {initial}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 truncate">
+          {enrollee.full_name || '—'}
+        </p>
+        <p className="text-[11px] text-slate-400 truncate">{enrollee.email || '—'}</p>
+        <div className="flex items-center gap-2 mt-1.5">
+          <Badge variant="outline" className={cn('text-[10px]', statusBadge)}>
+            {statusLabel}
+          </Badge>
+          {enrollee.status !== 'not_started' && (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <MiniProgress pct={pct} />
+              <span className="text-[11px] text-slate-500 tabular-nums shrink-0">{pct}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

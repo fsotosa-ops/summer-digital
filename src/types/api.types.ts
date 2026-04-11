@@ -272,6 +272,18 @@ export interface ApiJourneyEnrolleeRead {
   /** null si not_started → cae al registered_at de la asistencia. */
   started_at: string | null;
   completed_at: string | null;
+  // CRM contact data
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  birth_date?: string | null;
+  gender?: string | null;
+  education_level?: string | null;
+  occupation?: string | null;
 }
 
 export interface ApiJourneyCreate {
