@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { resourceService } from '@/services/resource.service';
 import { gamificationService } from '@/services/gamification.service';
@@ -104,6 +104,7 @@ export default function AdminResourcesPage() {
   const [editingResource, setEditingResource] = useState<ApiResourceAdminRead | null>(null);
   const [previewResource, setPreviewResource] = useState<ApiResourceAdminRead | null>(null);
   const [error, setError]                   = useState<string | null>(null);
+  const [orgsError, setOrgsError]           = useState<string | null>(null);
   const [statusFilter, setStatusFilter]     = useState<'all' | 'published' | 'draft'>('all');
 
   // Reference data for unlock conditions
@@ -133,26 +134,29 @@ export default function AdminResourcesPage() {
   const orgId        = isSuperAdmin ? selectedOrgId : user?.organizationId;
 
   // Load organizations for SuperAdmin
+  const loadOrgs = useCallback(async () => {
+    if (!isSuperAdmin) { setIsLoadingOrgs(false); return; }
+    setIsLoadingOrgs(true);
+    setOrgsError(null);
+    try {
+      const orgs = await organizationService.listMyOrganizations();
+      const sorted = [...orgs].sort((a, b) => {
+        if (a.slug === 'fundacion-summer') return -1;
+        if (b.slug === 'fundacion-summer') return 1;
+        return 0;
+      });
+      setOrganizations(sorted);
+    } catch (err) {
+      console.error('Error loading organizations:', err);
+      setOrgsError('No se pudieron cargar las organizaciones.');
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  }, [isSuperAdmin]);
+
   useEffect(() => {
-    const loadOrgs = async () => {
-      if (!isSuperAdmin) { setIsLoadingOrgs(false); return; }
-      try {
-        const orgs = await organizationService.listMyOrganizations();
-        const sorted = [...orgs].sort((a, b) => {
-          if (a.slug === 'fundacion-summer') return -1;
-          if (b.slug === 'fundacion-summer') return 1;
-          return 0;
-        });
-        setOrganizations(sorted);
-        // No auto-select: start with "Todas las organizaciones" (null)
-      } catch (err) {
-        console.error('Error loading organizations:', err);
-      } finally {
-        setIsLoadingOrgs(false);
-      }
-    };
     loadOrgs();
-  }, [isSuperAdmin, selectedOrgId]);
+  }, [loadOrgs]);
 
   // Load reference data (only when a specific org is selected)
   useEffect(() => {
@@ -282,7 +286,7 @@ export default function AdminResourcesPage() {
           unlock_conditions: formData.unlock_conditions,
         };
         await resourceService.updateResource(editOrgId, editingResource.id, updateData);
-        if (fileToUpload) await resourceService.uploadFile(editOrgId, editingResource.id, fileToUpload);
+        if (contentSource === 'upload' && fileToUpload) await resourceService.uploadFile(editOrgId, editingResource.id, fileToUpload);
 
         // Sync org assignments: add new, remove old
         if (isSuperAdmin) {
@@ -296,7 +300,7 @@ export default function AdminResourcesPage() {
         if (effectiveOrgIds.length === 0) return;
         const [ownerOrgId, ...extraOrgIds] = effectiveOrgIds;
         const newResource = await resourceService.createResource(ownerOrgId, formData);
-        if (fileToUpload) await resourceService.uploadFile(ownerOrgId, newResource.id, fileToUpload);
+        if (contentSource === 'upload' && fileToUpload) await resourceService.uploadFile(ownerOrgId, newResource.id, fileToUpload);
         if (extraOrgIds.length > 0) await resourceService.assignResourceOrganizations(newResource.id, extraOrgIds);
       }
       setDialogOpen(false);
@@ -763,7 +767,11 @@ export default function AdminResourcesPage() {
                   <button
                     key={src}
                     type="button"
-                    onClick={() => setContentSource(src)}
+                    onClick={() => {
+                      setContentSource(src);
+                      if (src === 'url') setFileToUpload(null);
+                      if (src === 'upload') setFormData(prev => ({ ...prev, content_url: '' }));
+                    }}
                     className={cn(
                       'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
                       contentSource === src
@@ -937,7 +945,7 @@ export default function AdminResourcesPage() {
             </div>
 
             {/* Organization access (SuperAdmin only) */}
-            {isSuperAdmin && organizations.length > 0 && (
+            {isSuperAdmin && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-slate-700">
                   Organizaciones con acceso <span className="text-red-500">*</span>
@@ -947,7 +955,18 @@ export default function AdminResourcesPage() {
                     ? 'Gestiona qué organizaciones tienen acceso a este recurso.'
                     : 'La primera organización seleccionada será la propietaria.'}
                 </p>
-                {isLoadingResourceOrgs ? (
+                {isLoadingOrgs ? (
+                  <div className="flex items-center gap-2 py-2 text-sm text-slate-400">
+                    <Loader2 size={14} className="animate-spin" /> Cargando organizaciones…
+                  </div>
+                ) : orgsError ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2">
+                    <AlertCircle size={14} /> {orgsError}
+                    <button type="button" onClick={loadOrgs} className="ml-auto text-xs font-medium underline hover:text-red-700">
+                      Reintentar
+                    </button>
+                  </div>
+                ) : isLoadingResourceOrgs ? (
                   <div className="flex items-center gap-2 py-2 text-sm text-slate-400">
                     <Loader2 size={14} className="animate-spin" /> Cargando organizaciones…
                   </div>
@@ -980,7 +999,13 @@ export default function AdminResourcesPage() {
               </Button>
               <button
                 type="submit"
-                disabled={isSaving || !formData.title || (isSuperAdmin && accessOrgIds.length === 0)}
+                disabled={
+                  isSaving
+                  || !formData.title
+                  || (isSuperAdmin && accessOrgIds.length === 0)
+                  || (contentSource === 'url' && !formData.content_url?.trim())
+                  || (contentSource === 'upload' && !fileToUpload && !editingResource?.storage_path)
+                }
                 className="flex items-center gap-2 px-4 py-2 rounded-lg
                            bg-gradient-to-r from-summer-pink to-summer-lavender text-white
                            text-sm font-semibold hover:opacity-90 transition-opacity

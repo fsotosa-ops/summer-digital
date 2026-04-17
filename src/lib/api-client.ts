@@ -151,15 +151,15 @@ export class ApiError extends Error {
     /**
      * Execute a fetch with AbortController timeout.
      */
-    private async fetchWithTimeout(url: string, config: RequestInit): Promise<Response> {
+    private async fetchWithTimeout(url: string, config: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
         return await fetch(url, { ...config, signal: controller.signal });
       } catch (err: any) {
         if (err.name === 'AbortError') {
-          throw new ApiError(0, 'Request timeout', { message: `Request to ${url} timed out after ${REQUEST_TIMEOUT_MS}ms` });
+          throw new ApiError(0, 'Request timeout', { message: `Request to ${url} timed out after ${timeoutMs}ms` });
         }
         throw err;
       } finally {
@@ -171,12 +171,12 @@ export class ApiError extends Error {
      * Execute fetch with retry for transient server errors (502/503/504)
      * and network errors. Exponential backoff: 300ms → 600ms.
      */
-    private async fetchWithRetry(url: string, config: RequestInit): Promise<Response> {
+    private async fetchWithRetry(url: string, config: RequestInit, timeoutMs?: number): Promise<Response> {
       let lastError: any;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const response = await this.fetchWithTimeout(url, config);
+          const response = await this.fetchWithTimeout(url, config, timeoutMs);
 
           // Only retry on transient server errors for idempotent-ish requests
           if (RETRYABLE_STATUS.has(response.status) && attempt < MAX_RETRIES) {
@@ -207,7 +207,7 @@ export class ApiError extends Error {
     /**
      * Método genérico para realizar peticiones HTTP
      */
-    private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    private async request<T>(endpoint: string, options: RequestInit = {}, timeoutMs?: number): Promise<T> {
       // Circuit breaker: si auth está muerta, no hacer requests (excepto endpoints públicos)
       if (this.isAuthDead && !this.isPublicAuthEndpoint(endpoint)) {
         throw new ApiError(401, 'Session expired', null);
@@ -258,7 +258,7 @@ export class ApiError extends Error {
       };
 
       // 2. Ejecutar Request (with timeout + retry)
-      let response = await this.fetchWithRetry(url, config);
+      let response = await this.fetchWithRetry(url, config, timeoutMs);
 
       // 3. Manejo de 401/403 (Unauthorized/Forbidden) y Refresh Automático
       if (response.status === 401 || response.status === 403) {
@@ -268,7 +268,7 @@ export class ApiError extends Error {
 
                   // Reintentar el request original con el nuevo token
                   headers.set('Authorization', `Bearer ${this.accessToken}`);
-                  response = await this.fetchWithRetry(url, { ...options, headers });
+                  response = await this.fetchWithRetry(url, { ...options, headers }, timeoutMs);
               } catch {
                   throw new ApiError(401, 'Session expired', null);
               }
@@ -302,7 +302,7 @@ export class ApiError extends Error {
       return this.request<T>(endpoint, { method: 'GET', headers });
     }
 
-    public post<T>(endpoint: string, body: any, headers?: HeadersInit): Promise<T> {
+    public post<T>(endpoint: string, body: any, headers?: HeadersInit, timeoutMs?: number): Promise<T> {
       const isUrlEncoded = body instanceof URLSearchParams;
       const isFormData = body instanceof FormData;
 
@@ -310,7 +310,7 @@ export class ApiError extends Error {
         method: 'POST',
         body: isUrlEncoded || isFormData ? body : JSON.stringify(body),
         headers
-      });
+      }, timeoutMs);
     }
 
     public put<T>(endpoint: string, body: any, headers?: HeadersInit): Promise<T> {

@@ -44,7 +44,12 @@ class ResourceService {
   async uploadFile(orgId: string, id: string, file: File): Promise<ApiResourceAdminRead> {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post<ApiResourceAdminRead>(`/resources/${orgId}/admin/resources/${id}/upload`, formData);
+    return apiClient.post<ApiResourceAdminRead>(
+      `/resources/${orgId}/admin/resources/${id}/upload`,
+      formData,
+      undefined,
+      60_000,
+    );
   }
 
   // --- Admin: Organization assignment ---
