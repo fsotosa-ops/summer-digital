@@ -207,6 +207,7 @@ export interface ApiJourneyAdminRead {
   thumbnail_url?: string | null;
   category?: string | null;
   is_active: boolean;
+  is_global?: boolean;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -321,6 +322,7 @@ export interface ApiJourneyCreate {
   category?: string | null;
   thumbnail_url?: string | null;
   is_active?: boolean;
+  is_global?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -331,6 +333,7 @@ export interface ApiJourneyUpdate {
   category?: string | null;
   thumbnail_url?: string | null;
   is_active?: boolean;
+  is_global?: boolean;
   metadata?: Record<string, unknown>;
   is_onboarding?: boolean | null;
 }
@@ -1031,6 +1034,7 @@ export interface ApiResourceCreate {
   thumbnail_url?: string | null;
   points_on_completion?: number;
   unlock_logic?: ApiUnlockLogic;
+  is_global?: boolean;
   metadata?: Record<string, unknown>;
   unlock_conditions?: ApiUnlockConditionCreate[];
 }
@@ -1043,6 +1047,7 @@ export interface ApiResourceUpdate {
   thumbnail_url?: string | null;
   points_on_completion?: number | null;
   unlock_logic?: ApiUnlockLogic | null;
+  is_global?: boolean;
   metadata?: Record<string, unknown> | null;
   unlock_conditions?: ApiUnlockConditionCreate[] | null;
 }
@@ -1057,6 +1062,7 @@ export interface ApiResourceAdminRead {
   storage_path?: string | null;
   thumbnail_url?: string | null;
   is_published: boolean;
+  is_global?: boolean;
   points_on_completion: number;
   unlock_logic: ApiUnlockLogic;
   metadata: Record<string, unknown>;

@@ -122,6 +122,7 @@ export default function AdminResourcesPage() {
     thumbnail_url: '',
     points_on_completion: 0,
     unlock_logic: 'AND',
+    is_global: false,
     unlock_conditions: [],
   });
   const [contentSource, setContentSource] = useState<'url' | 'upload'>('url');
@@ -166,11 +167,23 @@ export default function AdminResourcesPage() {
   useEffect(() => {
     if (isLoadingOrgs) return;
 
-    const orgsToLoad: { id: string; name: string }[] = orgId
+    // When the dialog has explicit org assignments (`accessOrgIds`), restrict the
+    // reference data (journeys, levels, rewards) to those orgs — a journey only
+    // makes sense as an unlock condition if it's reachable by the same orgs that
+    // can access the resource. Global journeys/resources come included from the
+    // backend (list endpoints union `is_global = TRUE`).
+    const defaultOrgs: { id: string; name: string }[] = orgId
       ? [{ id: orgId, name: organizations.find(o => o.id === orgId)?.name ?? '' }]
       : isSuperAdmin
         ? organizations.map(o => ({ id: o.id, name: o.name }))
         : [];
+
+    const orgsToLoad = accessOrgIds.length > 0
+      ? accessOrgIds.map(id => ({
+          id,
+          name: organizations.find(o => o.id === id)?.name ?? '',
+        }))
+      : defaultOrgs;
 
     if (orgsToLoad.length === 0) {
       setLevels([]); setRewards([]); setJourneys([]);
@@ -212,7 +225,7 @@ export default function AdminResourcesPage() {
       }
     };
     loadRefs();
-  }, [orgId, organizations, isSuperAdmin, isLoadingOrgs]);
+  }, [orgId, organizations, isSuperAdmin, isLoadingOrgs, accessOrgIds]);
 
   const fetchResources = async () => {
     if (!isSuperAdmin && !orgId) return;
@@ -257,7 +270,7 @@ export default function AdminResourcesPage() {
 
   const openCreateDialog = () => {
     setEditingResource(null);
-    setFormData({ title: '', description: '', type: 'video', content_url: '', thumbnail_url: '', points_on_completion: 0, unlock_logic: 'AND', unlock_conditions: [] });
+    setFormData({ title: '', description: '', type: 'video', content_url: '', thumbnail_url: '', points_on_completion: 0, unlock_logic: 'AND', is_global: false, unlock_conditions: [] });
     setContentSource('url');
     setFileToUpload(null);
     setAccessOrgIds([]);
@@ -274,6 +287,7 @@ export default function AdminResourcesPage() {
       thumbnail_url: resource.thumbnail_url || '',
       points_on_completion: resource.points_on_completion,
       unlock_logic: resource.unlock_logic,
+      is_global: resource.is_global ?? false,
       unlock_conditions: resource.unlock_conditions.map(c => ({
         condition_type: c.condition_type,
         reference_id: c.reference_id,
@@ -319,13 +333,15 @@ export default function AdminResourcesPage() {
           thumbnail_url: formData.thumbnail_url,
           points_on_completion: formData.points_on_completion,
           unlock_logic: formData.unlock_logic,
+          is_global: formData.is_global,
           unlock_conditions: formData.unlock_conditions,
         };
         await resourceService.updateResource(editOrgId, editingResource.id, updateData);
         if (contentSource === 'upload' && fileToUpload) await resourceService.uploadFile(editOrgId, editingResource.id, fileToUpload);
 
-        // Sync org assignments: add new, remove old
-        if (isSuperAdmin) {
+        // Sync org assignments only when not global; otherwise the resource is
+        // visible to every org and the pivot is intentionally left untouched.
+        if (isSuperAdmin && !formData.is_global) {
           const toAdd = accessOrgIds.filter(id => !originalOrgIds.includes(id));
           const toRemove = originalOrgIds.filter(id => !accessOrgIds.includes(id));
           if (toAdd.length > 0) await resourceService.assignResourceOrganizations(editingResource.id, toAdd);
@@ -333,11 +349,20 @@ export default function AdminResourcesPage() {
         }
       } else {
         const effectiveOrgIds = isSuperAdmin ? accessOrgIds : (user?.organizationId ? [user.organizationId] : []);
-        if (effectiveOrgIds.length === 0) return;
-        const [ownerOrgId, ...extraOrgIds] = effectiveOrgIds;
+        if (effectiveOrgIds.length === 0 && !formData.is_global) return;
+        // For global resources without explicit orgs, fall back to the user's own
+        // org as owner (or the first listed org for SuperAdmin) — every resource
+        // still needs an `organization_id` per schema.
+        const ownerOrgId = effectiveOrgIds[0]
+          ?? user?.organizationId
+          ?? organizations[0]?.id;
+        if (!ownerOrgId) return;
+        const extraOrgIds = effectiveOrgIds.slice(1);
         const newResource = await resourceService.createResource(ownerOrgId, formData);
         if (contentSource === 'upload' && fileToUpload) await resourceService.uploadFile(ownerOrgId, newResource.id, fileToUpload);
-        if (extraOrgIds.length > 0) await resourceService.assignResourceOrganizations(newResource.id, extraOrgIds);
+        if (!formData.is_global && extraOrgIds.length > 0) {
+          await resourceService.assignResourceOrganizations(newResource.id, extraOrgIds);
+        }
       }
       setDialogOpen(false);
       toast.success(editingResource ? 'Recurso actualizado' : 'Recurso creado');
@@ -998,10 +1023,21 @@ export default function AdminResourcesPage() {
                 <Label className="text-sm font-medium text-slate-700">
                   Organizaciones con acceso <span className="text-red-500">*</span>
                 </Label>
+                <label className="flex items-center gap-2 text-sm text-slate-600 select-none">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-summer-pink focus:ring-summer-pink"
+                    checked={formData.is_global ?? false}
+                    onChange={(e) => setFormData({ ...formData, is_global: e.target.checked })}
+                  />
+                  Disponible para todas las organizaciones
+                </label>
                 <p className="text-xs text-slate-400">
-                  {editingResource
-                    ? 'Gestiona qué organizaciones tienen acceso a este recurso.'
-                    : 'La primera organización seleccionada será la propietaria.'}
+                  {formData.is_global
+                    ? 'Este recurso será accesible para todas las organizaciones.'
+                    : editingResource
+                      ? 'Gestiona qué organizaciones tienen acceso a este recurso.'
+                      : 'La primera organización seleccionada será la propietaria.'}
                 </p>
                 {isLoadingOrgs ? (
                   <div className="flex items-center gap-2 py-2 text-sm text-slate-400">
@@ -1019,12 +1055,14 @@ export default function AdminResourcesPage() {
                     <Loader2 size={14} className="animate-spin" /> Cargando organizaciones…
                   </div>
                 ) : (
-                  <MultiSelect
-                    options={organizations.map((o) => ({ value: o.id, label: o.name }))}
-                    selected={accessOrgIds}
-                    onChange={setAccessOrgIds}
-                    placeholder="Seleccionar organizaciones..."
-                  />
+                  <div className={cn(formData.is_global && 'opacity-50 pointer-events-none')}>
+                    <MultiSelect
+                      options={organizations.map((o) => ({ value: o.id, label: o.name }))}
+                      selected={accessOrgIds}
+                      onChange={setAccessOrgIds}
+                      placeholder="Seleccionar organizaciones..."
+                    />
+                  </div>
                 )}
               </div>
             )}

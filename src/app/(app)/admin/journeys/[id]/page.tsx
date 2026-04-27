@@ -377,6 +377,7 @@ export default function JourneyEditorPage() {
   // Journey config section
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
+  const [editIsGlobal, setEditIsGlobal] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Org assignment management (SuperAdmin only)
@@ -487,6 +488,7 @@ export default function JourneyEditorPage() {
     if (!journey || !orgId) return;
     setEditDescription(journey.description || '');
     setEditCategory(journey.category || '');
+    setEditIsGlobal(journey.is_global ?? false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
@@ -689,6 +691,7 @@ export default function JourneyEditorPage() {
     if (!journey) return false;
     if (editDescription !== (journey.description || '')) return true;
     if (editCategory !== (journey.category || '')) return true;
+    if (editIsGlobal !== (journey.is_global ?? false)) return true;
     return false;
   })();
   const configDirty = journeyDirty || orgsDirty;
@@ -703,6 +706,7 @@ export default function JourneyEditorPage() {
       const updates: ApiJourneyUpdate = {};
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
+      if (editIsGlobal !== (journey.is_global ?? false)) updates.is_global = editIsGlobal;
 
       // Only send is_onboarding when category actually changed
       if (editCategory !== (journey.category || '')) {
@@ -1136,6 +1140,15 @@ export default function JourneyEditorPage() {
             </div>
 
             <div className="px-4 pb-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm text-slate-600 select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-summer-pink focus:ring-summer-pink"
+                  checked={editIsGlobal}
+                  onChange={(e) => setEditIsGlobal(e.target.checked)}
+                />
+                Disponible para todas las organizaciones
+              </label>
               {loadingOrgAssign ? (
                 <div className="flex items-center gap-2 py-2 text-slate-400 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
@@ -1144,16 +1157,20 @@ export default function JourneyEditorPage() {
                 <p className="text-xs text-slate-400">No hay organizaciones disponibles.</p>
               ) : (
                 <>
-                  <MultiSelect
-                    options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
-                    selected={assignedOrgIds}
-                    onChange={setAssignedOrgIds}
-                    placeholder="Buscar organizaciones..."
-                  />
+                  <div className={editIsGlobal ? 'opacity-50 pointer-events-none' : ''}>
+                    <MultiSelect
+                      options={allOrgs.map(o => ({ value: o.id, label: o.name }))}
+                      selected={assignedOrgIds}
+                      onChange={setAssignedOrgIds}
+                      placeholder="Buscar organizaciones..."
+                    />
+                  </div>
                   <p className="text-xs text-slate-400">
-                    {assignedOrgIds.length === 0
-                      ? 'Sin selección = abierto para todas.'
-                      : `${assignedOrgIds.length} org(s) seleccionada(s).`}
+                    {editIsGlobal
+                      ? 'Este journey será accesible para todas las organizaciones.'
+                      : assignedOrgIds.length === 0
+                        ? 'Activa "todas las organizaciones" para hacerlo global.'
+                        : `${assignedOrgIds.length} org(s) seleccionada(s).`}
                   </p>
                 </>
               )}
