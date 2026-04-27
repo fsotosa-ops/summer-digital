@@ -111,6 +111,7 @@ export default function AdminResourcesPage() {
   const [levels, setLevels]   = useState<ApiLevelRead[]>([]);
   const [rewards, setRewards] = useState<ApiRewardRead[]>([]);
   const [journeys, setJourneys] = useState<ApiJourneyAdminRead[]>([]);
+  const [refsError, setRefsError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<ApiResourceCreate>({
@@ -158,25 +159,60 @@ export default function AdminResourcesPage() {
     loadOrgs();
   }, [loadOrgs]);
 
-  // Load reference data (only when a specific org is selected)
+  // Load reference data for unlock conditions.
+  // - Admin or SuperAdmin with a specific org selected → load that org.
+  // - SuperAdmin in "all orgs" mode → load each org in parallel and merge,
+  //   suffixing names with the org so duplicates are distinguishable.
   useEffect(() => {
-    if (!orgId) return;
+    if (isLoadingOrgs) return;
+
+    const orgsToLoad: { id: string; name: string }[] = orgId
+      ? [{ id: orgId, name: organizations.find(o => o.id === orgId)?.name ?? '' }]
+      : isSuperAdmin
+        ? organizations.map(o => ({ id: o.id, name: o.name }))
+        : [];
+
+    if (orgsToLoad.length === 0) {
+      setLevels([]); setRewards([]); setJourneys([]);
+      return;
+    }
+
     const loadRefs = async () => {
+      setRefsError(null);
       try {
-        const [lvls, rwds, jnys] = await Promise.all([
-          gamificationService.listLevels(orgId),
-          gamificationService.listRewards(orgId),
-          adminService.listJourneys(orgId),
-        ]);
-        setLevels(lvls);
-        setRewards(rwds);
-        setJourneys(jnys);
+        const perOrg = await Promise.all(orgsToLoad.map(async ({ id, name }) => {
+          const [lvls, rwds, jnys] = await Promise.all([
+            gamificationService.listLevels(id).catch(() => [] as ApiLevelRead[]),
+            gamificationService.listRewards(id).catch(() => [] as ApiRewardRead[]),
+            adminService.listJourneys(id).catch(() => [] as ApiJourneyAdminRead[]),
+          ]);
+          const suffix = orgsToLoad.length > 1 && name ? ` — ${name}` : '';
+          return {
+            levels: lvls.map(l => ({ ...l, name: `${l.name}${suffix}` })),
+            rewards: rwds.map(r => ({ ...r, name: `${r.name}${suffix}` })),
+            journeys: jnys.map(j => ({ ...j, title: `${j.title}${suffix}` })),
+          };
+        }));
+
+        const dedupe = <T extends { id: string }>(arr: T[]): T[] => {
+          const seen = new Set<string>();
+          return arr.filter(x => {
+            if (seen.has(x.id)) return false;
+            seen.add(x.id);
+            return true;
+          });
+        };
+
+        setLevels(dedupe(perOrg.flatMap(r => r.levels)));
+        setRewards(dedupe(perOrg.flatMap(r => r.rewards)));
+        setJourneys(dedupe(perOrg.flatMap(r => r.journeys)));
       } catch (err) {
         console.error('Error loading reference data:', err);
+        setRefsError('No se pudieron cargar niveles, badges o journeys.');
       }
     };
     loadRefs();
-  }, [orgId]);
+  }, [orgId, organizations, isSuperAdmin, isLoadingOrgs]);
 
   const fetchResources = async () => {
     if (!isSuperAdmin && !orgId) return;
@@ -870,6 +906,12 @@ export default function AdminResourcesPage() {
                 </button>
               </div>
 
+              {refsError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={14} /> {refsError}
+                </p>
+              )}
+
               {(formData.unlock_conditions || []).length === 0 && (
                 <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100
                                px-3 py-2 rounded-lg">
@@ -907,7 +949,9 @@ export default function AdminResourcesPage() {
                         <SelectValue placeholder="Seleccionar nivel" />
                       </SelectTrigger>
                       <SelectContent>
-                        {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.min_points} pts)</SelectItem>)}
+                        {levels.length === 0
+                          ? <div className="px-2 py-1.5 text-xs text-slate-400">No hay niveles disponibles</div>
+                          : levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.min_points} pts)</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
@@ -917,7 +961,9 @@ export default function AdminResourcesPage() {
                         <SelectValue placeholder="Seleccionar badge" />
                       </SelectTrigger>
                       <SelectContent>
-                        {rewards.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                        {rewards.length === 0
+                          ? <div className="px-2 py-1.5 text-xs text-slate-400">No hay badges disponibles</div>
+                          : rewards.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
@@ -927,7 +973,9 @@ export default function AdminResourcesPage() {
                         <SelectValue placeholder="Seleccionar journey" />
                       </SelectTrigger>
                       <SelectContent>
-                        {journeys.map(j => <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>)}
+                        {journeys.length === 0
+                          ? <div className="px-2 py-1.5 text-xs text-slate-400">No hay journeys disponibles</div>
+                          : journeys.map(j => <SelectItem key={j.id} value={j.id}>{j.title}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   )}
