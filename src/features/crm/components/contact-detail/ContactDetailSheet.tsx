@@ -386,7 +386,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       {/* ===== FULL-SCREEN DIALOG ===== */}
       <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
         <DialogContent
-          className="!max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100dvh-1rem)] sm:!h-[calc(100vh-3rem)] !max-h-[calc(100dvh-1rem)] sm:!max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
+          className="!max-w-[100vw] sm:!max-w-[calc(100vw-3rem)] !w-screen sm:!w-full !h-[100dvh] sm:!h-[calc(100vh-3rem)] !max-h-[100dvh] sm:!max-h-[calc(100vh-3rem)] !rounded-none sm:!rounded-lg !p-0 !gap-0 !flex !flex-col overflow-hidden"
           showCloseButton={true}
         >
           <DialogTitle className="sr-only">
@@ -435,68 +435,67 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
           {/* Content with Tabs */}
           <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-4 sm:px-6 mt-3 shrink-0 overflow-x-auto">
-            <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
+            <div className="px-4 sm:px-6 mt-3 shrink-0">
+            <TabsList className="!h-auto w-full sm:w-fit flex bg-white border border-slate-200 shadow-sm p-1 rounded-xl">
               <TabsTrigger
                 value="profile"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
+                className="rounded-lg gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-sm flex-1 sm:flex-none min-w-0 overflow-hidden whitespace-nowrap [&>span]:hidden sm:[&>span]:inline
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
                 <User className="h-3.5 w-3.5" />
-                Perfil
+                <span>Perfil</span>
               </TabsTrigger>
               <TabsTrigger
                 value="orgs"
                 onClick={() => loadAvailableOrgs()}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
+                className="rounded-lg gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-sm flex-1 sm:flex-none min-w-0 overflow-hidden whitespace-nowrap [&>span]:hidden sm:[&>span]:inline
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
                 <Building2 className="h-3.5 w-3.5" />
-                Orgs ({user.organizations.length})
+                <span>Orgs ({user.organizations.length})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="notes"
                 onClick={() => loadNotesAndTasks(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
+                className="rounded-lg gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-sm flex-1 sm:flex-none min-w-0 overflow-hidden whitespace-nowrap [&>span]:hidden sm:[&>span]:inline
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
                 <StickyNote className="h-3.5 w-3.5" />
-                Notas & Tareas
+                <span>Notas & Tareas</span>
               </TabsTrigger>
               <TabsTrigger
                 value="activity"
                 onClick={() => loadActivity(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
+                className="rounded-lg gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-sm flex-1 sm:flex-none min-w-0 overflow-hidden whitespace-nowrap [&>span]:hidden sm:[&>span]:inline
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
                 <Activity className="h-3.5 w-3.5" />
-                Actividad
+                <span>Actividad</span>
               </TabsTrigger>
               <TabsTrigger
                 value="events"
                 onClick={() => setEventsLoaded(true)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
+                className="rounded-lg gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 text-[11px] sm:text-sm flex-1 sm:flex-none min-w-0 overflow-hidden whitespace-nowrap [&>span]:hidden sm:[&>span]:inline
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
               >
                 <Calendar className="h-3.5 w-3.5" />
-                Eventos
+                <span>Eventos</span>
               </TabsTrigger>
             </TabsList>
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="px-4 sm:px-6 py-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="px-4 sm:px-6 py-4">
 
                   <TabsContent value="profile" className="mt-0">
                     <ProfileTab
@@ -579,7 +578,6 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                   </TabsContent>
 
                 </div>
-              </ScrollArea>
             </div>
           </Tabs>
         </DialogContent>
