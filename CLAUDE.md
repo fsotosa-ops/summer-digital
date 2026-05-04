@@ -61,6 +61,18 @@ SUPERSET_ADMIN_PASSWORD           # Server-side only
 
 Copy to `.env.local` for local development. Production secrets live in GCP Secret Manager.
 
+## Mobile Responsiveness
+
+**The entire application MUST be mobile responsive.** This is a hard requirement that applies to every component, page, and feature.
+
+- Design mobile-first: start with small screens (`sm:` and below) and scale up with Tailwind breakpoints (`md:`, `lg:`, `xl:`).
+- All layouts must work correctly on viewport widths from 320px (small phones) up to 1440px+ (large desktops).
+- Sidebars and navigation drawers must collapse into mobile-friendly menus on small screens — use the existing `MainLayout` drawer pattern as reference.
+- Touch targets must be at least 44×44px. Avoid hover-only interactions for critical actions.
+- Tables and data-heavy views (CRM, admin panels) must either stack, scroll horizontally with `overflow-x-auto`, or switch to card layouts on mobile.
+- Typography, spacing, and component sizes must scale appropriately — avoid fixed pixel widths that break on small screens.
+- Always test new UI in both mobile (375px) and desktop (1280px) viewports before marking work as done.
+
 ## Key Conventions
 
 - **Feature modules** in `src/features/` follow domain-driven naming (e.g., `crm/components/ContactCard.tsx`).
