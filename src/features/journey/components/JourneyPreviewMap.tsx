@@ -75,7 +75,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
 
       case 'typeform':
         return embedSrc ? (
-          <div className="w-full h-[400px] rounded-lg overflow-hidden border border-slate-200">
+          <div className="w-full h-[320px] sm:h-[400px] rounded-lg overflow-hidden border border-slate-200">
             <iframe src={embedSrc} width="100%" height="100%" frameBorder="0"
               allow="camera; microphone; autoplay; encrypted-media" title="Typeform" />
           </div>
@@ -85,7 +85,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
 
       case 'pdf':
         return embedSrc ? (
-          <div className="w-full h-[500px] rounded-lg overflow-hidden border border-slate-200">
+          <div className="w-full h-[400px] sm:h-[500px] rounded-lg overflow-hidden border border-slate-200">
             <iframe src={embedSrc} width="100%" height="100%" frameBorder="0"
               allowFullScreen title="PDF" />
           </div>
@@ -143,7 +143,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
   return (
     <div className="space-y-4">
       {/* Preview Banner */}
-      <div className="bg-summer-lavender/10 border border-summer-lavender rounded-lg px-4 py-3 flex items-center justify-between">
+      <div className="bg-summer-lavender/10 border border-summer-lavender rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-summer-lavender" />
           <span className="text-sm font-medium text-summer-lavender">
@@ -179,7 +179,7 @@ export function JourneyPreviewMap({ initialJourney, onBack }: JourneyPreviewMapP
       </div>
 
       {/* Journey Map */}
-      <div className="relative w-full h-[600px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
+      <div className="relative w-full h-[480px] sm:h-[560px] md:h-[600px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
         {/* Grid Pattern Background */}
         <div className="absolute inset-0 opacity-5"
              style={{ backgroundImage: 'radial-gradient(#0f172a 1px, transparent 1px)', backgroundSize: '30px 30px' }}>

@@ -386,7 +386,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
       {/* ===== FULL-SCREEN DIALOG ===== */}
       <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
         <DialogContent
-          className="!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100vh-3rem)] !max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
+          className="!max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100dvh-1rem)] sm:!h-[calc(100vh-3rem)] !max-h-[calc(100dvh-1rem)] sm:!max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
           showCloseButton={true}
         >
           <DialogTitle className="sr-only">
@@ -394,7 +394,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
           </DialogTitle>
           {/* Header */}
           <div className="shrink-0 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 border-b border-summer-lavender/50">
-            <div className="flex items-center gap-4 px-6 pt-5 pb-4">
+            <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 pt-5 pb-4">
               <Avatar className="h-14 w-14 shrink-0 ring-2 ring-white shadow-sm">
                 <AvatarImage src={user.avatar_url || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-summer-pink to-summer-lavender text-white text-lg font-semibold">
@@ -435,10 +435,11 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
 
           {/* Content with Tabs */}
           <Tabs defaultValue="profile" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-3 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
+            <div className="px-4 sm:px-6 mt-3 shrink-0 overflow-x-auto">
+            <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
               <TabsTrigger
                 value="profile"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -449,7 +450,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
               <TabsTrigger
                 value="orgs"
                 onClick={() => loadAvailableOrgs()}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -460,7 +461,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
               <TabsTrigger
                 value="notes"
                 onClick={() => loadNotesAndTasks(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -471,7 +472,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
               <TabsTrigger
                 value="activity"
                 onClick={() => loadActivity(user.id)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -482,7 +483,7 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
               <TabsTrigger
                 value="events"
                 onClick={() => setEventsLoaded(true)}
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -491,10 +492,11 @@ export function ContactDetailSheet({ user, onClose, onUserUpdated, onUserDeleted
                 Eventos
               </TabsTrigger>
             </TabsList>
+            </div>
 
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                <div className="px-6 py-4">
+                <div className="px-4 sm:px-6 py-4">
 
                   <TabsContent value="profile" className="mt-0">
                     <ProfileTab

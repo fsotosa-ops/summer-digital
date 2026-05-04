@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Route, BookOpen, Users, Trophy, BarChart3, Layers, TrendingUp, LayoutDashboard } from 'lucide-react';
+import { Route, BookOpen, Users, Layers, BarChart3, LayoutDashboard, RefreshCw } from 'lucide-react';
 import { User } from '@/types';
+import { ApiEventDashboardSummary } from '@/types/api.types';
 import { crmService } from '@/services/crm.service';
 import { adminService } from '@/services/admin.service';
 import { resourceService } from '@/services/resource.service';
+import { eventService } from '@/services/event.service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LiveEventBanner } from './event-control/LiveEventBanner';
+import { EventMetricsGrid } from './event-control/EventMetricsGrid';
+import { EventQuickActions } from './event-control/EventQuickActions';
 
 interface AdminDashboardPanelProps {
   user: User;
@@ -21,59 +25,30 @@ interface Stats {
   completions: number | null;
 }
 
-const QUICK_ACTIONS = [
-  {
-    label: 'Crear Journey',
-    description: 'Diseña experiencias de aprendizaje',
-    href: '/admin/journeys',
-    icon: Route,
-    gradient: 'from-summer-pink to-summer-lavender',
-  },
-  {
-    label: 'Publicar Recurso',
-    description: 'Sube videos, PDFs y cápsulas',
-    href: '/admin/resources',
-    icon: BookOpen,
-    gradient: 'from-summer-sky to-cyan-500',
-  },
-  {
-    label: 'CRM',
-    description: 'Gestiona contactos y pipeline',
-    href: '/crm',
-    icon: Users,
-    gradient: 'from-summer-teal to-emerald-500',
-  },
-  {
-    label: 'Gamificación',
-    description: 'Puntos, rangos y recompensas',
-    href: '/admin/gamification',
-    icon: Trophy,
-    gradient: 'from-summer-yellow to-summer-orange',
-  },
-  {
-    label: 'Analítica',
-    description: 'Métricas y reportes de la plataforma',
-    href: '/analytics',
-    icon: TrendingUp,
-    gradient: 'from-summer-teal to-summer-sky',
-  },
-];
-
 /* ─── Panel ──────────────────────────────────────────── */
 export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
   const [stats, setStats] = useState<Stats>({ users: null, journeys: null, resources: null, completions: null });
+  const [eventSummary, setEventSummary] = useState<ApiEventDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventLoading, setEventLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const orgId = user.organizationId ?? '';
 
-  useEffect(() => {
+  const fetchData = (isRefresh = false) => {
     if (!orgId) return;
 
+    if (!isRefresh) setLoading(true);
+    setEventLoading(true);
+    if (isRefresh) setRefreshing(true);
+
+    // Fetch KPIs and event summary in parallel
     Promise.allSettled([
       crmService.getStats(orgId),
       adminService.listJourneys(orgId),
       resourceService.listResources(orgId, null),
-    ]).then(([crmResult, journeysResult, resourcesResult]) => {
+      eventService.getDashboardSummary(orgId),
+    ]).then(([crmResult, journeysResult, resourcesResult, eventResult]) => {
       const users = crmResult.status === 'fulfilled' ? crmResult.value.total_contacts : null;
 
       const journeys = journeysResult.status === 'fulfilled'
@@ -89,9 +64,23 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
         : null;
 
       setStats({ users, journeys, resources, completions });
+
+      if (eventResult.status === 'fulfilled') {
+        setEventSummary(eventResult.value);
+      }
+
       setLoading(false);
+      setEventLoading(false);
+      setRefreshing(false);
     });
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [orgId]);
+
+  const hasLiveEvents = eventSummary && eventSummary.live_events.length > 0;
+  const liveEvent = eventSummary?.live_events[0] ?? null;
 
   const KPI_CARDS = [
     { label: 'Usuarios Activos', sub: 'Total registrados', icon: Users,     border: 'border-summer-pink', iconGradient: 'from-summer-pink to-summer-lavender', value: stats.users },
@@ -106,19 +95,45 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
       {/* Header card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
-        <div className="p-6 flex items-center gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shrink-0">
-            <LayoutDashboard size={22} className="text-white" />
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shrink-0">
+              <LayoutDashboard size={22} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-semibold text-slate-800">
+                {hasLiveEvents ? 'Centro de Control' : 'Panel de Admin'}
+              </h1>
+              <p className="text-sm text-slate-500">
+                {hasLiveEvents ? 'Monitoreo de eventos en vivo' : 'Vista general de tu plataforma'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-semibold text-slate-800">Panel de Admin</h1>
-            <p className="text-sm text-slate-500">Vista general de tu plataforma</p>
-          </div>
+          <button
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+            className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600 disabled:opacity-50"
+            title="Actualizar datos"
+          >
+            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
-      {/* KPI cards — individual, no container */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Live Event Banner / Upcoming Events */}
+      <LiveEventBanner
+        liveEvents={eventSummary?.live_events ?? []}
+        upcomingEvents={eventSummary?.upcoming_events ?? []}
+        orgId={orgId}
+      />
+
+      {/* Event Metrics — only when there are live events */}
+      {hasLiveEvents && (
+        <EventMetricsGrid summary={eventSummary} loading={eventLoading} />
+      )}
+
+      {/* Platform KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {KPI_CARDS.map(stat => {
           const Icon = stat.icon;
           return (
@@ -126,9 +141,9 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
               key={stat.label}
               whileHover={{ y: -3 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className={`bg-white rounded-2xl border ${stat.border} shadow-sm p-5 flex flex-col gap-3`}
+              className={`bg-white rounded-2xl border ${stat.border} shadow-sm p-4 sm:p-5 flex flex-col gap-3`}
             >
-              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${stat.iconGradient} flex items-center justify-center shrink-0`}>
+              <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br ${stat.iconGradient} flex items-center justify-center shrink-0`}>
                 <Icon size={20} className="text-white" />
               </div>
               <div>
@@ -139,7 +154,7 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="text-3xl font-bold tabular-nums text-slate-800 leading-none"
+                    className="text-2xl sm:text-3xl font-bold tabular-nums text-slate-800 leading-none"
                   >
                     {stat.value !== null ? stat.value.toLocaleString() : '—'}
                   </motion.p>
@@ -152,40 +167,8 @@ export function AdminDashboardPanel({ user }: AdminDashboardPanelProps) {
         })}
       </div>
 
-      {/* Quick Actions card */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-summer-pink via-summer-lavender to-summer-teal" />
-        <div className="p-6">
-          <h2 className="text-base font-semibold text-slate-700 border-b border-slate-100 pb-3 mb-4">
-            Acciones Rápidas
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {QUICK_ACTIONS.map(action => {
-              const Icon = action.icon;
-              return (
-                <motion.div
-                  key={action.label}
-                  whileHover={{ y: -2 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                >
-                  <Link href={action.href} className="block h-full">
-                    <div className="bg-slate-50 hover:bg-slate-100 rounded-xl p-4 flex flex-col items-center text-center gap-3 h-full transition-colors cursor-pointer">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.gradient} flex items-center justify-center shrink-0`}>
-                        <Icon size={22} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-800 text-sm">{action.label}</p>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{action.description}</p>
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
+      {/* Quick Actions — context-aware */}
+      <EventQuickActions liveEvent={liveEvent} orgId={orgId} />
     </div>
   );
 }

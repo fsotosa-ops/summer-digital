@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
         <p className="text-slate-500">Vision global del impacto de la Fundacion.</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[800px] relative">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[calc(100dvh-9rem)] md:h-[800px] relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
             <Loader2 className="h-8 w-8 animate-spin text-summer-teal mb-3" />

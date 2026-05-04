@@ -464,15 +464,15 @@ export default function AdminResourcesPage() {
               <p className="text-xs text-slate-400 mt-0.5">Crea y administra contenido educativo para participantes</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap w-full sm:w-auto">
             {isSuperAdmin && organizations.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Building2 size={14} className="text-slate-400 shrink-0" />
                 <Select
                   value={selectedOrgId || '__all__'}
                   onValueChange={(v) => setSelectedOrgId(v === '__all__' ? null : v)}
                 >
-                  <SelectTrigger className="w-[200px] border-slate-200 text-sm h-9">
+                  <SelectTrigger className="w-full sm:w-[200px] border-slate-200 text-sm h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -501,7 +501,7 @@ export default function AdminResourcesPage() {
 
       {/* ── Stats ──────────────────────────────────────── */}
       {!isLoading && !isLoadingOrgs && (isSuperAdmin || orgId) && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {statCards.map(s => {
             const Icon = s.icon;
             return (
@@ -593,7 +593,116 @@ export default function AdminResourcesPage() {
       ) : (
         /* ── Table ── */
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {resources.map(resource => {
+              const TypeIcon = getTypeIcon(resource.type);
+              const c = TYPE_COLORS[resource.type];
+              return (
+                <div key={resource.id} className="p-4 active:bg-slate-50 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center shrink-0', c.bg)}>
+                      <TypeIcon size={18} className={c.iconCls} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-800 text-sm leading-tight truncate">
+                        {resource.title}
+                      </p>
+                      {resource.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">
+                          {resource.description}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className={cn(
+                          'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border',
+                          c.bg, c.text, c.border,
+                        )}>
+                          <TypeIcon size={10} />
+                          {resource.type}
+                        </span>
+                        {resource.is_published ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest
+                                           px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Eye size={10} /> Publicado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest
+                                           px-2 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                            <EyeOff size={10} /> Borrador
+                          </span>
+                        )}
+                        {resource.unlock_conditions.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold
+                                           text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-0.5 rounded-full">
+                            <Lock size={10} />
+                            {resource.unlock_conditions.length}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-emerald-500">Libre</span>
+                        )}
+                        {resource.points_on_completion > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-bold
+                                           text-summer-yellow bg-summer-yellow/10 border border-summer-yellow px-2 py-0.5 rounded-full">
+                            <Zap size={10} />
+                            {resource.points_on_completion}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Consumos: <strong className="text-slate-700">{resource.consumption_count}</strong>
+                      </p>
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <div className="flex items-center justify-end gap-1 mt-3">
+                      {(resource.content_url || resource.storage_path) && (
+                        <button
+                          onClick={() => setPreviewResource(resource)}
+                          title="Vista previa"
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                     text-slate-500 hover:text-summer-sky hover:bg-summer-sky/10 active:bg-summer-sky/20 transition-colors"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEditDialog(resource)}
+                        title="Editar"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                   text-slate-500 hover:text-summer-pink hover:bg-summer-pink/10 active:bg-summer-pink/20 transition-colors"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleTogglePublish(resource)}
+                        title={resource.is_published ? 'Despublicar' : 'Publicar'}
+                        className={cn(
+                          'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors',
+                          resource.is_published
+                            ? 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200'
+                            : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100',
+                        )}
+                      >
+                        {resource.is_published ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(resource.id)}
+                        title="Eliminar"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                   text-slate-500 hover:text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70">
@@ -697,7 +806,7 @@ export default function AdminResourcesPage() {
                       {/* Hover actions */}
                       {canEdit && (
                         <td className="py-3 px-4">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-1 opacity-60 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                             {(resource.content_url || resource.storage_path) && (
                               <button
                                 onClick={() => setPreviewResource(resource)}

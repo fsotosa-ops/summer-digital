@@ -679,7 +679,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
       {/* ===== FULL-SCREEN DIALOG (mismo que ContactDetailSheet) ===== */}
       <Dialog open={!!org} onOpenChange={(open) => !open && onClose()}>
         <DialogContent
-          className="!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100vh-3rem)] !max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
+          className="!max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-3rem)] !w-full !h-[calc(100dvh-1rem)] sm:!h-[calc(100vh-3rem)] !max-h-[calc(100dvh-1rem)] sm:!max-h-[calc(100vh-3rem)] p-0 flex flex-col overflow-hidden"
           showCloseButton={true}
         >
           <DialogTitle className="sr-only">Perfil de {org.name}</DialogTitle>
@@ -695,7 +695,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
           <>
           {/* Header — mismo gradiente que ContactDetailSheet */}
           <div className="shrink-0 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 border-b border-summer-lavender/50">
-            <div className="flex items-center gap-4 px-6 pt-5 pb-4">
+            <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 pt-5 pb-4">
               {/* Logo / Avatar */}
               {org.logo_url ? (
                 <img
@@ -742,10 +742,11 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               }
             }}
           >
-            <TabsList className="mx-6 mt-3 shrink-0 bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
+            <div className="px-4 sm:px-6 mt-3 shrink-0 overflow-x-auto">
+            <TabsList className="bg-white border border-slate-200 shadow-sm p-1 rounded-xl h-auto w-fit">
               <TabsTrigger
                 value="perfil"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -755,7 +756,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </TabsTrigger>
               <TabsTrigger
                 value="miembros"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -765,7 +766,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </TabsTrigger>
               <TabsTrigger
                 value="eventos"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -775,7 +776,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
               </TabsTrigger>
               <TabsTrigger
                 value="journeys"
-                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm
+                className="rounded-lg gap-1.5 px-3 py-1.5 text-sm shrink-0 whitespace-nowrap
                   data-[state=active]:bg-gradient-to-r data-[state=active]:from-summer-pink data-[state=active]:to-summer-lavender
                   data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=active]:font-medium
                   text-slate-500 hover:text-slate-700"
@@ -784,10 +785,11 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                 Monitoreo
               </TabsTrigger>
             </TabsList>
+            </div>
 
             <div className="flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                <div className="px-6 py-4">
+                <div className="px-4 sm:px-6 py-4">
 
                   {/* ───── Tab: Perfil ───── */}
                   <TabsContent value="perfil" className="mt-0">
@@ -914,8 +916,8 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                   <TabsContent value="miembros" className="mt-0">
                     <div className="space-y-4">
                       {/* Member action buttons */}
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 flex-wrap">
                           <Users className="h-4 w-4" />
                           {members.length} miembro{members.length !== 1 ? 's' : ''}
                           {nonMemberAttendeeCount > 0 && (
@@ -924,16 +926,16 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                             </span>
                           )}
                         </h3>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setAddOpen(true)} className="flex-1 sm:flex-none">
                             <UserPlus2 className="h-4 w-4 mr-1" />
                             Agregar
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)}>
+                          <Button variant="outline" size="sm" onClick={() => setBulkOpen(true)} className="flex-1 sm:flex-none">
                             <Upload className="h-4 w-4 mr-1" />
                             Masivo
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+                          <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)} className="flex-1 sm:flex-none">
                             <Mail className="h-4 w-4 mr-1" />
                             Invitar
                           </Button>
@@ -950,8 +952,129 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                           No hay miembros en esta organización
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                          <Table>
+                        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                          {/* Mobile cards */}
+                          <div className="md:hidden divide-y divide-slate-100">
+                            {peopleRows.map((person) => person.kind === 'attendee' ? (
+                              <div key={`att-m-${person.userId}`} className="p-3 bg-summer-yellow/5 space-y-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-summer-yellow to-summer-pink/70 flex items-center justify-center shrink-0">
+                                    <span className="text-white text-[10px] font-semibold">
+                                      {(person.fullName || person.email || '?').split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-medium text-sm truncate">{person.fullName || 'Sin nombre'}</div>
+                                    <div className="text-xs text-slate-500 truncate">{person.email || person.userId}</div>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] bg-summer-yellow/10 border-summer-yellow text-amber-700">
+                                  No es miembro · sólo asistencia
+                                </Badge>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-9 text-xs gap-1 border-dashed border-summer-pink/40 text-summer-pink hover:bg-summer-pink/5"
+                                  onClick={() => handlePromoteAttendee(person.userId, person.email)}
+                                  disabled={!person.email || promotingUserId === person.userId}
+                                >
+                                  {promotingUserId === person.userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus2 className="h-3 w-3" />}
+                                  Agregar a la organización
+                                </Button>
+                              </div>
+                            ) : (() => { const member = person.member; return (
+                              <div key={`m-${member.id}`} className="p-3 space-y-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shrink-0">
+                                    <span className="text-white text-[10px] font-semibold">
+                                      {(member.user?.full_name || member.user?.email || '?').split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-medium text-sm truncate">{member.user?.full_name || 'Sin nombre'}</div>
+                                    <div className="text-xs text-slate-500 truncate">{member.user?.email || member.user_id}</div>
+                                  </div>
+                                  <div className="flex gap-1 shrink-0">
+                                    {isSuperAdmin && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9"
+                                        onClick={() => handleToggleAdmin(member.user_id, !!member.user?.is_platform_admin)}
+                                        disabled={togglingAdminId === member.user_id || member.user_id === user?.id}
+                                      >
+                                        {togglingAdminId === member.user_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : member.user?.is_platform_admin ? <Shield className="h-3.5 w-3.5 text-summer-teal" /> : <ShieldOff className="h-3.5 w-3.5 text-slate-400" />}
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                      onClick={() => handleRemoveMember(member.id)}
+                                      disabled={removingId === member.id}
+                                    >
+                                      {removingId === member.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Select value={member.role} onValueChange={(v: ApiMemberRole) => handleUpdateRole(member.id, v)}>
+                                    <SelectTrigger className="w-full h-9 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={member.status} onValueChange={(v: ApiMembershipStatus) => handleUpdateStatus(member.id, v)}>
+                                    <SelectTrigger className="w-full h-9 text-xs">
+                                      <SelectValue>
+                                        <Badge variant="outline" className={`${STATUS_COLORS[member.status]} text-[10px]`}>
+                                          {STATUSES.find((s) => s.value === member.status)?.label || member.status}
+                                        </Badge>
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STATUSES.map((s) => (
+                                        <SelectItem key={s.value} value={s.value}>
+                                          <Badge variant="outline" className={`${STATUS_COLORS[s.value]} text-xs`}>{s.label}</Badge>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {(eventsByMember[member.user_id]?.length ?? 0) > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {eventsByMember[member.user_id].slice(0, 3).map((ev) => (
+                                      <Badge key={ev.attendance_id} variant="outline" className="text-[10px] bg-summer-lavender/5 border-summer-lavender/30 text-summer-lavender max-w-[140px] truncate">
+                                        <span className="truncate">{ev.event_name}</span>
+                                      </Badge>
+                                    ))}
+                                    {eventsByMember[member.user_id].length > 3 && (
+                                      <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-500">
+                                        +{eventsByMember[member.user_id].length - 3}
+                                      </Badge>
+                                    )}
+                                    <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-slate-400 hover:text-summer-pink" onClick={() => openAssignEvent(member)} disabled={orgEvents.length === 0}>
+                                      + evento
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-9 text-xs gap-1 border-dashed text-slate-500"
+                                    onClick={() => openAssignEvent(member)}
+                                    disabled={orgEvents.length === 0}
+                                  >
+                                    <Calendar className="h-3 w-3" />
+                                    {orgEvents.length === 0 ? 'Sin eventos en la org' : 'Asignar evento'}
+                                  </Button>
+                                )}
+                              </div>
+                            ); })())}
+                          </div>
+
+                          {/* Desktop table */}
+                          <Table className="hidden md:table">
                             <TableHeader>
                               <TableRow className="bg-slate-50/60">
                                 <TableHead>Usuario</TableHead>
@@ -1065,7 +1188,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                       value={member.role}
                                       onValueChange={(v: ApiMemberRole) => handleUpdateRole(member.id, v)}
                                     >
-                                      <SelectTrigger className="w-[130px] h-8 text-xs">
+                                      <SelectTrigger className="w-full sm:w-[130px] h-8 text-xs">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -1080,7 +1203,7 @@ export function OrgDetailDialog({ org, onClose, onOrgUpdated }: Props) {
                                       value={member.status}
                                       onValueChange={(v: ApiMembershipStatus) => handleUpdateStatus(member.id, v)}
                                     >
-                                      <SelectTrigger className="w-[120px] h-8 text-xs">
+                                      <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
                                         <SelectValue>
                                           <Badge variant="outline" className={`${STATUS_COLORS[member.status]} text-[10px]`}>
                                             {STATUSES.find((s) => s.value === member.status)?.label || member.status}
@@ -1478,7 +1601,7 @@ function JourneyTrackingView({
   return (
     <div className="space-y-4">
       {/* Header de stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {stats.map(({ label, value, color, hint }) => (
           <div
             key={label}
@@ -1551,7 +1674,7 @@ function CollapsibleHeader({
       className="w-full bg-slate-50/60 border-b border-slate-100 px-4 py-3 text-left
                  hover:bg-slate-100/70 transition-colors"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           {open ? (
             <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
@@ -1562,9 +1685,9 @@ function CollapsibleHeader({
           <h4 className="text-sm font-semibold text-slate-800 truncate">{title}</h4>
           {badge}
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-slate-500 sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 sm:justify-end min-w-0">
           {meta}
-          <span className="text-slate-400 whitespace-nowrap">{summary}</span>
+          <span className="text-slate-400 truncate sm:whitespace-nowrap">{summary}</span>
         </div>
       </div>
     </button>
@@ -1622,10 +1745,11 @@ function TrackingEventCard({
         }
         meta={
           <>
-            {dateRange && <span>{dateRange}</span>}
+            {dateRange && <span className="whitespace-nowrap">{dateRange}</span>}
             {event.location && (
-              <span className="flex items-center gap-1">
-                <MapPin size={10} /> {event.location}
+              <span className="flex items-center gap-1 min-w-0">
+                <MapPin size={10} className="shrink-0" />
+                <span className="truncate">{event.location}</span>
               </span>
             )}
           </>
@@ -1725,8 +1849,62 @@ function JourneysTable({
     );
   }
   return (
-    <Table>
-      <TableHeader>
+    <>
+      {/* Mobile cards */}
+      <div className="md:hidden divide-y divide-slate-100">
+        {journeys.map((j) => {
+          const pct = j.total_enrollments > 0 ? Math.round(j.completion_rate * 100) : 0;
+          return (
+            <div key={j.id} className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm text-slate-800 truncate">{j.title}</p>
+                  <p className="text-[11px] text-slate-400 truncate">/{j.slug}</p>
+                </div>
+                {j.category ? (
+                  <Badge variant="outline" className={cn('text-[10px] shrink-0', categoryBadgeClasses(j.category))}>
+                    {j.category}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-md bg-slate-50 p-2">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">Steps</p>
+                  <p className="text-sm font-semibold text-slate-700">{j.total_steps}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={j.total_enrollments === 0}
+                  onClick={() => onEnrolleesClick(j, eventId, eventName, 'all')}
+                  className="rounded-md bg-summer-lavender/5 p-2 disabled:opacity-60"
+                >
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">Inscritos</p>
+                  <p className="text-sm font-semibold text-summer-lavender">{j.total_enrollments}</p>
+                </button>
+                <button
+                  type="button"
+                  disabled={j.completed_enrollments === 0}
+                  onClick={() => onEnrolleesClick(j, eventId, eventName, 'completed')}
+                  className="rounded-md bg-summer-pink/5 p-2 disabled:opacity-60"
+                >
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">Compl.</p>
+                  <p className="text-sm font-semibold text-summer-pink">{j.completed_enrollments}</p>
+                </button>
+              </div>
+              {j.total_enrollments > 0 && (
+                <div className="flex items-center gap-2">
+                  <MiniProgress pct={pct} />
+                  <span className="text-[10px] text-slate-400">{pct}%</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <Table className="hidden md:table">
+        <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead className="pl-4">Journey</TableHead>
           <TableHead>Categoría</TableHead>
@@ -1794,6 +1972,7 @@ function JourneysTable({
         })}
       </TableBody>
     </Table>
+    </>
   );
 }
 

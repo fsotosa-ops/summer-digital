@@ -113,10 +113,10 @@ export function JourneyMap() {
       case 'typeform': {
         const formId = getTypeformId(node);
         return formId ? (
-          <div className="w-full flex-1 rounded-lg overflow-hidden border border-slate-200 min-h-[400px]">
+          <div className="w-full flex-1 rounded-lg overflow-hidden border border-slate-200 min-h-[320px] sm:min-h-[400px]">
             <TypeformWidget
               id={formId}
-              style={{ width: '100%', height: '100%', minHeight: '400px' }}
+              style={{ width: '100%', height: '100%', minHeight: '320px' }}
               hidden={getTypeformHiddenFields(node)}
               onSubmit={async (data) => {
                 await completeActivity(node.id, data.responseId);
@@ -131,8 +131,8 @@ export function JourneyMap() {
 
       case 'pdf':
         return embedSrc ? (
-          <div className="w-full flex-1 rounded-lg overflow-hidden border border-slate-200 min-h-[500px]">
-            <iframe src={embedSrc} width="100%" height="100%" style={{ minHeight: '500px' }} frameBorder="0"
+          <div className="w-full flex-1 rounded-lg overflow-hidden border border-slate-200 min-h-[400px] sm:min-h-[500px]">
+            <iframe src={embedSrc} width="100%" height="100%" style={{ minHeight: '400px' }} frameBorder="0"
               allowFullScreen title="PDF" />
           </div>
         ) : (
@@ -184,7 +184,7 @@ export function JourneyMap() {
   };
 
   return (
-    <div className="relative w-full h-[600px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner" ref={containerRef}>
+    <div className="relative w-full h-[480px] sm:h-[560px] md:h-[600px] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner" ref={containerRef}>
 
       {/* Back Button */}
       <div className="absolute top-4 left-4 z-20">
@@ -312,7 +312,7 @@ export function JourneyMap() {
       {/* Detail Sheet — full-height bottom drawer */}
       <Sheet open={!!selectedNode} onOpenChange={(open) => { if (!open) { setSelectedNode(null); setTypeformSubmitted(false); } }}>
         <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
+          <SheetHeader className="px-4 sm:px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <SheetTitle className="flex items-center gap-2 text-xl text-brand">
               {selectedNode?.title}
             </SheetTitle>
@@ -322,12 +322,12 @@ export function JourneyMap() {
           </SheetHeader>
 
           {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
             {selectedNode && renderNodeContent(selectedNode)}
           </div>
 
           {/* Fixed CTA at bottom */}
-          <SheetFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+          <SheetFooter className="px-4 sm:px-6 py-4 border-t border-slate-100 flex-shrink-0">
             {selectedNode?.status === 'in-progress' || selectedNode?.status === 'available' ? (
               selectedNode?.type === 'typeform' ? (
                 typeformSubmitted ? (

@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Switch } from '@/components/ui/switch';
+import { MiniProgress } from '@/components/MiniProgress';
 import { toast } from 'sonner';
 
 /* ─── Category badge helper ──────────────────────────── */
@@ -54,19 +55,6 @@ function categoryBadgeClasses(cat: string): string {
     comunidad:  'bg-summer-sky/10     text-summer-sky     border-summer-sky',
   };
   return map[key] ?? 'bg-slate-100 text-slate-600 border-slate-200';
-}
-
-/* ─── Mini progress bar ──────────────────────────────── */
-function MiniProgress({ pct }: { pct: number }) {
-  const color = pct >= 60 ? 'bg-summer-teal' : pct >= 30 ? 'bg-summer-yellow' : 'bg-slate-300';
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs text-slate-500 tabular-nums">{pct}%</span>
-    </div>
-  );
 }
 
 export default function AdminJourneysPage() {
@@ -308,6 +296,16 @@ export default function AdminJourneysPage() {
           </div>
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/journeys/seguimiento')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                         bg-white border border-slate-200 text-slate-700
+                         hover:border-summer-lavender hover:text-summer-lavender hover:bg-summer-lavender/5
+                         transition-colors shrink-0"
+            >
+              <Eye size={15} /> Ver seguimiento
+            </button>
             <Dialog open={createDialogOpen} onOpenChange={(open) => {
               setCreateDialogOpen(open);
               if (!open) setUseOnboardingTemplate(false);
@@ -608,7 +606,104 @@ export default function AdminJourneysPage() {
 
         /* ── Table ─────────────────────────────────────── */
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <Table>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {journeys.map(journey => {
+              const completionPct = journey.total_enrollments > 0
+                ? Math.round(journey.completion_rate * 100)
+                : 0;
+              const assignedOrgs = journeyOrgsMap[journey.id] || [];
+              return (
+                <div
+                  key={journey.id}
+                  className="p-4 active:bg-summer-pink/5 transition-colors"
+                  onClick={() => router.push(`/admin/journeys/${journey.id}`)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      'w-1 self-stretch rounded-full shrink-0',
+                      journey.is_active ? 'bg-summer-pink' : 'bg-slate-200',
+                    )} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-800 truncate">{journey.title}</p>
+                      <p className="text-xs text-slate-400 truncate">/{journey.slug}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge variant="outline" className={cn(
+                          'text-xs font-semibold',
+                          journey.is_active
+                            ? 'bg-summer-pink/10 text-summer-pink border-summer-pink'
+                            : 'bg-slate-100 text-slate-500 border-slate-200',
+                        )}>
+                          {journey.is_active ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                        {journey.category && (
+                          <Badge variant="outline" className={cn('text-xs', categoryBadgeClasses(journey.category))}>
+                            {journey.category}
+                          </Badge>
+                        )}
+                        {isSuperAdmin && !orgId && assignedOrgs.slice(0, 2).map(name => (
+                          <Badge
+                            key={name}
+                            variant="outline"
+                            className="text-[10px] font-medium bg-summer-lavender/10 text-summer-lavender border-summer-lavender"
+                          >
+                            {name}
+                          </Badge>
+                        ))}
+                        {isSuperAdmin && !orgId && assignedOrgs.length > 2 && (
+                          <Badge variant="outline" className="text-[10px] bg-slate-100 text-slate-500 border-slate-200">
+                            +{assignedOrgs.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                        <span>Steps: <strong className="text-slate-700">{journey.total_steps}</strong></span>
+                        <span>Inscritos: <strong className="text-slate-700">{journey.total_enrollments}</strong></span>
+                        <span className="flex items-center gap-1.5">
+                          Completados: <strong className="text-slate-700">{journey.completed_enrollments}</strong>
+                          {journey.total_enrollments > 0 && <MiniProgress pct={completionPct} />}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <div
+                      className="flex justify-end gap-1 mt-3"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => router.push(`/admin/journeys/${journey.id}`)}
+                        title="Editar"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                   text-slate-500 hover:text-summer-pink hover:bg-summer-pink/10 active:bg-summer-pink/20 transition-colors"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(journey)}
+                        title={journey.is_active ? 'Archivar' : 'Publicar'}
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                   text-slate-500 hover:text-summer-teal hover:bg-summer-teal/10 active:bg-summer-teal/20 transition-colors"
+                      >
+                        {journey.is_active ? <Archive size={16} /> : <Eye size={16} />}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(journey.id)}
+                        title="Eliminar"
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg
+                                   text-slate-500 hover:text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
                 <TableHead className="pl-6">Título</TableHead>
@@ -716,7 +811,7 @@ export default function AdminJourneysPage() {
                     {canEdit && (
                       <TableCell className="text-right pr-6">
                         <div
-                          className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="flex justify-end gap-1 opacity-60 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                           onClick={e => e.stopPropagation()}
                         >
                           <button

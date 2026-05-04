@@ -207,7 +207,7 @@ export default function ResourceDetailPage() {
       >
         {/* Embedded content — full height */}
         {hasEmbeddedContent && detected ? (
-          <div style={{ height: 'calc(100vh - 112px)' }}>
+          <div className="h-[calc(100dvh-7rem)] md:h-[calc(100vh-7rem)]">
             <iframe
               src={detected.embedUrl}
               className="w-full h-full"

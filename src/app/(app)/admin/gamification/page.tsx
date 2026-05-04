@@ -151,7 +151,7 @@ function ConditionRow({
           value={condition.type}
           onValueChange={(v) => onChange({ type: v as ApiUnlockConditionItem['type'] })}
         >
-          <SelectTrigger className="h-8 text-sm flex-1">
+          <SelectTrigger className="h-9 sm:h-8 text-sm flex-1 min-w-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -164,7 +164,7 @@ function ConditionRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+          className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
         >
           <X className="h-4 w-4" />
         </button>
@@ -767,26 +767,28 @@ export default function GamificationAdminPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {rewards.map((reward) => (
-                  <div key={reward.id} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-summer-teal flex items-center justify-center flex-shrink-0">
-                      {reward.icon_url ? <img src={reward.icon_url} alt="" className="h-6 w-6" /> : <Award className="h-5 w-5 text-summer-teal" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <p className="font-medium text-slate-900">{reward.name}</p>
-                        <Badge variant="outline" className="text-xs">{reward.type}</Badge>
-                        {(reward.points ?? 0) > 0 && (
-                          <Badge className="text-xs bg-summer-pink text-summer-pink border-0">
-                            <Zap className="h-3 w-3 mr-1" />{reward.points} pts
-                          </Badge>
-                        )}
+                  <div key={reward.id} className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-full bg-summer-teal flex items-center justify-center flex-shrink-0">
+                        {reward.icon_url ? <img src={reward.icon_url} alt="" className="h-6 w-6" /> : <Award className="h-5 w-5 text-summer-teal" />}
                       </div>
-                      {reward.description && <p className="text-sm text-slate-500 line-clamp-1">{reward.description}</p>}
-                      <ConditionPills reward={reward} journeys={journeys} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <p className="font-medium text-slate-900">{reward.name}</p>
+                          <Badge variant="outline" className="text-xs">{reward.type}</Badge>
+                          {(reward.points ?? 0) > 0 && (
+                            <Badge className="text-xs bg-summer-pink text-summer-pink border-0">
+                              <Zap className="h-3 w-3 mr-1" />{reward.points} pts
+                            </Badge>
+                          )}
+                        </div>
+                        {reward.description && <p className="text-sm text-slate-500 line-clamp-1">{reward.description}</p>}
+                        <ConditionPills reward={reward} journeys={journeys} />
+                      </div>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => openEditReward(reward)} className="h-8 w-8"><Edit2 className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteReward(reward.id)} className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                    <div className="flex gap-1 flex-shrink-0 self-end sm:self-start">
+                      <Button variant="ghost" size="icon" onClick={() => openEditReward(reward)} className="h-9 w-9 sm:h-8 sm:w-8"><Edit2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteReward(reward.id)} className="h-9 w-9 sm:h-8 sm:w-8 text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}

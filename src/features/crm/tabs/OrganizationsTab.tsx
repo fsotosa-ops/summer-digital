@@ -132,7 +132,7 @@ export function OrganizationsTab() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-100">
         <div className="text-sm text-slate-500">{organizations.length} organización(es)</div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -252,7 +252,64 @@ export function OrganizationsTab() {
         </Card>
       ) : (
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <Table>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y">
+            {organizations.map((org) => (
+              <div
+                key={org.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedOrg(org)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrg(org); } }}
+                className="w-full text-left p-4 hover:bg-slate-50/80 active:bg-slate-100 transition-colors flex flex-col gap-2 cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {org.logo_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={org.logo_url}
+                      alt={org.name}
+                      className="h-9 w-9 rounded object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded bg-summer-teal flex items-center justify-center shrink-0">
+                      <Building2 className="h-4 w-4 text-summer-teal" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm truncate">{org.name}</div>
+                    <div className="text-xs text-slate-500 truncate">/{org.slug}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Badge variant="outline">
+                    {ORG_TYPES.find((t) => t.value === org.type)?.label || org.type}
+                  </Badge>
+                  <span className="text-xs text-slate-500">
+                    {org.created_at ? new Date(org.created_at).toLocaleDateString() : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDelete(org.id)}
+                    disabled={deletingId === org.id}
+                  >
+                    {deletingId === org.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                 <TableHead>Nombre</TableHead>

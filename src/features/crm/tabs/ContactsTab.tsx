@@ -47,6 +47,7 @@ import {
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { ContactDetailSheet } from '../components/contact-detail';
 
 const STATUS_OPTIONS: { value: ApiAccountStatus; label: string }[] = [
@@ -380,7 +381,129 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
         </Card>
       ) : (
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <Table>
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y">
+            {isSuperAdmin
+              ? users.map((u) => (
+                  <div
+                    key={u.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedUser(u)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedUser(u); } }}
+                    className="w-full text-left p-4 hover:bg-slate-50/80 active:bg-slate-100 transition-colors flex flex-col gap-2 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {isSuperAdmin && u.id !== currentUser?.id && (
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(u.id)}
+                            onCheckedChange={() => handleToggleSelect(u.id)}
+                          />
+                        </span>
+                      )}
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={u.avatar_url || undefined} />
+                        <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                          {getInitials(u.full_name, u.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{u.full_name || 'Sin nombre'}</div>
+                        <div className="text-xs text-slate-500 truncate">{u.email}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={STATUS_COLORS[u.status || 'active']}>
+                        {STATUS_OPTIONS.find((s) => s.value === u.status)?.label || 'Activo'}
+                      </Badge>
+                      {u.is_platform_admin && (
+                        <Badge className="bg-summer-lavender text-summer-lavender text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      )}
+                      {u.organizations.slice(0, 2).map((org) => (
+                        <Badge
+                          key={org.id}
+                          variant="secondary"
+                          className="bg-slate-100 text-slate-600 text-[10px] font-normal"
+                        >
+                          {org.organization_name || org.organization_slug}
+                        </Badge>
+                      ))}
+                      {u.organizations.length > 2 && (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[10px]">
+                          +{u.organizations.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</span>
+                      {u.id !== currentUser?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={u.is_platform_admin ? 'Quitar admin' : 'Hacer admin'}
+                          onClick={(e) => handleToggleAdmin(u, e)}
+                          disabled={togglingAdmin === u.id}
+                          className={cn(
+                            'min-h-[44px]',
+                            u.is_platform_admin
+                              ? 'text-summer-lavender hover:text-summer-lavender hover:bg-summer-lavender/10'
+                              : 'text-slate-400 hover:text-slate-600',
+                          )}
+                        >
+                          {togglingAdmin === u.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : u.is_platform_admin ? (
+                            <ShieldOff className="h-4 w-4" />
+                          ) : (
+                            <Shield className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              : crmContacts.map((c) => {
+                  const displayName = [c.first_name, c.last_name].filter(Boolean).join(' ') || null;
+                  return (
+                    <div
+                      key={c.user_id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedUser(crmContactToUserStub(c))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedUser(crmContactToUserStub(c)); } }}
+                      className="w-full text-left p-4 hover:bg-slate-50/80 active:bg-slate-100 transition-colors flex flex-col gap-2 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className="h-10 w-10 shrink-0">
+                          <AvatarImage src={c.avatar_url || undefined} />
+                          <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                            {getInitials(displayName, c.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm truncate">{displayName || 'Sin nombre'}</div>
+                          <div className="text-xs text-slate-500 truncate">{c.email}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Badge variant="outline" className={CRM_STATUS_COLORS[c.status]}>
+                          {CRM_STATUS_LABELS[c.status] || c.status}
+                        </Badge>
+                        <span className="text-xs text-slate-500">
+                          {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+          </div>
+
+          {/* Desktop table */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
                 {isSuperAdmin && (
