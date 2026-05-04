@@ -5,6 +5,7 @@ import {
   ApiAttendanceUpdate,
   ApiEvent,
   ApiEventCreate,
+  ApiEventDashboardSummary,
   ApiEventJourneyAdd,
   ApiEventJourneyResponse,
   ApiEventUpdate,
@@ -43,6 +44,16 @@ class EventService {
   /** Unified join flow: org membership + attendance + enrollment. */
   async joinEvent(eventId: string): Promise<{ event_id: string; organization_id: string; org_joined: boolean; attendance_registered: boolean; journey_enrolled: string | null }> {
     return apiClient.post(`/auth/events/${eventId}/join`, {});
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard Summary
+  // ---------------------------------------------------------------------------
+
+  async getDashboardSummary(orgId: string): Promise<ApiEventDashboardSummary> {
+    return apiClient.get<ApiEventDashboardSummary>(
+      `/auth/organizations/${orgId}/events/dashboard-summary`
+    );
   }
 
   // ---------------------------------------------------------------------------
