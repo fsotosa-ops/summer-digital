@@ -50,3 +50,5 @@ _legacy_reference/
 .env.local
 
 onboarding.md
+*.png
+ERROR_LOGS.md 
