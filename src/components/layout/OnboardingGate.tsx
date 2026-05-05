@@ -133,7 +133,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'welcome' && (
           <motion.div
             key="welcome"
-            className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center gap-6 text-center px-8"
+            className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center gap-4 sm:gap-6 text-center px-4 sm:px-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -144,9 +144,9 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
-              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shadow-2xl"
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-summer-pink to-summer-lavender flex items-center justify-center shadow-2xl"
             >
-              <span className="text-4xl font-bold text-white">S</span>
+              <span className="text-3xl sm:text-4xl font-bold text-white">S</span>
             </motion.div>
 
             <motion.div
@@ -154,10 +154,10 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
                 Bienvenido, {firstName}
               </h1>
-              <p className="text-slate-400 text-lg">
+              <p className="text-slate-400 text-base sm:text-lg">
                 Completa tu journey de bienvenida para comenzar
               </p>
             </motion.div>
@@ -203,7 +203,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         {phase === 'completed' && (
           <motion.div
             key="completed"
-            className="fixed inset-0 bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10 flex flex-col items-center justify-center gap-6 text-center px-8"
+            className="fixed inset-0 bg-gradient-to-br from-summer-sky/10 via-white to-summer-teal/10 flex flex-col items-center justify-center gap-4 sm:gap-6 text-center px-4 sm:px-8"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -213,13 +213,13 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="h-24 w-24 rounded-full bg-gradient-to-br from-summer-yellow to-yellow-500 flex items-center justify-center shadow-lg"
+              className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gradient-to-br from-summer-yellow to-yellow-500 flex items-center justify-center shadow-lg"
             >
-              <span className="text-5xl">🏆</span>
+              <span className="text-4xl sm:text-5xl">🏆</span>
             </motion.div>
-            <h1 className="text-4xl font-bold text-slate-800">¡Nivel 1 Alcanzado!</h1>
-            <p className="text-xl text-summer-teal font-semibold mt-2">Summer UP desbloqueado</p>
-            <p className="text-slate-500 text-lg mt-2">Estás listo para explorar la plataforma</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-800">¡Nivel 1 Alcanzado!</h1>
+            <p className="text-lg sm:text-xl text-summer-teal font-semibold mt-2">Summer UP desbloqueado</p>
+            <p className="text-slate-500 text-base sm:text-lg mt-2">Estás listo para explorar la plataforma</p>
           </motion.div>
         )}
       </AnimatePresence>

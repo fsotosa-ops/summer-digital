@@ -25,7 +25,7 @@ export function HeroBanner({ user }: HeroBannerProps) {
   const subtitle = ROLE_SUBTITLES[user.role] ?? 'Bienvenido de nuevo.';
 
   return (
-    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-summer-sky via-summer-lavender to-summer-yellow p-6 md:p-8 text-white shadow-xl">
+    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-summer-sky via-summer-lavender to-summer-yellow p-4 sm:p-6 md:p-8 text-white shadow-xl">
       {/* Decorative blobs */}
       <svg
         className="absolute -top-12 -right-12 w-64 h-64 text-white/10 pointer-events-none"
@@ -43,17 +43,17 @@ export function HeroBanner({ user }: HeroBannerProps) {
       </svg>
 
       {/* Content */}
-      <div className="relative z-10 flex items-center gap-5">
+      <div className="relative z-10 flex items-center gap-3 sm:gap-5 min-w-0">
         {/* Avatar */}
-        <div className="relative w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center font-bold text-xl shrink-0 overflow-hidden">
+        <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center font-bold text-xl shrink-0 overflow-hidden">
           {user.avatarUrl ? (
-            <Image 
-              src={user.avatarUrl} 
-              alt={user.name} 
-              fill 
+            <Image
+              src={user.avatarUrl}
+              alt={user.name}
+              fill
               priority
-              className="object-cover" 
-              sizes="64px" 
+              className="object-cover"
+              sizes="64px"
             />
           ) : (
             <span>{initials}</span>
@@ -61,8 +61,8 @@ export function HeroBanner({ user }: HeroBannerProps) {
         </div>
 
         {/* Greeting */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight drop-shadow">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight drop-shadow truncate">
             ¡Hola, {firstName}!
           </h1>
           <p className="text-white/80 text-sm mt-1">{subtitle}</p>

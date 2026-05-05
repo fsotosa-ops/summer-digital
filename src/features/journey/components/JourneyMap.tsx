@@ -311,7 +311,7 @@ export function JourneyMap() {
 
       {/* Detail Sheet — full-height bottom drawer */}
       <Sheet open={!!selectedNode} onOpenChange={(open) => { if (!open) { setSelectedNode(null); setTypeformSubmitted(false); } }}>
-        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
+        <SheetContent side="bottom" className="h-[100dvh] sm:h-[90vh] flex flex-col p-0">
           <SheetHeader className="px-4 sm:px-6 pt-6 pb-4 border-b border-slate-100 flex-shrink-0">
             <SheetTitle className="flex items-center gap-2 text-xl text-brand">
               {selectedNode?.title}

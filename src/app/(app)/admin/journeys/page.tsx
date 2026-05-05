@@ -656,13 +656,15 @@ export default function AdminJourneysPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                        <span>Steps: <strong className="text-slate-700">{journey.total_steps}</strong></span>
-                        <span>Inscritos: <strong className="text-slate-700">{journey.total_enrollments}</strong></span>
-                        <span className="flex items-center gap-1.5">
-                          Completados: <strong className="text-slate-700">{journey.completed_enrollments}</strong>
-                          {journey.total_enrollments > 0 && <MiniProgress pct={completionPct} />}
-                        </span>
+                      <div className="mt-3 text-xs text-slate-500 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span>Steps: <strong className="text-slate-700">{journey.total_steps}</strong></span>
+                          <span>Inscritos: <strong className="text-slate-700">{journey.total_enrollments}</strong></span>
+                          <span>Completados: <strong className="text-slate-700">{journey.completed_enrollments}</strong></span>
+                        </div>
+                        {journey.total_enrollments > 0 && (
+                          <MiniProgress pct={completionPct} />
+                        )}
                       </div>
                     </div>
                   </div>

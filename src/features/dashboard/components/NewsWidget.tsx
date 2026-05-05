@@ -8,7 +8,7 @@ export function NewsWidget() {
   return (
     <div className="bg-white rounded-3xl shadow-xl border-none overflow-hidden">
       {/* Sticky header with subtle pastel gradient */}
-      <div className="sticky top-0 z-10 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 px-6 py-4 border-b border-slate-100/60">
+      <div className="sticky top-0 z-10 bg-gradient-to-r from-summer-sky/10 via-summer-lavender/10 to-summer-yellow/10 px-4 sm:px-6 py-4 border-b border-slate-100/60">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-semibold text-slate-800">Anuncios y Novedades</h3>
           <Badge
@@ -21,7 +21,7 @@ export function NewsWidget() {
       </div>
 
       <div className="max-h-[420px] overflow-y-auto">
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-4 sm:px-6 py-4 space-y-4">
           {announcements.length > 0 ? (
             announcements.map((item) => (
               <div key={item.id} className="group pb-4 border-b border-slate-50 last:border-0 last:pb-0">

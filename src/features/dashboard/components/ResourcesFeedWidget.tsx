@@ -27,9 +27,9 @@ function ResourceCardCompact({ resource }: { resource: ApiResourceParticipantRea
 
   const card = (
     <div className={`bg-white border border-slate-100 border-l-4 ${cfg.borderCls}
-                     rounded-2xl px-4 py-3 flex items-center gap-3 transition-all
+                     rounded-2xl px-4 py-3 min-h-[60px] flex items-center gap-3 transition-all
                      ${unlocked
-                       ? 'cursor-pointer hover:shadow-sm hover:border-slate-200'
+                       ? 'cursor-pointer hover:shadow-sm hover:border-slate-200 active:scale-[0.98]'
                        : 'opacity-60'}`}>
       {/* Type icon */}
       <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.iconGradient}
@@ -88,28 +88,28 @@ export function ResourcesFeedWidget() {
       <div className="h-[2px] bg-gradient-to-r from-summer-yellow via-summer-orange to-orange-500" />
 
       {/* ── Header ────────────────────────────────────── */}
-      <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
-        <div className="flex items-center gap-3">
+      <div className="px-4 sm:px-5 py-4 flex items-center justify-between gap-2 border-b border-slate-100">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-summer-yellow to-summer-orange
                           flex items-center justify-center shadow-sm shrink-0">
             <BookOpen size={16} className="text-white" />
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-800 leading-tight">Recursos disponibles</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Tu biblioteca de aprendizaje</p>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-800 leading-tight truncate">Recursos disponibles</h2>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">Tu biblioteca de aprendizaje</p>
           </div>
         </div>
-        <Link href="/resources">
+        <Link href="/resources" className="shrink-0">
           <button className="flex items-center gap-1.5 bg-gradient-to-r from-summer-yellow to-summer-orange
-                             text-white text-xs font-bold px-3 py-1.5 rounded-xl
-                             hover:opacity-90 transition-opacity shadow-sm shrink-0">
+                             text-white text-xs font-bold px-4 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-xl
+                             hover:opacity-90 active:opacity-80 transition-opacity shadow-sm">
             Ver todos <ArrowRight size={11} />
           </button>
         </Link>
       </div>
 
       {/* ── Content ───────────────────────────────────── */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (

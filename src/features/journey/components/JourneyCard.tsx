@@ -118,7 +118,7 @@ export function JourneyCardCompact({
       <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
         {isDone ? (
           <div className="shrink-0 text-xs font-semibold text-emerald-600
-                          bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl">
+                          bg-emerald-50 border border-emerald-100 px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 flex items-center rounded-xl">
             ✓ Listo
           </div>
         ) : (
@@ -126,7 +126,7 @@ export function JourneyCardCompact({
             onClick={onContinue}
             className="shrink-0 flex items-center gap-1 text-xs font-bold
                        text-summer-orange bg-summer-yellow/10 border border-summer-orange
-                       px-3 py-1.5 rounded-xl hover:bg-summer-yellow transition-colors"
+                       px-4 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-xl hover:bg-summer-yellow active:bg-summer-yellow/30 transition-colors"
           >
             Continuar <ArrowRight size={12} />
           </button>
@@ -155,6 +155,7 @@ export function JourneyCard({
   return (
     <motion.div
       whileHover={{ y: -3, boxShadow: '0 8px 30px -6px rgba(0,0,0,0.12)' }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col"
     >
@@ -238,9 +239,9 @@ export function JourneyCard({
         ) : (
           <button
             onClick={onContinue}
-            className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl
+            className={`w-full flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl
                         bg-gradient-to-r ${gradient} text-white text-xs font-semibold
-                        hover:opacity-90 transition-opacity`}
+                        hover:opacity-90 active:opacity-80 transition-opacity`}
           >
             Continuar <ArrowRight size={13} />
           </button>

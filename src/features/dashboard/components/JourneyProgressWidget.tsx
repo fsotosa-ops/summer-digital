@@ -12,16 +12,16 @@ export function JourneyProgressWidget() {
     <div className="bg-white rounded-3xl shadow-xl relative overflow-hidden">
       {/* Faded Map icon background */}
       <Map
-        className="absolute -bottom-4 -right-4 w-32 h-32 text-slate-200 opacity-50 pointer-events-none"
+        className="hidden sm:block absolute -bottom-4 -right-4 w-32 h-32 text-slate-200 opacity-50 pointer-events-none"
         aria-hidden
       />
 
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-slate-800">Mi Progreso</h3>
           <Link
             href="/journey"
-            className="flex items-center gap-1 text-xs text-summer-pink hover:text-summer-pink font-medium transition-colors"
+            className="flex items-center gap-1 text-xs text-summer-pink hover:text-summer-pink font-medium transition-colors px-2 py-2 -mx-2 -my-2 rounded-lg active:bg-summer-pink/5"
           >
             Ver todo <ArrowRight size={12} />
           </Link>
@@ -45,8 +45,9 @@ export function JourneyProgressWidget() {
               <motion.div
                 key={journey.id}
                 whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="group p-3 rounded-2xl border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer relative overflow-hidden"
+                className="group p-3 min-h-[56px] rounded-2xl border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer relative overflow-hidden"
               >
                 {/* Progress bar gradient background */}
                 <div

@@ -75,7 +75,10 @@ class ResourceService {
   // --- Participant ---
 
   async getMyResources(): Promise<ApiResourceParticipantRead[]> {
-    return apiClient.get<ApiResourceParticipantRead[]>('/resources/me/resources');
+    // 30s timeout: el endpoint puede ser lento por cold-start del backend en
+    // Cloud Run o cuando el usuario pertenece a varias orgs y se agrega
+    // condiciones de desbloqueo. El default de 15s no alcanza en esos casos.
+    return apiClient.get<ApiResourceParticipantRead[]>('/resources/me/resources', undefined, 30000);
   }
 
   async getMyResource(id: string): Promise<ApiResourceParticipantRead> {

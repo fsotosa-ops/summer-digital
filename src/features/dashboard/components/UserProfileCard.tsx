@@ -32,7 +32,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-neutral-900 to-slate-800 rounded-3xl p-4 sm:p-6 text-white shadow-xl relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-summer-pink/20 to-summer-lavender/10 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-summer-teal/15 to-cyan-500/10 rounded-full translate-y-6 -translate-x-6 blur-2xl" />

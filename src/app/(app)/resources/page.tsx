@@ -289,6 +289,7 @@ export default function ResourcesPage() {
                 key={resource.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileTap={!isLocked ? { scale: 0.98 } : undefined}
                 className={cn(
                   'bg-white rounded-2xl border border-slate-100 shadow-sm shadow-slate-200/50 overflow-hidden flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300',
                   isLocked && 'opacity-75'
@@ -360,14 +361,14 @@ export default function ResourcesPage() {
                   <div className="mt-auto">
                     {isLocked ? (
                       <button disabled
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                        className="w-full flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl
                                    bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed">
                         <Lock size={14} /> Bloqueado
                       </button>
                     ) : isConsumed ? (
                       <button
                         onClick={() => router.push(`/resources/${resource.id}`)}
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                        className="w-full flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl
                                    bg-emerald-50 border border-emerald-200 text-emerald-700
                                    text-sm font-semibold hover:bg-emerald-100 transition-colors"
                       >
@@ -376,7 +377,7 @@ export default function ResourcesPage() {
                     ) : (
                       <button
                         onClick={() => router.push(`/resources/${resource.id}`)}
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl
+                        className="w-full flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl
                                    bg-gradient-to-r from-summer-yellow to-summer-orange text-white
                                    text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
                       >

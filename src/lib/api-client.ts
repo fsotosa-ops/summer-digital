@@ -298,8 +298,8 @@ export class ApiError extends Error {
 
     // --- Métodos Públicos ---
 
-    public get<T>(endpoint: string, headers?: HeadersInit): Promise<T> {
-      return this.request<T>(endpoint, { method: 'GET', headers });
+    public get<T>(endpoint: string, headers?: HeadersInit, timeoutMs?: number): Promise<T> {
+      return this.request<T>(endpoint, { method: 'GET', headers }, timeoutMs);
     }
 
     public post<T>(endpoint: string, body: any, headers?: HeadersInit, timeoutMs?: number): Promise<T> {

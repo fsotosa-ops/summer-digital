@@ -188,7 +188,7 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
       )}
 
       <Dialog open={open} onOpenChange={showCelebration ? handleCloseCelebration : onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="!max-w-[100vw] sm:!max-w-2xl !w-screen sm:!w-full !h-[100dvh] sm:!h-auto !max-h-[100dvh] sm:!max-h-[calc(100vh-3rem)] !rounded-none sm:!rounded-lg !p-4 sm:!p-6 !gap-4 !flex !flex-col overflow-y-auto">
           <AnimatePresence mode="wait">
             {showCelebration ? (
               /* Celebration view */
@@ -472,14 +472,14 @@ export function CompleteProfileModal({ user, open, onOpenChange }: CompleteProfi
                   </div>
                 )}
 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+                <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                  <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
                     Cancelar
                   </Button>
                   <Button
                     onClick={handleSave}
                     disabled={saving || loading}
-                    className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white border-0 hover:from-summer-pink hover:to-summer-lavender"
+                    className="w-full sm:w-auto min-h-[44px] bg-gradient-to-r from-summer-pink to-summer-lavender text-white border-0 hover:from-summer-pink hover:to-summer-lavender"
                   >
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />

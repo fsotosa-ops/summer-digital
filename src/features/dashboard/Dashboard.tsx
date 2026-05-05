@@ -185,7 +185,7 @@ export function Dashboard() {
           ROLE-SPECIFIC CONTENT
       ══════════════════════════════════════════════════ */}
       {isParticipantView && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-start">
           <ParticipantJourneysSection />
           <ResourcesFeedWidget />
         </div>

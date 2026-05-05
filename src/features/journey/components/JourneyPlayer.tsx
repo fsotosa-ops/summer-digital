@@ -582,7 +582,7 @@ export function JourneyPlayer({
           {xpPop.visible && (
             <motion.div
               key="xp-pop"
-              className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+              className="absolute bottom-32 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
               initial={{ opacity: 0, y: 0, scale: 0.5 }}
               animate={{ opacity: 1, y: -60, scale: 1.2 }}
               exit={{ opacity: 0, y: -100 }}

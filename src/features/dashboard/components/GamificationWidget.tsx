@@ -21,13 +21,13 @@ export function GamificationWidget({ score, rank }: GamificationWidgetProps) {
       {/* Top decorative border */}
       <div className="h-1 bg-gradient-to-r from-summer-yellow/50 via-summer-lavender/10/10 to-transparent" />
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <OasisScore score={score} rank={rank} />
 
         {/* Badges section */}
         <div className="mt-5 border-t border-slate-50 pt-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Medallas</p>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {PLACEHOLDER_BADGES.map((badge) => (
               <div
                 key={badge.id}

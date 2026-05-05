@@ -200,14 +200,14 @@ export default function ResourceDetailPage() {
       {/* ── Content area ────────────────────────────────────────── */}
       <div
         className={cn(
-          'flex-1',
+          'flex-1 flex flex-col min-h-0',
           // Add bottom padding when bottom bar is shown
           !resource.is_consumed && resource.is_unlocked && 'pb-20'
         )}
       >
         {/* Embedded content — full height */}
         {hasEmbeddedContent && detected ? (
-          <div className="h-[calc(100dvh-7rem)] md:h-[calc(100vh-7rem)]">
+          <div className="flex-1 min-h-[60vh]">
             <iframe
               src={detected.embedUrl}
               className="w-full h-full"

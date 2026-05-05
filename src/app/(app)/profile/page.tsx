@@ -307,30 +307,30 @@ export default function ProfilePage() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex-shrink-0 self-start">
+            <div className="flex-shrink-0 self-start w-full sm:w-auto">
               {!isEditing ? (
                 <button
                   onClick={handleStartEdit}
-                  className="flex items-center gap-2 bg-white/20 hover:bg-white/30
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40
                              border border-white/30 text-white text-sm font-semibold
-                             px-4 py-2 rounded-xl transition-colors"
+                             px-4 py-2 min-h-[44px] rounded-xl transition-colors"
                 >
                   <Pencil size={14} /> Editar perfil
                 </button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleCancel}
                     disabled={saving}
-                    className="bg-white/10 hover:bg-white/20 border border-white/20 text-white
-                               text-sm px-3 py-2 rounded-xl transition-colors"
+                    className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 active:bg-white/30 border border-white/20 text-white
+                               text-sm px-3 py-2 min-h-[44px] rounded-xl transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className={`flex items-center gap-1.5 bg-white ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} font-semibold text-sm px-4 py-2 rounded-xl hover:bg-white/90 transition-colors`}
+                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white ${isParticipantView ? 'text-summer-sky' : 'text-summer-pink'} font-semibold text-sm px-4 py-2 min-h-[44px] rounded-xl hover:bg-white/90 active:bg-white/80 transition-colors`}
                   >
                     {saving
                       ? <Loader2 size={14} className="animate-spin" />
@@ -398,7 +398,7 @@ export default function ProfilePage() {
 
             {isEditing ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Company */}
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-500 flex items-center gap-1">
@@ -408,7 +408,7 @@ export default function ProfilePage() {
                       value={draft.company ?? ''}
                       onChange={(e) => setDraft((prev) => ({ ...prev, company: e.target.value }))}
                       placeholder="Nombre de la empresa"
-                      className="h-9"
+                      className="h-11 sm:h-9"
                     />
                   </div>
                   {/* Phone */}
@@ -420,7 +420,7 @@ export default function ProfilePage() {
                       value={draft.phone ?? ''}
                       onChange={(e) => setDraft((prev) => ({ ...prev, phone: e.target.value }))}
                       placeholder="+56 9 1234 5678"
-                      className="h-9"
+                      className="h-11 sm:h-9"
                     />
                   </div>
                   {/* Birth date */}
@@ -432,7 +432,7 @@ export default function ProfilePage() {
                       type="date"
                       value={draft.birth_date ?? ''}
                       onChange={(e) => setDraft((prev) => ({ ...prev, birth_date: e.target.value }))}
-                      className="h-9"
+                      className="h-11 sm:h-9"
                     />
                   </div>
                   {/* Gender */}
@@ -442,7 +442,7 @@ export default function ProfilePage() {
                       value={draft.gender || NONE}
                       onValueChange={(v) => handleSelectOption('gender', v)}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-11 sm:h-9">
                         <SelectValue placeholder="Selecciona" />
                       </SelectTrigger>
                       <SelectContent>
@@ -464,7 +464,7 @@ export default function ProfilePage() {
                       value={draft.education_level || NONE}
                       onValueChange={(v) => handleSelectOption('education_level', v)}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-11 sm:h-9">
                         <SelectValue placeholder="Selecciona" />
                       </SelectTrigger>
                       <SelectContent>
@@ -486,7 +486,7 @@ export default function ProfilePage() {
                       value={draft.occupation || NONE}
                       onValueChange={(v) => handleSelectOption('occupation', v)}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-11 sm:h-9">
                         <SelectValue placeholder="Selecciona" />
                       </SelectTrigger>
                       <SelectContent>

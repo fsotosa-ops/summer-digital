@@ -87,7 +87,7 @@ export function ParticipantJourneysSection() {
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-1.5 bg-white text-summer-orange
                                hover:bg-summer-yellow/20 shadow-sm border border-white/60
-                               text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
+                               text-xs font-bold px-4 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-xl transition-colors"
             >
               Ver todo <ArrowRight size={12} />
             </motion.button>
@@ -116,7 +116,7 @@ export function ParticipantJourneysSection() {
       </div>
 
       {/* ── Content ─────────────────────────────────────── */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2].map(i => (
@@ -165,7 +165,8 @@ export function ParticipantJourneysSection() {
               <Link href="/journey">
                 <motion.div
                   whileHover={{ x: 5 }}
-                  className="text-center py-2 text-xs font-semibold text-summer-orange
+                  whileTap={{ scale: 0.97 }}
+                  className="text-center py-3 min-h-[44px] flex items-center justify-center text-xs font-semibold text-summer-orange
                                   hover:text-summer-orange transition-colors cursor-pointer"
                 >
                   Ver {extraCount} journey{extraCount > 1 ? 's' : ''} más →

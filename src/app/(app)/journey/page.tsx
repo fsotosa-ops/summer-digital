@@ -353,7 +353,7 @@ export default function JourneyPage() {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <Select value={selectedOrgId || ''} onValueChange={setSelectedOrgId}>
-              <SelectTrigger className="w-full sm:w-[220px] border-summer-lavender focus:ring-summer-lavender text-sm">
+              <SelectTrigger className="w-full sm:w-[220px] h-11 sm:h-10 border-summer-lavender focus:ring-summer-lavender text-sm">
                 <SelectValue placeholder="Selecciona organización" />
               </SelectTrigger>
               <SelectContent>
