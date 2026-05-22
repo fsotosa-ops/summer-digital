@@ -76,7 +76,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, initializeSession, viewMode, setViewMode } = useAuthStore();
+  const { user, logout, initializeSession, refreshProfile, viewMode, setViewMode } = useAuthStore();
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [onboardingChecking, setOnboardingChecking] = useState(false);
@@ -126,18 +126,37 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!hydrated || !user || isAdmin) return;
     const checked = sessionStorage.getItem(SESSION_KEYS.ONBOARDING_CHECKED);
     if (checked) return;
+
     setOnboardingChecking(true);
-    journeyService.checkOnboarding(user.organizationId ?? undefined).then(res => {
-      if (res.should_show && res.journey_id) {
-        // Redirect to dedicated onboarding page
-        const currentPath = pathname || '/dashboard';
-        router.replace(`/onboarding?journeyId=${res.journey_id}&redirect=${encodeURIComponent(currentPath)}`);
+
+    const runCheck = async () => {
+      let orgId = user.organizationId;
+
+      // If no org yet, refresh once — catches backend async membership creation
+      // and admin CRM assignments made while the user is already logged in
+      if (!orgId) {
+        await refreshProfile();
+        const freshOrgId = useAuthStore.getState().user?.organizationId;
+        if (freshOrgId) {
+          // Org was just assigned; the effect will re-run via the organizationId dep
+          setOnboardingChecking(false);
+          return;
+        }
+      }
+
+      try {
+        const res = await journeyService.checkOnboarding(orgId ?? undefined);
+        if (res.should_show && res.journey_id) {
+          const currentPath = pathname || '/dashboard';
+          router.replace(`/onboarding?journeyId=${res.journey_id}&redirect=${encodeURIComponent(currentPath)}`);
+        }
+      } catch {
+        sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
       }
       setOnboardingChecking(false);
-    }).catch(() => {
-      sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
-      setOnboardingChecking(false);
-    });
+    };
+
+    runCheck();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, user?.id, user?.organizationId]);
 

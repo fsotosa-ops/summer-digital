@@ -34,6 +34,8 @@ class JourneyService {
     const allJourneys: Journey[] = [];
 
     for (const entry of fullEnrollments) {
+      if (entry.journey?.is_active === false) continue;
+
       enrollmentMap.set(entry.journey_id, entry.id);
 
       // Build a lightweight enrollment object for the mapper

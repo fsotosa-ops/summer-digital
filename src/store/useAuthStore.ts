@@ -17,6 +17,7 @@ interface AuthState {
   logout: () => Promise<void>;
   forceLogout: () => void;
   initializeSession: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   addPoints: (points: number) => void;
   awardMedal: (medalId: string) => void;
   setViewMode: (mode: 'admin' | 'participant') => void;
@@ -84,6 +85,18 @@ export const useAuthStore = create<AuthState>()(
         // porque los tokens ya son inválidos
         supabase.auth.signOut().catch(() => {});
         set({ user: null, isLoading: false, error: null });
+      },
+
+      refreshProfile: async () => {
+        try {
+          const user = await authService.refreshSession();
+          if (user) {
+            const rank = calculateRank(user.oasisScore);
+            set({ user: { ...user, rank } });
+          }
+        } catch {
+          // Ignore — maintain cached session
+        }
       },
 
       initializeSession: async () => {
