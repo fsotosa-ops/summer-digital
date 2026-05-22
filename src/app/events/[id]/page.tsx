@@ -19,7 +19,6 @@ export default function EventGatewayPage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
-  const [joinError, setJoinError] = useState<string | null>(null);
   const isProcessingRef = useRef(false);
   const retryCountRef = useRef(0);
 
@@ -100,45 +99,22 @@ export default function EventGatewayPage() {
           return;
         }
 
-        // Retry once for transient errors before giving up
+        // Retry once silently for transient errors, then fall through to dashboard
         if (retryCountRef.current < 1) {
           retryCountRef.current += 1;
           isProcessingRef.current = false;
           setPhase('idle');
           return;
         }
-        setJoinError('No pudimos vincular tu cuenta al evento. Por favor intenta de nuevo.');
-        isProcessingRef.current = false;
+        // All retries exhausted → dashboard; MainLayout refreshProfile will
+        // pick up the org once the backend catches up or admin assigns via CRM
         setPhase('done');
+        router.replace('/dashboard');
       }
     };
 
     processJoin();
   }, [hydrated, user, router, eventId, logout, setUser, phase]);
-
-  if (joinError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4">
-        <div className="text-center space-y-6 max-w-sm">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-slate-800">Error al unirte al evento</h1>
-            <p className="text-slate-500 text-sm">{joinError}</p>
-          </div>
-          <button
-            onClick={() => {
-              setJoinError(null);
-              retryCountRef.current = 0;
-              isProcessingRef.current = false;
-              setPhase('idle');
-            }}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-summer-pink to-summer-lavender text-white font-semibold text-sm hover:opacity-90 transition-opacity"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col items-center justify-center p-4">
