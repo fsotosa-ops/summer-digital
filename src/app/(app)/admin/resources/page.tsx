@@ -1054,12 +1054,12 @@ export default function AdminResourcesPage() {
               )}
 
               {(formData.unlock_conditions || []).map((cond, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div key={idx} className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <Select
                     value={cond.condition_type}
                     onValueChange={(v) => updateCondition(idx, { condition_type: v as ApiConditionType, reference_id: undefined, reference_value: undefined })}
                   >
-                    <SelectTrigger className="w-[180px] bg-white border-slate-200 text-sm">
+                    <SelectTrigger className="w-full sm:w-[180px] bg-white border-slate-200 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

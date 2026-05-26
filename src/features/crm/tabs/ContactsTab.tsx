@@ -760,7 +760,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
 
       {/* Export CSV Dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={(open) => { if (!exporting) setExportDialogOpen(open); }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Exportar contactos a CSV</DialogTitle>
             <DialogDescription>
@@ -781,7 +781,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">Creado desde</label>
                 <Input
