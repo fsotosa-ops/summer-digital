@@ -578,6 +578,20 @@ export interface ApiEventUpdate {
   diagnosis?: ApiEventDiagnosis | null;
 }
 
+// --- Platform Settings ---
+
+export interface ApiPlatformSettings {
+  diagnosis_form_url: string | null;
+  closure_form_url: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface ApiPlatformSettingsUpdate {
+  diagnosis_form_url?: string | null;
+  closure_form_url?: string | null;
+}
+
 // Event ↔ Journey assignment (via crm.event_journeys)
 
 export interface ApiEventJourneyAdd {

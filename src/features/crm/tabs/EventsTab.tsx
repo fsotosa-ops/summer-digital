@@ -5,17 +5,19 @@ import { toast } from 'sonner';
 import { eventService } from '@/services/event.service';
 import { adminService } from '@/services/admin.service';
 import { crmService } from '@/services/crm.service';
+import { settingsService } from '@/services/settings.service';
 import {
   ApiEvent,
   ApiEventCreate,
   ApiEventCounterpartDetails,
   ApiEventVenueDetails,
-  ApiEventDiagnosis,
   ApiEventLocationDetails,
   ApiEventStatus,
   ApiEventUpdate,
   ApiJourneyAdminRead,
 } from '@/types/api.types';
+import { Widget as TypeformWidget } from '@typeform/embed-react';
+import { useAuthStore } from '@/store/useAuthStore';
 import { generateSlug } from '@/lib/utils';
 import { EVENT_STATUS_CONFIG } from '@/lib/constants/crm-data';
 import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select';
@@ -50,7 +52,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Plus, Loader2, Trash2, Pencil, Copy, Check, LayoutList, MapPin, ClipboardList } from 'lucide-react';
+import { Calendar, Plus, Loader2, Trash2, Pencil, Copy, Check, LayoutList, MapPin, ClipboardList, FileText } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 
 const EVENT_STATUSES = (Object.entries(EVENT_STATUS_CONFIG) as [ApiEventStatus, { label: string; badgeColor: string }][]).map(
@@ -77,15 +79,12 @@ const defaultVenue: ApiEventVenueDetails = {
   notes: null,
 };
 
-const defaultDiagnosis: ApiEventDiagnosis = {
-  objective: null,
-  expectations: null,
-  historical_activities: null,
-  historical_incidents: null,
-  myths_stigmas: null,
-  community_leaders: null,
-  main_obstacles: null,
-};
+
+function extractTypeformId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const match = url.match(/typeform\.com\/to\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
+}
 
 /** Local form state extends ApiEventCreate with journey_ids for the MultiSelect UI */
 type EventFormData = ApiEventCreate & { journey_ids: string[] };
@@ -111,7 +110,6 @@ const defaultForm: EventFormData = {
   expected_participants: null,
   counterpart_details: { ...defaultCounterpart },
   venue_details: { ...defaultVenue },
-  diagnosis: { ...defaultDiagnosis },
 };
 
 interface EventsTabProps {
@@ -134,6 +132,10 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [diagnosisFormUrl, setDiagnosisFormUrl] = useState<string | null>(null);
+  const [closureFormUrl, setClosureFormUrl] = useState<string | null>(null);
+
+  const user = useAuthStore(s => s.user);
 
   // Location cascading selects state
   const [locCountry, setLocCountry] = useState('CL');
@@ -155,16 +157,21 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
     if (!orgId) return;
     setLoading(true);
     try {
-      const [evts, journeyList, ages, roles] = await Promise.all([
+      const [evts, journeyList, ages, roles, platformSettings] = await Promise.all([
         eventService.listOrgEvents(orgId),
         adminService.listJourneys(orgId).catch(() => [] as ApiJourneyAdminRead[]),
         crmService.listFieldOptions('event_expected_ages'),
         crmService.listFieldOptions('event_expected_roles'),
+        settingsService.getPlatformSettings().catch(() => null),
       ]);
       setEvents(evts);
       setJourneys(journeyList);
       setAgeOptions(ages.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
       setRoleOptions(roles.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
+      if (platformSettings) {
+        setDiagnosisFormUrl(platformSettings.diagnosis_form_url);
+        setClosureFormUrl(platformSettings.closure_form_url);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al cargar eventos');
     } finally {
@@ -216,7 +223,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
       expected_participants: event.expected_participants ?? null,
       counterpart_details: { ...defaultCounterpart, ...event.counterpart_details },
       venue_details: { ...defaultVenue, ...event.venue_details },
-      diagnosis: { ...defaultDiagnosis, ...event.diagnosis },
     });
     setDialogOpen(true);
   };
@@ -235,9 +241,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
   const setVenue = (patch: Partial<ApiEventVenueDetails>) =>
     setFormData((p) => ({ ...p, venue_details: { ...p.venue_details, ...patch } as ApiEventVenueDetails }));
 
-  const setDiagnosis = (patch: Partial<ApiEventDiagnosis>) =>
-    setFormData((p) => ({ ...p, diagnosis: { ...p.diagnosis, ...patch } as ApiEventDiagnosis }));
-
   const handleSave = async () => {
     if (!formData.name || !formData.slug || !orgId) return;
     setSaving(true);
@@ -255,7 +258,6 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           expected_participants: formData.expected_participants || null,
           counterpart_details: formData.counterpart_details,
           venue_details: formData.venue_details,
-          diagnosis: formData.diagnosis,
         };
         const updated = await eventService.updateEvent(orgId, editingEvent.id, updatePayload);
 
@@ -367,7 +369,7 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
           </DialogHeader>
 
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="mb-4 grid grid-cols-3 w-full">
+            <TabsList className="mb-4 grid grid-cols-4 w-full">
               <TabsTrigger value="general" className="flex items-center gap-1.5 text-xs">
                 <LayoutList className="h-3.5 w-3.5" /> General
               </TabsTrigger>
@@ -376,6 +378,9 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
               </TabsTrigger>
               <TabsTrigger value="diagnostico" className="flex items-center gap-1.5 text-xs">
                 <ClipboardList className="h-3.5 w-3.5" /> Diagnóstico
+              </TabsTrigger>
+              <TabsTrigger value="cierre" className="flex items-center gap-1.5 text-xs">
+                <FileText className="h-3.5 w-3.5" /> Cierre
               </TabsTrigger>
             </TabsList>
 
@@ -732,76 +737,57 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
             </TabsContent>
 
             {/* Tab: Diagnóstico */}
-            <TabsContent value="diagnostico" className="space-y-4 mt-0">
-              <div className="space-y-2">
-                <Label>Objetivo de la actividad</Label>
-                <Textarea
-                  value={formData.diagnosis?.objective || ''}
-                  onChange={(e) => setDiagnosis({ objective: e.target.value || null })}
-                  placeholder="¿Qué se quiere lograr con esta actividad?"
-                  rows={2}
-                />
-              </div>
+            <TabsContent value="diagnostico" className="mt-0">
+              {extractTypeformId(diagnosisFormUrl) ? (
+                <div
+                  className="w-full rounded-lg overflow-hidden border border-slate-200"
+                  style={{ height: '520px' }}
+                >
+                  <TypeformWidget
+                    id={extractTypeformId(diagnosisFormUrl)!}
+                    style={{ width: '100%', height: '100%' }}
+                    hidden={{
+                      event_id: editingEvent?.id ?? '',
+                      user_id: user?.id ?? '',
+                      org_id: orgId,
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <p className="text-sm text-slate-500">Formulario de diagnóstico no configurado.</p>
+                  <p className="text-xs text-slate-400">
+                    Un superadmin puede configurarlo en <span className="font-medium">Admin → Configuración</span>.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
 
-              <div className="space-y-2">
-                <Label>Expectativas</Label>
-                <Textarea
-                  value={formData.diagnosis?.expectations || ''}
-                  onChange={(e) => setDiagnosis({ expectations: e.target.value || null })}
-                  placeholder="¿Qué espera la contraparte de la actividad?"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Actividades históricas en la comunidad</Label>
-                <Textarea
-                  value={formData.diagnosis?.historical_activities || ''}
-                  onChange={(e) => setDiagnosis({ historical_activities: e.target.value || null })}
-                  placeholder="Actividades previas de salud mental o bienestar realizadas en esta comunidad"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Incidentes históricos relevantes</Label>
-                <Textarea
-                  value={formData.diagnosis?.historical_incidents || ''}
-                  onChange={(e) => setDiagnosis({ historical_incidents: e.target.value || null })}
-                  placeholder="Fallecimientos, intentos, casos de acoso, incidentes relacionados a salud mental"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Mitos, estigmas y sensibilidad del público</Label>
-                <Textarea
-                  value={formData.diagnosis?.myths_stigmas || ''}
-                  onChange={(e) => setDiagnosis({ myths_stigmas: e.target.value || null })}
-                  placeholder="¿Qué creencias o tabúes existen sobre salud mental en esta comunidad?"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Líderes o embajadores en la comunidad</Label>
-                <Textarea
-                  value={formData.diagnosis?.community_leaders || ''}
-                  onChange={(e) => setDiagnosis({ community_leaders: e.target.value || null })}
-                  placeholder="¿Hay personas influyentes que apoyen o puedan apoyar estos temas?"
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Principales obstáculos en la comunidad</Label>
-                <Textarea
-                  value={formData.diagnosis?.main_obstacles || ''}
-                  onChange={(e) => setDiagnosis({ main_obstacles: e.target.value || null })}
-                  placeholder="¿Cuáles han sido los mayores obstáculos para lograr los objetivos?"
-                  rows={2}
-                />
-              </div>
+            {/* Tab: Cierre */}
+            <TabsContent value="cierre" className="mt-0">
+              {extractTypeformId(closureFormUrl) ? (
+                <div
+                  className="w-full rounded-lg overflow-hidden border border-slate-200"
+                  style={{ height: '520px' }}
+                >
+                  <TypeformWidget
+                    id={extractTypeformId(closureFormUrl)!}
+                    style={{ width: '100%', height: '100%' }}
+                    hidden={{
+                      event_id: editingEvent?.id ?? '',
+                      user_id: user?.id ?? '',
+                      org_id: orgId,
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <p className="text-sm text-slate-500">Formulario de cierre no configurado.</p>
+                  <p className="text-xs text-slate-400">
+                    Un superadmin puede configurarlo en <span className="font-medium">Admin → Configuración</span>.
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
