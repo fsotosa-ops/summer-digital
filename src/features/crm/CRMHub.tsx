@@ -83,7 +83,7 @@ export function CRMHub() {
 
         {/* Main content */}
         <main className="flex-1 overflow-auto p-4 bg-slate-50">
-          {activeSection === 'overview' && <ActivityTab orgId={user?.organizationId} onNavigate={setActiveSection} />}
+          {activeSection === 'overview' && <ActivityTab orgId={user?.organizationId} />}
           {activeSection === 'contacts' && <ContactsTab orgId={user?.organizationId} />}
           {activeSection === 'orgs'     && <OrganizationsTab />}
           {activeSection === 'config'   && isAdmin && <FieldOptionsTab />}
