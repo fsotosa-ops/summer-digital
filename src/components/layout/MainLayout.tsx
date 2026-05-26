@@ -347,10 +347,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (hasChildren) {
       return (
         <div key={item.label} className="space-y-1">
-          <div
+          <button
+            type="button"
             onClick={() => setAdminOpen(!adminOpen)}
             className={cn(
-              'flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors duration-200 cursor-pointer',
+              'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-colors duration-200',
               mobileNavInactive,
               isActive && (isParticipantTheme ? 'text-slate-900 font-medium' : 'text-white')
             )}
@@ -365,7 +366,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               size={16}
               className={cn('transition-transform duration-200', adminOpen ? 'rotate-180' : '')}
             />
-          </div>
+          </button>
           <AnimatePresence>
             {adminOpen && (
               <motion.div
