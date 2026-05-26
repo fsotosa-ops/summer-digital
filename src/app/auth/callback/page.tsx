@@ -16,6 +16,7 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleCallback = async () => {
       const code = searchParams.get('code');
+      const state = searchParams.get('state');
 
       if (!code) {
         setError('No se recibió código de autorización');
@@ -23,7 +24,7 @@ function AuthCallbackContent() {
       }
 
       try {
-        const user = await authService.handleOAuthCallback(code);
+        const user = await authService.handleOAuthCallback(code, state);
         setUser(user);
 
         // Fresh login → clear stale onboarding flag so MainLayout re-checks

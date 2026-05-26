@@ -31,8 +31,10 @@ class AuthService {
     return response.url;
   }
 
-  async handleOAuthCallback(code: string): Promise<User> {
-    const response = await apiClient.get<ApiLoginResponse>(`/auth/callback?code=${code}`);
+  async handleOAuthCallback(code: string, state?: string | null): Promise<User> {
+    const params = new URLSearchParams({ code });
+    if (state) params.set('state', state);
+    const response = await apiClient.get<ApiLoginResponse>(`/auth/callback?${params.toString()}`);
     apiClient.setTokens(response.access_token, response.refresh_token);
     await syncSupabaseSession(response.access_token, response.refresh_token);
     return mapApiUserToUser(response.user);

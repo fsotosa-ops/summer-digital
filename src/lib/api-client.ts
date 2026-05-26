@@ -248,7 +248,7 @@ export class ApiError extends Error {
           throw new ApiError(401, 'Session expired', null);
         }
       }
-      if (this.accessToken) {
+      if (this.accessToken && !this.isPublicAuthEndpoint(endpoint)) {
         headers.set('Authorization', `Bearer ${this.accessToken}`);
       }
 
