@@ -21,8 +21,8 @@ export default function AdminSettingsPage() {
     settingsService.getPlatformSettings()
       .then((data) => {
         setSettings(data);
-        setDiagnosisUrl(data.diagnosis_form_url ?? '');
-        setClosureUrl(data.closure_form_url ?? '');
+        setDiagnosisUrl(data.settings.event_forms.diagnosis_form_url ?? '');
+        setClosureUrl(data.settings.event_forms.closure_form_url ?? '');
       })
       .catch(() => toast.error('Error al cargar la configuración'))
       .finally(() => setLoading(false));
@@ -32,8 +32,10 @@ export default function AdminSettingsPage() {
     setSaving(true);
     try {
       const updated = await settingsService.updatePlatformSettings({
-        diagnosis_form_url: diagnosisUrl.trim() || null,
-        closure_form_url: closureUrl.trim() || null,
+        event_forms: {
+          diagnosis_form_url: diagnosisUrl.trim() || null,
+          closure_form_url: closureUrl.trim() || null,
+        },
       });
       setSettings(updated);
       toast.success('Configuración guardada');
@@ -45,8 +47,8 @@ export default function AdminSettingsPage() {
   };
 
   const isDirty =
-    diagnosisUrl !== (settings?.diagnosis_form_url ?? '') ||
-    closureUrl !== (settings?.closure_form_url ?? '');
+    diagnosisUrl !== (settings?.settings.event_forms.diagnosis_form_url ?? '') ||
+    closureUrl !== (settings?.settings.event_forms.closure_form_url ?? '');
 
   if (loading) {
     return (

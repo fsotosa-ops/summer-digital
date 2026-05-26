@@ -580,16 +580,25 @@ export interface ApiEventUpdate {
 
 // --- Platform Settings ---
 
-export interface ApiPlatformSettings {
+export interface ApiEventFormsSettings {
   diagnosis_form_url: string | null;
   closure_form_url: string | null;
+}
+
+export interface ApiPlatformSettingsData {
+  event_forms: ApiEventFormsSettings;
+  // Add new setting sections here as the platform grows
+}
+
+export interface ApiPlatformSettings {
+  settings: ApiPlatformSettingsData;
   updated_at: string;
   updated_by: string | null;
 }
 
 export interface ApiPlatformSettingsUpdate {
-  diagnosis_form_url?: string | null;
-  closure_form_url?: string | null;
+  event_forms?: Partial<ApiEventFormsSettings>;
+  // Mirror new sections from ApiPlatformSettingsData as optional partials
 }
 
 // Event ↔ Journey assignment (via crm.event_journeys)

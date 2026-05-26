@@ -169,8 +169,8 @@ export function EventsTab({ orgId, orgSlug }: EventsTabProps) {
       setAgeOptions(ages.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
       setRoleOptions(roles.filter(o => o.is_active).map(o => ({ value: o.value, label: o.label })));
       if (platformSettings) {
-        setDiagnosisFormUrl(platformSettings.diagnosis_form_url);
-        setClosureFormUrl(platformSettings.closure_form_url);
+        setDiagnosisFormUrl(platformSettings.settings.event_forms.diagnosis_form_url);
+        setClosureFormUrl(platformSettings.settings.event_forms.closure_form_url);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al cargar eventos');
