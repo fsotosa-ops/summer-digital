@@ -372,6 +372,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <AnimatePresence>
             {adminOpen && (
               <motion.div
+                key="admin-accordion-children"
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
@@ -562,7 +563,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Hamburger → Sheet (mobile) */}
         <div className="md:hidden">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <Sheet
+            open={sheetOpen}
+            onOpenChange={(open) => {
+              setSheetOpen(open);
+              if (open && isAdminUser && viewMode === 'admin') setAdminOpen(true);
+            }}
+          >
             <SheetTrigger asChild>
               <Button
                 variant="ghost"

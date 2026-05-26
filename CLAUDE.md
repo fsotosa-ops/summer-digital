@@ -68,3 +68,9 @@ Copy to `.env.local` for local development. Production secrets live in GCP Secre
 - **Zustand stores** use the SSR hydration pattern — check existing stores before adding new ones.
 - The analytics route (`/api/analytics/token`) is the only Next.js Route Handler; it fetches a Superset guest token server-side.
 - Docker output is `standalone` — don't reference files outside `src/` or `public/` from within components.
+
+## Bug Fixing Workflow
+
+When diagnosing any bug or unexpected behavior, invoke the `superpowers:systematic-debugging` skill before proposing any fix.
+
+Before claiming a fix is complete or creating a commit, invoke the `superpowers:verification-before-completion` skill and run the app to confirm the behavior.
