@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { resourceService } from '@/services/resource.service';
+import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { EventType } from '@/lib/realtime/types';
 import { organizationService } from '@/services/organization.service';
 import { ApiOrganization, ApiResourceParticipantRead, ApiResourceType } from '@/types/api.types';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +79,14 @@ export default function ResourcesPage() {
     };
     load();
   }, [retryCount]);
+
+  useRealtimeEvents<{ resource_id: string }>(EventType.RESOURCE_UNPUBLISHED, ({ resource_id }) => {
+    setResources(prev => prev.filter(r => r.id !== resource_id));
+  });
+
+  useRealtimeEvents(EventType.RESOURCE_PUBLISHED, () => {
+    setRetryCount(c => c + 1);
+  });
 
   const filtered = resources
     .filter(r => typeFilter === 'all' || r.type === typeFilter)

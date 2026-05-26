@@ -1,6 +1,8 @@
 export const EventType = {
   JOURNEY_ARCHIVED: 'journey.archived',
   JOURNEY_PUBLISHED: 'journey.published',
+  RESOURCE_PUBLISHED: 'resource.published',
+  RESOURCE_UNPUBLISHED: 'resource.unpublished',
 } as const
 
 export type EventTypeName = (typeof EventType)[keyof typeof EventType]
