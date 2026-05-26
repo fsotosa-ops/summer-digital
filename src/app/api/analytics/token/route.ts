@@ -82,6 +82,14 @@ export async function GET() {
     const csrfData = await csrfResponse.json();
     const csrfToken = csrfData.result;
 
+    if (!csrfToken) {
+      console.error('[Analytics] CSRF token response missing result field:', csrfData);
+      return NextResponse.json(
+        { error: 'Superset no devolvió un CSRF token válido', detail: JSON.stringify(csrfData) },
+        { status: 502 }
+      );
+    }
+
     // 3. Generate Guest Token
     const guestResponse = await fetch(`${SUPERSET_URL}/api/v1/security/guest_token/`, {
       method: 'POST',

@@ -39,6 +39,7 @@ import { UserRole } from '@/types';
 import { toast, Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
 import { apiClient } from '@/lib/api-client';
+import { realtimeClient } from '@/lib/realtime/client';
 
 
 
@@ -79,6 +80,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, logout, initializeSession, refreshProfile, viewMode, setViewMode } = useAuthStore();
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [onboardingChecking, setOnboardingChecking] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
@@ -96,6 +98,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     return unsub;
   }, []);
+
+  // Connect/disconnect realtime WebSocket with the user session
+  useEffect(() => {
+    if (user) {
+      realtimeClient.connect()
+    } else {
+      realtimeClient.disconnect()
+    }
+  }, [user?.id])
 
   // Registrar callback de auth failure — circuit breaker del apiClient
   useEffect(() => {
@@ -369,7 +380,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <Link
                       key={child.href}
                       href={child.href}
-                      onClick={() => isMobile && document.getElementById('close-sheet')?.click()}
+                      onClick={() => isMobile && setSheetOpen(false)}
                     >
                       <motion.div
                         whileHover={{ x: 4 }}
@@ -399,7 +410,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
 
     return (
-      <Link key={item.href} href={item.href} onClick={() => isMobile && document.getElementById('close-sheet')?.click()}>
+      <Link key={item.href} href={item.href} onClick={() => isMobile && setSheetOpen(false)}>
         <motion.div
           whileHover={{ x: 2 }}
           whileTap={{ scale: 0.98 }}
@@ -548,7 +559,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Hamburger → Sheet (mobile) */}
         <div className="md:hidden">
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
@@ -580,7 +591,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   Menú
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 p-4 mt-2 flex-1">
+              <nav className="flex flex-col gap-1 p-4 mt-2 flex-1 overflow-y-auto">
                 {filteredNavItems.map((item) => renderNavItem(item, true))}
               </nav>
               {/* Mobile: mode toggle (admin only) */}
@@ -636,7 +647,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                         ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         : 'text-neutral-400 hover:text-white hover:bg-white/10'
                     )}
-                    onClick={() => { router.push('/profile'); document.getElementById('close-sheet')?.click(); }}
+                    onClick={() => { router.push('/profile'); setSheetOpen(false); }}
                   >
                     <User size={20} />
                     Mi Perfil

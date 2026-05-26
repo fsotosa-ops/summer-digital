@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { EventType } from '@/lib/realtime/types';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useJourneyStore } from '@/store/useJourneyStore';
@@ -115,7 +117,7 @@ type Tab = 'progress' | 'available' | 'history';
 export default function JourneyPage() {
   const router = useRouter();
   const { user, viewMode } = useAuthStore();
-  const { journeys, fetchJourneys, fetchJourneysForAdmin, isLoading } = useJourneyStore();
+  const { journeys, fetchJourneys, fetchJourneysForAdmin, refreshJourneys, isLoading } = useJourneyStore();
   const [activeTab, setActiveTab] = useState<Tab>('progress');
   const [availableJourneys, setAvailableJourneys] = useState<ApiJourneyRead[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
@@ -129,6 +131,7 @@ export default function JourneyPage() {
 
   // Client-side org filter — only used in participant mode
   const [orgFilter, setOrgFilter] = useState<string | null>(null);
+  const [availableTick, setAvailableTick] = useState(0); // incremented by realtime events
 
   const isAdminUser = user?.role === 'Admin' || user?.role === 'SuperAdmin';
   const isAdminMode = isAdminUser && viewMode === 'admin';
@@ -190,7 +193,21 @@ export default function JourneyPage() {
       }
     };
     loadAvailable();
-  }, [organizations, journeys, isAdminMode, isLoading]);
+  }, [organizations, journeys, isAdminMode, isLoading, availableTick]);
+
+  // --- Realtime events ---------------------------------------------------------
+  // journey.archived: remove from available list immediately + refresh enrolled
+  useRealtimeEvents<{ journey_id: string }>(EventType.JOURNEY_ARCHIVED, ({ journey_id }) => {
+    setAvailableJourneys(prev => prev.filter(j => j.id !== journey_id));
+    refreshJourneys(orgId);
+  });
+
+  // journey.published: re-fetch both enrolled and available lists
+  useRealtimeEvents(EventType.JOURNEY_PUBLISHED, () => {
+    refreshJourneys(orgId);   // restore it in enrolled list if user had an enrollment
+    setAvailableTick(t => t + 1); // re-fetch available list for non-enrolled users
+  });
+  // ---------------------------------------------------------------------------
 
   const handleEnroll = async (journeyId: string) => {
     setEnrollingId(journeyId);

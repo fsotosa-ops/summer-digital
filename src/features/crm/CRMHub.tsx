@@ -10,12 +10,12 @@ import { FieldOptionsTab } from './tabs/FieldOptionsTab';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type Section = 'overview' | 'contacts' | 'orgs' | 'config';
+export type CRMSection = 'overview' | 'contacts' | 'orgs' | 'config';
 
 export function CRMHub() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
-  const [activeSection, setActiveSection] = useState<Section>('overview');
+  const [activeSection, setActiveSection] = useState<CRMSection>('overview');
 
   if (!user || !isAdmin) {
     return (
@@ -27,10 +27,10 @@ export function CRMHub() {
   }
 
   const navItems = [
-    { value: 'overview' as Section,  label: 'Inicio',          icon: LayoutDashboard },
-    { value: 'contacts' as Section,  label: 'Contactos',       icon: Users           },
-    { value: 'orgs'     as Section,  label: 'Organizaciones',  icon: Building2       },
-    ...(isAdmin ? [{ value: 'config' as Section, label: 'Configuración', icon: Settings }] : []),
+    { value: 'overview' as CRMSection,  label: 'Inicio',          icon: LayoutDashboard },
+    { value: 'contacts' as CRMSection,  label: 'Contactos',       icon: Users           },
+    { value: 'orgs'     as CRMSection,  label: 'Organizaciones',  icon: Building2       },
+    ...(isAdmin ? [{ value: 'config' as CRMSection, label: 'Configuración', icon: Settings }] : []),
   ];
 
   return (
@@ -83,7 +83,7 @@ export function CRMHub() {
 
         {/* Main content */}
         <main className="flex-1 overflow-auto p-4 bg-slate-50">
-          {activeSection === 'overview' && <ActivityTab orgId={user?.organizationId} />}
+          {activeSection === 'overview' && <ActivityTab orgId={user?.organizationId} onNavigate={setActiveSection} />}
           {activeSection === 'contacts' && <ContactsTab orgId={user?.organizationId} />}
           {activeSection === 'orgs'     && <OrganizationsTab />}
           {activeSection === 'config'   && isAdmin && <FieldOptionsTab />}
