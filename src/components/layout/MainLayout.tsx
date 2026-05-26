@@ -171,11 +171,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, user?.id, user?.organizationId]);
 
-  // Sync admin dropdown with current route
+  // Sync admin accordion with current route — but never while the sheet is open
+  // (sheet open = user is manually controlling the accordion via tap)
   useEffect(() => {
+    if (sheetOpen) return;
     const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/crm') || pathname.startsWith('/analytics');
     setAdminOpen(isAdminRoute);
-  }, [pathname]);
+  }, [pathname, sheetOpen]);
 
   const handleLogout = async () => {
     await logout();
