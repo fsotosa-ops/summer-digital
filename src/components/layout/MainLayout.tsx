@@ -576,7 +576,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <SheetContent
               side="left"
               className={cn(
-                'w-[300px] sm:w-[340px] p-0',
+                'w-[300px] sm:w-[340px] p-0 flex flex-col overflow-hidden',
                 isParticipantTheme
                   ? 'bg-white border-r border-summer-yellow'
                   : 'bg-neutral-950 border-r border-white/5'
@@ -591,7 +591,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   Menú
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 p-4 mt-2 flex-1 overflow-y-auto">
+              <nav className="flex flex-col gap-1 p-4 mt-2 flex-1 min-h-0 overflow-y-auto">
                 {filteredNavItems.map((item) => renderNavItem(item, true))}
               </nav>
               {/* Mobile: mode toggle (admin only) */}
