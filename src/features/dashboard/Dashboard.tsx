@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { gamificationService } from '@/services/gamification.service';
 import { ApiUserPointsSummary } from '@/types/api.types';
 import { Pencil } from 'lucide-react';
 import { ParticipantJourneysSection } from './components/ParticipantJourneysSection';
 import { ResourcesFeedWidget } from './components/ResourcesFeedWidget';
-import { AdminDashboardPanel } from './components/AdminDashboardPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /* ─── Level progress from real API data ──────────────── */
@@ -37,6 +37,7 @@ export function Dashboard() {
   const { user, viewMode } = useAuthStore();
   const [gamSummary, setGamSummary] = useState<ApiUserPointsSummary | null>(null);
   const [imgError, setImgError] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     gamificationService.getUserSummary()
@@ -56,6 +57,12 @@ export function Dashboard() {
   const isAdmin       = user.role === 'Admin' || user.role === 'SuperAdmin';
   const isSubscriber  = user.role === 'Subscriber';
   const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
+
+  // Admins in admin mode belong in the CRM — redirect immediately
+  if (isAdmin && viewMode === 'admin') {
+    router.replace('/crm');
+    return null;
+  }
 
   // Hero card color tokens — participant vs admin
   const heroGradient   = isParticipantView ? 'from-summer-yellow to-summer-orange'                      : 'from-summer-pink to-summer-lavender';
@@ -190,8 +197,6 @@ export function Dashboard() {
           <ResourcesFeedWidget />
         </div>
       )}
-
-      {isAdmin && viewMode === 'admin' && <AdminDashboardPanel user={user} />}
 
       {isSubscriber && <ResourcesFeedWidget />}
 
