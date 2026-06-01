@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { crmService } from '@/services/crm.service';
 import { adminService } from '@/services/admin.service';
 import { resourceService } from '@/services/resource.service';
-import { ApiCrmContact, ApiOrgTrackingResponse } from '@/types/api.types';
+import { eventService } from '@/services/event.service';
+import { ApiCrmContact, ApiOrgTrackingResponse, ApiEventDashboardSummary } from '@/types/api.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -48,6 +50,7 @@ export function ActivityTab({
   const [contacts, setContacts] = useState<ApiCrmContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
+  const [eventSummary, setEventSummary] = useState<ApiEventDashboardSummary | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [orgId]);
@@ -55,10 +58,11 @@ export function ActivityTab({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [contactsRes, trackingRes, resourcesRes] = await Promise.allSettled([
+      const [contactsRes, trackingRes, resourcesRes, eventRes] = await Promise.allSettled([
         crmService.listContacts(0, 30, undefined, orgId),
         orgId ? adminService.listOrgTracking(orgId) : Promise.resolve(null),
         orgId ? resourceService.listResources(orgId, null) : Promise.resolve([]),
+        orgId ? eventService.getDashboardSummary(orgId) : Promise.resolve(null),
       ]);
       if (contactsRes.status === 'fulfilled') {
         setContacts(contactsRes.value.contacts);
@@ -69,6 +73,9 @@ export function ActivityTab({
       }
       if (resourcesRes.status === 'fulfilled') {
         setResourceCount(Array.isArray(resourcesRes.value) ? resourcesRes.value.length : 0);
+      }
+      if (eventRes.status === 'fulfilled' && eventRes.value) {
+        setEventSummary(eventRes.value);
       }
     } finally {
       setLoading(false);
@@ -185,6 +192,45 @@ export function ActivityTab({
           </div>
         ))}
       </div>
+
+      {/* ── Live / upcoming event banner (conditional) ── */}
+      {eventSummary && eventSummary.live_events.length > 0 && (() => {
+        const ev = eventSummary.live_events[0];
+        return (
+          <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 truncate">
+                {ev.name}
+              </p>
+              <p className="text-xs text-amber-700">
+                {ev.registered_count} inscritos · {ev.attended_count} asistieron
+              </p>
+            </div>
+            <Link
+              href="/crm?tab=events"
+              className="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 transition-colors"
+            >
+              Control →
+            </Link>
+          </div>
+        );
+      })()}
+
+      {eventSummary && eventSummary.live_events.length === 0 && eventSummary.upcoming_events.length > 0 && (() => {
+        const ev = eventSummary.upcoming_events[0];
+        return (
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+            <span className="text-sm">📅</span>
+            <p className="flex-1 text-xs text-slate-600 truncate">
+              Próximo evento: <strong>{ev.name}</strong> · {ev.registered_count} inscritos
+            </p>
+          </div>
+        );
+      })()}
 
       {/* ── Widget 1: Salud del Engagement ── */}
       <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-summer-pink/10 to-summer-lavender/10">
