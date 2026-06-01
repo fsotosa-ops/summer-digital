@@ -131,6 +131,19 @@ export function OrganizationsTab() {
 
   return (
     <div className="space-y-4">
+      {/* Summary header */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-xs flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-summer-teal/10 flex items-center justify-center shrink-0">
+            <Building2 className="h-5 w-5 text-summer-teal" />
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-slate-400 uppercase leading-none mb-1">Organizaciones / Cohortes</p>
+            <p className="text-2xl font-bold text-slate-700">{organizations.length}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-100">
         <div className="text-sm text-slate-500">{organizations.length} organización(es)</div>

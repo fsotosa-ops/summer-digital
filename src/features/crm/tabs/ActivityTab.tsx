@@ -1,56 +1,51 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { crmService } from '@/services/crm.service';
-import { ApiCrmStats, ApiCrmTask, ApiCrmTaskStatus } from '@/types/api.types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { adminService } from '@/services/admin.service';
+import { ApiCrmContact, ApiOrgTrackingResponse } from '@/types/api.types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Users,
-  UserCheck,
-  UserX,
   AlertTriangle,
   Loader2,
   RefreshCw,
-  ClipboardList,
-  Clock,
-  FileText,
-  Calendar,
-  CheckCircle2,
-  ArrowRight,
+  HeartPulse,
+  Users,
+  UserCheck,
+  UserMinus,
+  UserX,
+  TrendingUp,
+  BookOpen,
   Activity,
+  CheckCircle2,
+  Clock,
+  Flame,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { MiniProgress } from '@/components/MiniProgress';
+import { formatRelativeTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { eventStatusLabel, eventStatusClasses } from '@/lib/journey-tracking-helpers';
+import { Badge } from '@/components/ui/badge';
 
-const PRIORITY_COLORS: Record<string, string> = {
-  low:    'bg-slate-100 text-slate-600',
-  medium: 'bg-summer-sky text-summer-sky',
-  high:   'bg-orange-100 text-orange-700',
-  urgent: 'bg-red-100 text-red-700',
-};
+function getInitials(name: string | null | undefined, email: string): string {
+  if (name) return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  return email[0].toUpperCase();
+}
 
-const PRIORITY_LABELS: Record<string, string> = {
-  low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Urgente',
-};
-
-const COLUMNS: { key: ApiCrmTaskStatus; label: string; color: string; dot: string }[] = [
-  { key: 'pending',     label: 'Pendientes',   color: 'border-t-summer-yellow',  dot: 'bg-summer-yellow'  },
-  { key: 'in_progress', label: 'En Progreso',  color: 'border-t-blue-500',   dot: 'bg-blue-500'   },
-  { key: 'completed',   label: 'Completadas',  color: 'border-t-green-500',  dot: 'bg-green-500'  },
-];
-
-const NEXT_STATUS: Record<string, ApiCrmTaskStatus> = {
-  pending: 'in_progress',
-  in_progress: 'completed',
-};
-
-export function ActivityTab({ orgId }: { orgId?: string }) {
-  const [stats, setStats] = useState<ApiCrmStats | null>(null);
-  const [tasks, setTasks] = useState<ApiCrmTask[]>([]);
+export function ActivityTab({
+  orgId,
+  onNavigateToRisk,
+}: {
+  orgId?: string;
+  onNavigateToRisk?: () => void;
+}) {
+  const [total, setTotal]     = useState(0);
+  const [tracking, setTracking] = useState<ApiOrgTrackingResponse | null>(null);
+  const [contacts, setContacts] = useState<ApiCrmContact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [movingId, setMovingId] = useState<string | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [orgId]);
@@ -58,33 +53,19 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [statsResult, tasksResult] = await Promise.allSettled([
-        crmService.getStats(orgId),
-        crmService.listTasks(0, 50, undefined, undefined, orgId),
+      const [contactsRes, trackingRes] = await Promise.allSettled([
+        crmService.listContacts(0, 30, undefined, orgId),
+        orgId ? adminService.listOrgTracking(orgId) : Promise.resolve(null),
       ]);
-      
-      if (statsResult.status === 'fulfilled') setStats(statsResult.value);
-      if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value);
+      if (contactsRes.status === 'fulfilled') {
+        setContacts(contactsRes.value.contacts);
+        setTotal(contactsRes.value.count);
+      }
+      if (trackingRes.status === 'fulfilled' && trackingRes.value) {
+        setTracking(trackingRes.value);
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const moveTask = async (task: ApiCrmTask) => {
-    const next = NEXT_STATUS[task.status];
-    if (!next) return;
-    setMovingId(task.id);
-    try {
-      const updated = await crmService.updateTask(task.id, { status: next });
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      toast.success('Tarea actualizada');
-      // Recargamos stats para reflejar el cambio en los contadores
-      const newStats = await crmService.getStats(orgId);
-      setStats(newStats);
-    } catch {
-      toast.error('Error al mover la tarea');
-    } finally {
-      setMovingId(null);
     }
   };
 
@@ -96,172 +77,437 @@ export function ActivityTab({ orgId }: { orgId?: string }) {
     );
   }
 
-  const tasksByStatus = (status: ApiCrmTaskStatus) =>
-    tasks.filter((t) => t.status === status);
+  // ── Métricas derivadas de tracking ─────────────────────────────
+  // enrolled = personas únicas inscritas en ≥1 journey
+  const enrolled     = tracking?.total_unique_enrolled_users ?? 0;
+  // notEnrolled = registrados en la plataforma que nunca iniciaron ningún journey → mayor riesgo
+  const notEnrolled  = total > enrolled ? total - enrolled : 0;
+
+  // Aggregate journey metrics (inscripciones, no personas únicas)
+  const allJourneys = [
+    ...(tracking?.events.flatMap((e) => e.journeys) ?? []),
+    ...(tracking?.unassigned_journeys ?? []),
+  ];
+  const totalEnrollments    = allJourneys.reduce((s, j) => s + j.total_enrollments, 0);
+  const completedEnrollments = allJourneys.reduce((s, j) => s + j.completed_enrollments, 0);
+  const activeEnrollments   = allJourneys.reduce((s, j) => s + j.active_enrollments, 0);
+  const notStartedEnrollments = allJourneys.reduce((s, j) => s + j.not_started_enrollments, 0);
+
+  // Salud = % de la comunidad que participa en al menos 1 journey
+  // Si total=487 y enrolled=211 → 43% de salud (no 100%)
+  const healthPct   = total > 0 ? Math.round((enrolled / total) * 100) : 0;
+  const enrolledPct = total > 0 ? (enrolled / total) * 100 : 0;
+  const notEnrolledPct = total > 0 ? (notEnrolled / total) * 100 : 0;
+
+  // Tasa de completación entre los que SÍ están inscritos
+  const completionRate = totalEnrollments > 0
+    ? Math.round((completedEnrollments / totalEnrollments) * 100)
+    : 0;
+
+  // Actividad reciente — sort por last_seen_at desc
+  const recentlyActive = [...contacts]
+    .filter((c) => c.last_seen_at)
+    .sort((a, b) => new Date(b.last_seen_at!).getTime() - new Date(a.last_seen_at!).getTime())
+    .slice(0, 6);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">Resumen general</h3>
-        <Button variant="ghost" size="sm" onClick={loadData} className="h-8 text-slate-500 hover:text-summer-pink">
+        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <HeartPulse className="h-4 w-4 text-summer-pink" />
+          Panel de Engagement
+        </h3>
+        <Button variant="ghost" size="sm" onClick={loadData}
+          className="h-8 text-slate-500 hover:text-summer-pink">
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Actualizar
         </Button>
       </div>
 
-      {/* Hero — Total Contactos + Mini Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card className="lg:col-span-1 rounded-2xl shadow-sm border-0 bg-gradient-to-br from-summer-pink/10 to-summer-lavender/10">
-          <CardContent className="pt-6 pb-5">
-            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-4">
-              <div>
-                <p className="text-xs font-semibold text-summer-pink uppercase tracking-wide mb-1">
-                  Contactos
-                </p>
-                <p className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-summer-pink to-summer-lavender leading-none">
-                  {stats?.total_contacts ?? 0}
-                </p>
+      {/* ── Widget 1: Salud del Engagement ── */}
+      <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-summer-pink/10 to-summer-lavender/10">
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-xs font-semibold text-summer-pink uppercase tracking-wide mb-1">
+                Adopción del Programa
+              </p>
+              <p className="text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-summer-pink to-summer-lavender leading-none">
+                {healthPct}%
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {enrolled} de {total} miembros participan en al menos un journey
+              </p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-summer-pink/20 flex items-center justify-center">
+              <HeartPulse className="h-6 w-6 text-summer-pink" />
+            </div>
+          </div>
+
+          {/* Barra: verde = inscritos, gris = sin journey */}
+          <div className="h-3 rounded-full overflow-hidden flex bg-slate-100">
+            {enrolledPct > 0 && (
+              <div className="h-full bg-emerald-400 transition-all"
+                style={{ width: `${enrolledPct}%` }} />
+            )}
+            {notEnrolledPct > 0 && (
+              <div className="h-full bg-slate-300 transition-all"
+                style={{ width: `${notEnrolledPct}%` }} />
+            )}
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full inline-block bg-emerald-400" />
+              Participando en journeys
+            </span>
+            <span className="text-[10px] text-slate-500 flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full inline-block bg-slate-300" />
+              Sin journey asignado
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Widget 2: 4 cards de estado ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          {
+            label: 'Comunidad',
+            sublabel: 'Registrados en la plataforma',
+            value: total,
+            color: 'text-slate-700',
+            border: 'border-slate-100',
+            Icon: Users,
+          },
+          {
+            label: 'Participando',
+            sublabel: 'Inscritos en ≥1 journey',
+            value: enrolled,
+            color: 'text-emerald-600',
+            border: 'border-emerald-100',
+            Icon: UserCheck,
+          },
+          {
+            label: 'Completaron',
+            sublabel: 'Completaciones de journeys',
+            value: completedEnrollments,
+            color: 'text-blue-600',
+            border: 'border-blue-100',
+            Icon: CheckCircle2,
+          },
+          {
+            label: 'Sin Journey',
+            sublabel: 'Nunca iniciaron un programa',
+            value: notEnrolled,
+            color: 'text-amber-500',
+            border: 'border-amber-100',
+            Icon: UserX,
+            action: onNavigateToRisk,
+          },
+        ].map(({ label, sublabel, value, color, border, Icon, action }) => (
+          <div
+            key={label}
+            onClick={action}
+            role={action ? 'button' : undefined}
+            tabIndex={action ? 0 : undefined}
+            onKeyDown={action ? (e) => { if (e.key === 'Enter') action(); } : undefined}
+            className={cn(
+              'bg-white rounded-xl p-3 border shadow-xs flex flex-col gap-0.5',
+              border,
+              action && 'cursor-pointer hover:shadow-md transition-all group',
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-medium text-slate-400 uppercase">{label}</p>
+              <Icon className={cn('h-3.5 w-3.5 opacity-40', color)} />
+            </div>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+            <p className="text-[10px] text-slate-400 leading-tight">{sublabel}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Alert: sin journey ── */}
+      {notEnrolled > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-sm text-amber-800 font-semibold leading-none">
+                {notEnrolled} miembro{notEnrolled !== 1 ? 's' : ''} sin journey asignado
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Están registrados pero nunca iniciaron un programa
+              </p>
+            </div>
+          </div>
+          {onNavigateToRisk && (
+            <Button size="sm" variant="outline" onClick={onNavigateToRisk}
+              className="shrink-0 h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100">
+              Ver →
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* ── Row: Salud de Programas + Funnel ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Widget 3: Salud de Programas */}
+        <Card className="rounded-2xl border-slate-100 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-summer-teal" />
+              Salud de Programas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {allJourneys.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">Sin journeys activos</p>
+            ) : (
+              <div className="space-y-4">
+                {allJourneys.slice(0, 5).map((journey) => {
+                  const pct = Math.round(journey.completion_rate * 100);
+                  const event = tracking?.events.find((e) =>
+                    e.journeys.some((j) => j.id === journey.id),
+                  );
+                  return (
+                    <div key={journey.id} className="space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700 truncate leading-tight">
+                            {journey.title}
+                          </p>
+                          {event && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Badge variant="outline"
+                                className={cn('text-[9px] px-1 py-0 border leading-none',
+                                  eventStatusClasses(event.event_status))}>
+                                {eventStatusLabel(event.event_status)}
+                              </Badge>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                {event.event_name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-600 shrink-0">{pct}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all',
+                            pct >= 60 ? 'bg-summer-teal' : pct >= 30 ? 'bg-summer-yellow' : 'bg-slate-300',
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          {journey.completed_enrollments} completaron
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                          {journey.active_enrollments} en progreso
+                        </span>
+                        {journey.not_started_enrollments > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                            {journey.not_started_enrollments} sin iniciar
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-summer-pink flex items-center justify-center">
-                <Users className="h-6 w-6 text-summer-pink" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Widget 4: Funnel de inscripciones */}
+        <Card className="rounded-2xl border-slate-100 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-summer-lavender" />
+              Funnel de Participación
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {totalEnrollments === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">Sin inscripciones</p>
+            ) : (
+              <div className="space-y-3">
+                {[
+                  {
+                    label: 'Sin iniciar',
+                    count: notStartedEnrollments,
+                    Icon: Clock,
+                    barColor: 'bg-slate-300',
+                    textColor: 'text-slate-500',
+                    bgColor: 'bg-slate-50',
+                  },
+                  {
+                    label: 'En progreso',
+                    count: activeEnrollments,
+                    Icon: Activity,
+                    barColor: 'bg-blue-400',
+                    textColor: 'text-blue-600',
+                    bgColor: 'bg-blue-50',
+                  },
+                  {
+                    label: 'Completados',
+                    count: completedEnrollments,
+                    Icon: CheckCircle2,
+                    barColor: 'bg-emerald-400',
+                    textColor: 'text-emerald-600',
+                    bgColor: 'bg-emerald-50',
+                  },
+                ].map(({ label, count, Icon, barColor, textColor, bgColor }) => {
+                  const pct = totalEnrollments > 0 ? Math.round((count / totalEnrollments) * 100) : 0;
+                  return (
+                    <div key={label} className="flex items-center gap-3">
+                      <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', bgColor)}>
+                        <Icon className={cn('h-4 w-4', textColor)} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-slate-600">{label}</span>
+                          <span className={cn('text-xs font-bold', textColor)}>{count}</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className={cn('h-full rounded-full transition-all', barColor)}
+                            style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-slate-400 w-8 text-right shrink-0">
+                        {pct}%
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">
+                    Tasa de completación
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600">{completionRate}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">Total inscripciones</span>
+                  <span className="text-xs font-bold text-slate-600">{totalEnrollments}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Row: Adopción del Programa + Actividad Reciente ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Widget 5: Adopción del programa */}
+        <Card className="rounded-2xl border-slate-100 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-summer-pink" />
+              Adopción del Programa
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3">
+              {[
+                {
+                  label: 'Participan en al menos 1 journey',
+                  value: enrolled,
+                  total: total,
+                  barColor: 'bg-emerald-400',
+                  textColor: 'text-emerald-600',
+                },
+                {
+                  label: 'Sin journey asignado',
+                  value: notEnrolled,
+                  total: total,
+                  barColor: 'bg-amber-300',
+                  textColor: 'text-amber-600',
+                },
+                {
+                  label: 'Completaron ≥1 journey',
+                  value: Math.min(completedEnrollments, enrolled),
+                  total: enrolled || 1,
+                  barColor: 'bg-blue-400',
+                  textColor: 'text-blue-600',
+                },
+              ].map(({ label, value, total: den, barColor, textColor }) => {
+                const pct = den > 0 ? Math.round((value / den) * 100) : 0;
+                return (
+                  <div key={label} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-600">{label}</span>
+                      <span className={cn('text-xs font-bold tabular-nums', textColor)}>
+                        {value} <span className="text-slate-400 font-normal">({pct}%)</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all', barColor)}
+                        style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+                <div className="text-center py-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-lg font-bold text-summer-teal">{completionRate}%</p>
+                  <p className="text-[10px] text-slate-400">Tasa de completación</p>
+                </div>
+                <div className="text-center py-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <p className="text-lg font-bold text-slate-700">{allJourneys.length}</p>
+                  <p className="text-[10px] text-slate-400">Journeys activos</p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="lg:col-span-1 grid grid-cols-1 gap-3">
-          {[
-            { label: 'Activos', value: stats?.active_contacts ?? 0, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'En Riesgo', value: stats?.risk_contacts ?? 0, icon: AlertTriangle, color: 'text-summer-yellow', bg: 'bg-summer-yellow/10' },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className="bg-white rounded-xl p-3 flex items-center justify-between border border-slate-100 shadow-xs">
-              <div>
-                <p className="text-[10px] font-medium text-slate-400 uppercase leading-none mb-1">{label}</p>
-                <p className={`text-xl font-bold ${color}`}>{value}</p>
-              </div>
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${bg}`}>
-                <Icon className={`h-4 w-4 ${color}`} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="lg:col-span-2 grid grid-cols-2 gap-3">
-          {[
-            { label: 'Tareas pend.', value: stats?.pending_tasks ?? 0, icon: ClipboardList, color: 'text-orange-500', bg: 'bg-orange-50' },
-            { label: 'En progreso', value: stats?.in_progress_tasks ?? 0, icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: 'Completadas', value: stats?.completed_tasks ?? 0, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { label: 'Notas total', value: stats?.total_notes ?? 0, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50' },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className="bg-white rounded-xl p-3 flex items-center gap-3 border border-slate-100 shadow-xs">
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
-                <Icon className={`h-4 w-4 ${color}`} />
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-400 uppercase leading-none mb-1">{label}</p>
-                <p className={`text-lg font-bold ${color}`}>{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Pipeline Header */}
-      <div className="pt-4">
-        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-summer-pink" />
-          Pipeline de Tareas
-        </h3>
-      </div>
-
-      {/* Kanban columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-8">
-        {COLUMNS.map(({ key, label, color, dot }) => {
-          const col = tasksByStatus(key);
-          return (
-            <div key={key} className={`rounded-2xl border-t-4 ${color} bg-white shadow-sm border border-slate-100 flex flex-col transition-all hover:shadow-md`}>
-              {/* Column header */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50/30 rounded-t-2xl">
-                <span className={`h-2 w-2 rounded-full ${dot}`} />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">{label}</span>
-                <span className="ml-auto text-[10px] font-bold text-slate-400 bg-white border border-slate-100 rounded-full px-2 py-0.5 shadow-xs">
-                  {col.length}
-                </span>
-              </div>
-
-              {/* Task cards */}
-              <div className="flex-1 p-3 space-y-3 min-h-[160px] bg-slate-50/10">
-                {col.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full pt-8 opacity-40">
-                    <ClipboardList className="h-8 w-8 text-slate-200 mb-2" />
-                    <p className="text-[10px] text-slate-300 font-medium">Sin tareas</p>
-                  </div>
-                ) : (
-                  col.map((task) => (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-xl p-3 space-y-3 border border-slate-100 shadow-sm hover:border-summer-pink hover:shadow-md transition-all group relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-100 group-hover:bg-summer-pink transition-colors" />
-                      
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-summer-pink transition-colors">
-                          {task.title}
+        {/* Widget 6: Actividad Reciente */}
+        <Card className="rounded-2xl border-slate-100 shadow-sm">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <Flame className="h-4 w-4 text-summer-pink" />
+              Actividad Reciente
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {recentlyActive.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">Sin actividad registrada</p>
+            ) : (
+              <div className="space-y-2.5">
+                {recentlyActive.map((c) => {
+                  const name = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email;
+                  return (
+                    <div key={c.user_id} className="flex items-center gap-2.5">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={c.avatar_url || undefined} />
+                        <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px] font-bold">
+                          {getInitials(name, c.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 truncate">{name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {formatRelativeTime(c.last_seen_at)}
                         </p>
-                        {task.description && (
-                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed italic">
-                            {task.description}
-                          </p>
-                        )}
                       </div>
-
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 border-0 ${PRIORITY_COLORS[task.priority]}`}>
-                            {PRIORITY_LABELS[task.priority] || task.priority}
-                          </Badge>
-                          {task.due_date && (
-                            <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(task.due_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {NEXT_STATUS[task.status] && (
-                        <button
-                          onClick={() => moveTask(task)}
-                          disabled={movingId === task.id}
-                          className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 hover:text-summer-pink hover:bg-summer-pink/10 py-1.5 rounded-lg transition-all border-t border-slate-50 group-hover:border-summer-pink"
-                        >
-                          {movingId === task.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : key === 'pending' ? (
-                            <><ArrowRight className="h-3 w-3" /> Mover a En Progreso</>
-                          ) : (
-                            <><CheckCircle2 className="h-3 w-3" /> Marcar Completada</>
-                          )}
-                        </button>
-                      )}
-                    </motion.div>
-                  ))
-                )}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          );
-        })}
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {tasks.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 shadow-xs">
-          <Clock className="h-10 w-10 mx-auto mb-3 text-slate-200" />
-          <p className="text-sm font-medium text-slate-400">No hay tareas registradas en el CRM aún.</p>
-        </div>
-      )}
     </div>
   );
 }

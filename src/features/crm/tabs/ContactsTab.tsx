@@ -12,6 +12,20 @@ import {
   ApiContactStatus,
   ApiOrganization,
 } from '@/types/api.types';
+
+function OasisScoreBadge({ score }: { score: number | null | undefined }) {
+  if (score == null) return <span className="text-slate-300 text-xs">—</span>;
+  const color =
+    score >= 61 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+    score >= 31 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  'bg-red-50 text-red-700 border-red-200';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded border ${color}`}>
+      <Activity className="h-3 w-3" />
+      {score}
+    </span>
+  );
+}
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +59,9 @@ import {
   ChevronRight,
   Trash2,
   Download,
+  Activity,
 } from 'lucide-react';
+import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ContactDetailSheet } from '../components/contact-detail';
@@ -122,6 +138,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
 
   // --- Org admin state ---
   const [crmContacts, setCrmContacts] = useState<ApiCrmContact[]>([]);
+  const [statusFilter, setStatusFilter] = useState<ApiContactStatus | null>(null);
 
   // --- Export state ---
   const [exporting, setExporting] = useState(false);
@@ -149,6 +166,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
           PAGE_SIZE,
           searchQuery || undefined,
           orgId,
+          statusFilter ?? undefined,
         );
         setCrmContacts(result.contacts);
         setTotalCount(result.count);
@@ -159,7 +177,7 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [isSuperAdmin, page, searchQuery, orgId]);
+  }, [isSuperAdmin, page, searchQuery, orgId, statusFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -184,8 +202,8 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  // Clear selection on page/search change
-  useEffect(() => { setSelectedIds(new Set()); }, [page, searchQuery]);
+  // Clear selection on page/search/filter change
+  useEffect(() => { setSelectedIds(new Set()); }, [page, searchQuery, statusFilter]);
 
   // ====== SuperAdmin selection helpers ======
   const selectableUsers = users.filter((u) => u.id !== currentUser?.id);
@@ -306,29 +324,56 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
   // ====== Render ======
   return (
     <div className="space-y-4">
-      {/* Search bar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Buscar por nombre o email..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10"
-          />
+      {/* Search bar + filters */}
+      <div className="flex flex-col gap-3 bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Buscar por nombre o email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <span className="text-sm text-slate-500 shrink-0">
+            {totalCount} participante(s){searchQuery && ` para "${searchQuery}"`}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openExportDialog}
+            disabled={totalCount === 0}
+            className="shrink-0"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Exportar CSV
+          </Button>
         </div>
-        <span className="text-sm text-slate-500">
-          {totalCount} contacto(s){searchQuery && ` para "${searchQuery}"`}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={openExportDialog}
-          disabled={totalCount === 0}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Exportar CSV
-        </Button>
+
+        {/* Status filter chips — only for org admins */}
+        {!isSuperAdmin && (
+          <div className="flex flex-wrap gap-2">
+            {([null, 'active', 'risk', 'inactive'] as const).map((s) => {
+              const label = s === null ? 'Todos' : s === 'active' ? 'Activos' : s === 'risk' ? 'En Riesgo' : 'Inactivos';
+              const isActive = statusFilter === s;
+              const chipColor =
+                s === 'risk'     ? (isActive ? 'bg-amber-500 text-white border-amber-500' : 'border-amber-200 text-amber-700 hover:bg-amber-50') :
+                s === 'active'   ? (isActive ? 'bg-emerald-500 text-white border-emerald-500' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50') :
+                s === 'inactive' ? (isActive ? 'bg-slate-500 text-white border-slate-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50') :
+                                   (isActive ? 'bg-summer-pink text-white border-summer-pink' : 'border-slate-200 text-slate-600 hover:bg-slate-50');
+              return (
+                <button
+                  key={String(s)}
+                  onClick={() => { setStatusFilter(s); setPage(0); }}
+                  className={`text-xs font-medium px-3 py-1 rounded-full border transition-colors min-h-[28px] ${chipColor}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {isSuperAdmin && selectedIds.size > 0 && (
@@ -493,9 +538,11 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                         <Badge variant="outline" className={CRM_STATUS_COLORS[c.status]}>
                           {CRM_STATUS_LABELS[c.status] || c.status}
                         </Badge>
-                        <span className="text-xs text-slate-500">
-                          {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
-                        </span>
+                        <OasisScoreBadge score={c.oasis_score} />
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>{c.last_seen_at ? formatRelativeTime(c.last_seen_at) : '—'}</span>
+                        <span>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</span>
                       </div>
                     </div>
                   );
@@ -514,11 +561,13 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                     />
                   </TableHead>
                 )}
-                <TableHead>Contacto</TableHead>
+                <TableHead>Participante</TableHead>
                 {isSuperAdmin && <TableHead>Organizaciones</TableHead>}
                 <TableHead>Estado</TableHead>
                 {isSuperAdmin && <TableHead>Rol</TableHead>}
-                <TableHead>Creado</TableHead>
+                {!isSuperAdmin && <TableHead>Oasis Score</TableHead>}
+                {!isSuperAdmin && <TableHead>Última Actividad</TableHead>}
+                <TableHead>Registrado</TableHead>
                 {isSuperAdmin && <TableHead className="text-right">Admin</TableHead>}
               </TableRow>
             </TableHeader>
@@ -625,6 +674,10 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                 : /* ===== Org admin: render ApiCrmContact rows ===== */
                   crmContacts.map((c) => {
                     const displayName = [c.first_name, c.last_name].filter(Boolean).join(' ') || null;
+                    const statusDot =
+                      c.status === 'active'   ? 'bg-emerald-400' :
+                      c.status === 'risk'     ? 'bg-amber-400' :
+                                                'bg-slate-300';
                     return (
                       <TableRow
                         key={c.user_id}
@@ -633,12 +686,15 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={c.avatar_url || undefined} />
-                              <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
-                                {getInitials(displayName, c.email)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={c.avatar_url || undefined} />
+                                <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                  {getInitials(displayName, c.email)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${statusDot}`} />
+                            </div>
                             <div>
                               <div className="font-medium text-sm">{displayName || 'Sin nombre'}</div>
                               <div className="text-xs text-slate-500">{c.email}</div>
@@ -649,6 +705,12 @@ export function ContactsTab({ orgId }: ContactsTabProps) {
                           <Badge variant="outline" className={CRM_STATUS_COLORS[c.status]}>
                             {CRM_STATUS_LABELS[c.status] || c.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <OasisScoreBadge score={c.oasis_score} />
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-xs">
+                          {c.last_seen_at ? formatRelativeTime(c.last_seen_at) : '—'}
                         </TableCell>
                         <TableCell className="text-slate-500 text-xs">
                           {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}

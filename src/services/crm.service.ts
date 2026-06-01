@@ -17,6 +17,7 @@ import {
   ApiCrmOrgProfile,
   ApiCrmOrgProfileUpdate,
   ApiContactEventParticipation,
+  ApiContactStatus,
 } from '@/types/api.types';
 
 class CrmService {
@@ -25,6 +26,7 @@ class CrmService {
     limit = 50,
     search?: string,
     orgId?: string,
+    status?: ApiContactStatus,
   ): Promise<ApiCrmContactsResponse> {
     const params = new URLSearchParams({
       offset: String(offset),
@@ -32,6 +34,7 @@ class CrmService {
     });
     if (search) params.set('search', search);
     if (orgId) params.set('organization_id', orgId);
+    if (status) params.set('status', status);
     return apiClient.get<ApiCrmContactsResponse>(
       `/crm/contacts/?${params.toString()}`,
     );
