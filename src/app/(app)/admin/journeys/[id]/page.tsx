@@ -16,12 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import {
   ChevronLeft,
   Plus,
@@ -1504,336 +1505,411 @@ export default function JourneyEditorPage() {
 
       </div>{/* end two-column layout */}
 
-      {/* Step Dialog */}
-      <Dialog open={stepDialogOpen} onOpenChange={(open) => {
+      {/* Step Sheet — wide side panel */}
+      <Sheet open={stepDialogOpen} onOpenChange={(open) => {
         setStepDialogOpen(open);
         if (!open) setConfigsByType({});
       }}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{editingStep ? 'Editar Step' : 'Nuevo Step'}</DialogTitle>
-            <DialogDescription>
-              Configura los detalles del step.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="step-title">Título</Label>
-              <Input
-                id="step-title"
-                value={stepForm.title}
-                onChange={(e) => setStepForm({ ...stepForm, title: e.target.value })}
-                placeholder="Ej: Bienvenida al programa"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="step-type">Tipo de Step</Label>
-              <Select
-                value={stepForm.type}
-                onValueChange={(value: ApiStepType) => {
-                  const currentType = stepForm.type;
-                  if (value === currentType) return;
-                  // Save current config keyed by current type
-                  const currentDescription = stepForm.config?.description;
-                  setConfigsByType((prev) => ({ ...prev, [currentType]: stepForm.config || {} }));
-                  // Restore cached config for new type, or start fresh
-                  const restored = configsByType[value] || {};
-                  // Carry over description if the restored config doesn't have one
-                  if (currentDescription && !restored.description) {
-                    restored.description = currentDescription;
-                  }
-                  setStepForm({ ...stepForm, type: value, config: restored });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STEP_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className="h-4 w-4" />
-                        <span>{option.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="step-points">Puntos base</Label>
-              <Input
-                id="step-points"
-                type="number"
-                min="0"
-                value={stepForm.gamification_rules?.base_points || 0}
-                onChange={(e) =>
-                  setStepForm({
-                    ...stepForm,
-                    gamification_rules: {
-                      ...stepForm.gamification_rules,
-                      base_points: parseInt(e.target.value) || 0,
-                    },
-                  })
-                }
-              />
-            </div>
-
-            {/* URL field for content_view (videos only) */}
-            {stepForm.type === 'content_view' && (
-              <StepUrlField
-                label="URL del video"
-                placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
-                value={getStepResourceUrl(stepForm.config, 'content_view')}
-                onChange={(_url, detected) => {
-                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
-                  delete newConfig.video_url;
-                  if (detected) {
-                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
-                  } else {
-                    delete newConfig.resource;
-                  }
-                  setStepForm({ ...stepForm, config: newConfig });
-                }}
-              />
-            )}
-
-            {/* URL field for resource_consumption (PDF, Google Slides, Google Drive) */}
-            {stepForm.type === 'resource_consumption' && (
-              <StepUrlField
-                label="URL del recurso"
-                placeholder="Google Slides, PDF, Google Drive..."
-                value={getStepResourceUrl(stepForm.config, 'resource_consumption')}
-                onChange={(_url, detected) => {
-                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
-                  delete newConfig.url;
-                  if (detected) {
-                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
-                  } else {
-                    delete newConfig.resource;
-                  }
-                  setStepForm({ ...stepForm, config: newConfig });
-                }}
-              />
-            )}
-
-            {/* URL field for survey */}
-            {stepForm.type === 'survey' && (
-              <StepUrlField
-                label="URL del formulario"
-                placeholder="https://form.typeform.com/to/..."
-                value={getStepResourceUrl(stepForm.config, 'survey')}
-                onChange={(_url, detected) => {
-                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
-                  delete newConfig.form_url;
-                  if (detected) {
-                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
-                  } else {
-                    delete newConfig.resource;
-                  }
-                  setStepForm({ ...stepForm, config: newConfig });
-                }}
-              />
-            )}
-
-            {/* URL field for milestone/desafío (optional — can be presencial) */}
-            {stepForm.type === 'milestone' && (
-              <StepUrlField
-                label="URL del desafío (opcional)"
-                placeholder="Kahoot, Quizizz, Genially... o dejar vacío si es presencial"
-                value={getStepResourceUrl(stepForm.config, 'milestone')}
-                onChange={(_url, detected) => {
-                  const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
-                  delete newConfig.url;
-                  if (detected) {
-                    newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
-                  } else {
-                    delete newConfig.resource;
-                  }
-                  setStepForm({ ...stepForm, config: newConfig });
-                }}
-              />
-            )}
-
-            {/* Profile field configuration */}
-            {stepForm.type === 'profile_field' && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Campos de perfil CRM</Label>
-                  <p className="text-xs text-slate-500">
-                    Selecciona los campos que el miembro deberá completar en este step.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {ALL_PROFILE_FIELDS.map(field => {
-                      const selected = ((stepForm.config?.field_names as string[]) || []).includes(field);
-                      return (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => {
-                            const current = (stepForm.config?.field_names as string[]) || [];
-                            const updated = selected
-                              ? current.filter(f => f !== field)
-                              : [...current, field];
-                            setStepForm({
-                              ...stepForm,
-                              config: { ...stepForm.config, field_names: updated },
-                            });
-                          }}
-                          className={cn(
-                            'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
-                            selected
-                              ? 'bg-summer-sky/10 border-summer-sky text-summer-sky'
-                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                          )}
-                        >
-                          {PROFILE_FIELD_LABELS[field]}
-                        </button>
-                      );
-                    })}
+        <SheetContent
+          side="right"
+          className="!max-w-[920px] w-full p-0 flex flex-col gap-0"
+        >
+          {/* Header */}
+          <SheetHeader className="px-6 py-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3">
+              {(() => {
+                const Icon = getStepIcon(stepForm.type, stepForm.config);
+                return (
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-summer-pink/20 to-summer-lavender/20 flex items-center justify-center shrink-0">
+                    <Icon className="h-4 w-4 text-summer-pink" />
                   </div>
-                </div>
+                );
+              })()}
+              <div>
+                <SheetTitle className="text-base font-semibold text-slate-900">
+                  {editingStep ? 'Editar Step' : 'Nuevo Step'}
+                </SheetTitle>
+                <SheetDescription className="text-xs text-slate-400 mt-0">
+                  {editingStep ? `Modificando "${editingStep.title}"` : 'Configura los detalles del nuevo step'}
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
 
-                {/* Preview of field options for selected fields */}
-                {((stepForm.config?.field_names as string[]) || []).length > 0 && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
-                    <p className="text-xs font-semibold text-slate-600">Vista previa de opciones</p>
-                    {((stepForm.config?.field_names as string[]) || []).map(fieldName => {
-                      const opts = fieldOptions[fieldName] || [];
-                      const label = PROFILE_FIELD_LABELS[fieldName] || fieldName;
-                      return (
-                        <div key={fieldName} className="space-y-1">
-                          <p className="text-xs font-medium text-slate-700">{label}</p>
-                          {opts.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {opts.map(o => (
-                                <span key={o.id} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">
-                                  {o.label}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-400 italic">
-                              {['country', 'state', 'city'].includes(fieldName)
-                                ? 'Usa selector de ubicación'
-                                : ['phone', 'company', 'birth_date'].includes(fieldName)
-                                ? 'Campo de texto libre'
-                                : 'Sin opciones configuradas en CRM'}
-                            </p>
-                          )}
+          {/* Body — two columns */}
+          <div className="flex-1 overflow-hidden flex flex-col md:flex-row min-h-0">
+
+            {/* LEFT: Identity + Scheduling */}
+            <div className="md:w-[360px] shrink-0 overflow-y-auto border-r border-slate-100 p-6 space-y-5">
+
+              {/* Title */}
+              <div className="space-y-1.5">
+                <Label htmlFor="step-title" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Título</Label>
+                <Input
+                  id="step-title"
+                  value={stepForm.title}
+                  onChange={(e) => setStepForm({ ...stepForm, title: e.target.value })}
+                  placeholder="Ej: Bienvenida al programa"
+                  className="text-sm"
+                  required
+                />
+              </div>
+
+              {/* Type */}
+              <div className="space-y-1.5">
+                <Label htmlFor="step-type" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo de Step</Label>
+                <Select
+                  value={stepForm.type}
+                  onValueChange={(value: ApiStepType) => {
+                    const currentType = stepForm.type;
+                    if (value === currentType) return;
+                    const currentDescription = stepForm.config?.description;
+                    setConfigsByType((prev) => ({ ...prev, [currentType]: stepForm.config || {} }));
+                    const restored = configsByType[value] || {};
+                    if (currentDescription && !restored.description) {
+                      restored.description = currentDescription;
+                    }
+                    setStepForm({ ...stepForm, type: value, config: restored });
+                  }}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STEP_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          <option.icon className="h-4 w-4" />
+                          <span>{option.label}</span>
                         </div>
-                      );
-                    })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Points */}
+              <div className="space-y-1.5">
+                <Label htmlFor="step-points" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Puntos base</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="step-points"
+                    type="number"
+                    min="0"
+                    value={stepForm.gamification_rules?.base_points || 0}
+                    onChange={(e) =>
+                      setStepForm({
+                        ...stepForm,
+                        gamification_rules: {
+                          ...stepForm.gamification_rules,
+                          base_points: parseInt(e.target.value) || 0,
+                        },
+                      })
+                    }
+                    className="w-28 text-sm"
+                  />
+                  <span className="text-sm text-slate-400">pts al completar</span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <Label htmlFor="step-description" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Descripción <span className="font-normal normal-case">(opcional)</span></Label>
+                <Textarea
+                  id="step-description"
+                  value={(stepForm.config?.description as string) || ''}
+                  onChange={(e) =>
+                    setStepForm({
+                      ...stepForm,
+                      config: { ...stepForm.config, description: e.target.value },
+                    })
+                  }
+                  placeholder="Describe qué debe hacer el participante..."
+                  rows={3}
+                  className="text-sm resize-none"
+                />
+              </div>
+
+              {/* Scheduling */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-slate-100" />
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    Disponibilidad
+                  </span>
+                  <div className="h-px flex-1 bg-slate-100" />
+                </div>
+
+                <div className="space-y-1.5">
+                  {(['none', 'date', 'hours_start', 'hours_previous'] as const).map((mode) => (
+                    <label
+                      key={mode}
+                      className={cn(
+                        'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors',
+                        stepScheduleMode === mode
+                          ? 'bg-summer-lavender/8 border-summer-lavender/40'
+                          : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="schedule-mode"
+                        value={mode}
+                        checked={stepScheduleMode === mode}
+                        onChange={() => setStepScheduleMode(mode)}
+                        className="mt-0.5 h-4 w-4 text-summer-pink border-slate-300 focus:ring-summer-pink shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-sm leading-tight', stepScheduleMode === mode ? 'text-slate-800 font-medium' : 'text-slate-600')}>
+                          {mode === 'none' && 'Sin restricción'}
+                          {mode === 'date' && 'Fecha y hora específica'}
+                          {mode === 'hours_start' && 'Horas desde el inicio'}
+                          {mode === 'hours_previous' && 'Horas desde el step anterior'}
+                        </p>
+                        {mode === 'none' && (
+                          <p className="text-xs text-slate-400 mt-0.5">Se habilita según progreso del participante</p>
+                        )}
+                        {mode === 'date' && stepScheduleMode === 'date' && (
+                          <input
+                            type="datetime-local"
+                            value={stepAvailableFrom}
+                            onChange={e => setStepAvailableFrom(e.target.value)}
+                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                          />
+                        )}
+                        {mode === 'hours_start' && stepScheduleMode === 'hours_start' && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={stepHoursAfterStart}
+                              onChange={e => setStepHoursAfterStart(parseInt(e.target.value) || 1)}
+                              className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                            />
+                            <span className="text-sm text-slate-500">horas después del inicio</span>
+                          </div>
+                        )}
+                        {mode === 'hours_previous' && stepScheduleMode === 'hours_previous' && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={stepHoursAfterPrevious}
+                              onChange={e => setStepHoursAfterPrevious(parseInt(e.target.value) || 1)}
+                              className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                            />
+                            <span className="text-sm text-slate-500">horas después del anterior</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: Content configuration */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* URL-based types */}
+              {stepForm.type === 'content_view' && (
+                <StepUrlField
+                  label="URL del video"
+                  placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
+                  value={getStepResourceUrl(stepForm.config, 'content_view')}
+                  onChange={(_url, detected) => {
+                    const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                    delete newConfig.video_url;
+                    if (detected) {
+                      newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                    } else {
+                      delete newConfig.resource;
+                    }
+                    setStepForm({ ...stepForm, config: newConfig });
+                  }}
+                />
+              )}
+
+              {stepForm.type === 'resource_consumption' && (
+                <StepUrlField
+                  label="URL del recurso"
+                  placeholder="Google Slides, PDF, Google Drive..."
+                  value={getStepResourceUrl(stepForm.config, 'resource_consumption')}
+                  onChange={(_url, detected) => {
+                    const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                    delete newConfig.url;
+                    if (detected) {
+                      newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                    } else {
+                      delete newConfig.resource;
+                    }
+                    setStepForm({ ...stepForm, config: newConfig });
+                  }}
+                />
+              )}
+
+              {stepForm.type === 'survey' && (
+                <StepUrlField
+                  label="URL del formulario"
+                  placeholder="https://form.typeform.com/to/..."
+                  value={getStepResourceUrl(stepForm.config, 'survey')}
+                  onChange={(_url, detected) => {
+                    const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                    delete newConfig.form_url;
+                    if (detected) {
+                      newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                    } else {
+                      delete newConfig.resource;
+                    }
+                    setStepForm({ ...stepForm, config: newConfig });
+                  }}
+                />
+              )}
+
+              {stepForm.type === 'milestone' && (
+                <StepUrlField
+                  label="URL del desafío (opcional)"
+                  placeholder="Kahoot, Quizizz, Genially... o dejar vacío si es presencial"
+                  value={getStepResourceUrl(stepForm.config, 'milestone')}
+                  onChange={(_url, detected) => {
+                    const newConfig: Record<string, unknown> = { ...stepForm.config, description: stepForm.config?.description };
+                    delete newConfig.url;
+                    if (detected) {
+                      newConfig.resource = { type: detected.type, source_url: detected.sourceUrl, embed_url: detected.embedUrl };
+                    } else {
+                      delete newConfig.resource;
+                    }
+                    setStepForm({ ...stepForm, config: newConfig });
+                  }}
+                />
+              )}
+
+              {/* Profile field configuration */}
+              {stepForm.type === 'profile_field' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Campos de perfil CRM</Label>
+                    <p className="text-xs text-slate-400">
+                      Selecciona los campos que el miembro deberá completar en este step.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {ALL_PROFILE_FIELDS.map(field => {
+                        const selected = ((stepForm.config?.field_names as string[]) || []).includes(field);
+                        return (
+                          <button
+                            key={field}
+                            type="button"
+                            onClick={() => {
+                              const current = (stepForm.config?.field_names as string[]) || [];
+                              const updated = selected
+                                ? current.filter(f => f !== field)
+                                : [...current, field];
+                              setStepForm({
+                                ...stepForm,
+                                config: { ...stepForm.config, field_names: updated },
+                              });
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                              selected
+                                ? 'bg-summer-sky/10 border-summer-sky text-summer-sky'
+                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                            )}
+                          >
+                            {PROFILE_FIELD_LABELS[field]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="step-description">Descripción (opcional)</Label>
-              <Textarea
-                id="step-description"
-                value={(stepForm.config?.description as string) || ''}
-                onChange={(e) =>
-                  setStepForm({
-                    ...stepForm,
-                    config: { ...stepForm.config, description: e.target.value },
-                  })
-                }
-                placeholder="Describe qué debe hacer el participante..."
-                rows={3}
-              />
-            </div>
-
-            {/* Availability / Scheduling */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <Label className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                Disponibilidad
-              </Label>
-              <div className="space-y-2">
-                {(['none', 'date', 'hours_start', 'hours_previous'] as const).map((mode) => (
-                  <label key={mode} className="flex items-start gap-2.5 cursor-pointer group">
-                    <input
-                      type="radio"
-                      name="schedule-mode"
-                      value={mode}
-                      checked={stepScheduleMode === mode}
-                      onChange={() => setStepScheduleMode(mode)}
-                      className="mt-0.5 h-4 w-4 text-summer-pink border-slate-300 focus:ring-summer-pink"
-                    />
-                    <span className="text-sm text-slate-700 leading-tight">
-                      {mode === 'none' && 'Sin restricción (según progreso del participante)'}
-                      {mode === 'date' && 'Fecha y hora específica'}
-                      {mode === 'hours_start' && 'Horas después del inicio del journey/evento'}
-                      {mode === 'hours_previous' && 'Horas después del step anterior'}
-                    </span>
-                  </label>
-                ))}
-              </div>
-
-              {stepScheduleMode === 'date' && (
-                <div className="ml-6 space-y-1">
-                  <input
-                    type="datetime-local"
-                    value={stepAvailableFrom}
-                    onChange={e => setStepAvailableFrom(e.target.value)}
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-                  />
+                  {((stepForm.config?.field_names as string[]) || []).length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vista previa de opciones</p>
+                      {((stepForm.config?.field_names as string[]) || []).map(fieldName => {
+                        const opts = fieldOptions[fieldName] || [];
+                        const label = PROFILE_FIELD_LABELS[fieldName] || fieldName;
+                        return (
+                          <div key={fieldName} className="space-y-1">
+                            <p className="text-xs font-medium text-slate-700">{label}</p>
+                            {opts.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {opts.map(o => (
+                                  <span key={o.id} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">
+                                    {o.label}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400 italic">
+                                {['country', 'state', 'city'].includes(fieldName)
+                                  ? 'Usa selector de ubicación'
+                                  : ['phone', 'company', 'birth_date'].includes(fieldName)
+                                  ? 'Campo de texto libre'
+                                  : 'Sin opciones configuradas en CRM'}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {stepScheduleMode === 'hours_start' && (
-                <div className="ml-6 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={stepHoursAfterStart}
-                    onChange={e => setStepHoursAfterStart(parseInt(e.target.value) || 1)}
-                    className="w-24 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-                  />
-                  <span className="text-sm text-slate-500">horas</span>
+              {/* Empty state for types with no extra config */}
+              {(stepForm.type === 'event_attendance' || stepForm.type === 'social_interaction') && (
+                <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-8">
+                  {stepForm.type === 'event_attendance'
+                    ? <Users className="h-14 w-14 text-slate-200 mb-4" />
+                    : <MessageSquare className="h-14 w-14 text-slate-200 mb-4" />
+                  }
+                  <p className="text-sm font-medium text-slate-400">Sin configuración adicional</p>
+                  <p className="text-xs text-slate-300 mt-1 max-w-xs">
+                    {stepForm.type === 'event_attendance'
+                      ? 'La asistencia al evento se registra automáticamente vía QR o check-in.'
+                      : 'La interacción se registra cuando el participante completa la actividad.'
+                    }
+                  </p>
                 </div>
               )}
-
-              {stepScheduleMode === 'hours_previous' && (
-                <div className="ml-6 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={stepHoursAfterPrevious}
-                    onChange={e => setStepHoursAfterPrevious(parseInt(e.target.value) || 1)}
-                    className="w-24 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-                  />
-                  <span className="text-sm text-slate-500">horas</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setStepDialogOpen(false)} disabled={isSaving}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveStep} disabled={isSaving || !stepForm.title}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : editingStep ? (
-                  'Guardar cambios'
-                ) : (
-                  'Crear Step'
-                )}
-              </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Footer */}
+          <SheetFooter className="px-6 py-4 border-t border-slate-100 shrink-0">
+            <div className="flex items-center justify-between w-full">
+              <p className="text-xs text-slate-400">
+                {stepScheduleMode !== 'none' && (
+                  <span className="flex items-center gap-1.5 text-summer-lavender">
+                    <Clock className="h-3.5 w-3.5" />
+                    {stepScheduleMode === 'date' && stepAvailableFrom
+                      ? `Disponible el ${new Date(stepAvailableFrom).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`
+                      : stepScheduleMode === 'hours_start'
+                      ? `Se habilita ${stepHoursAfterStart}h después del inicio`
+                      : `Se habilita ${stepHoursAfterPrevious}h después del step anterior`
+                    }
+                  </span>
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setStepDialogOpen(false)} disabled={isSaving}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handleSaveStep} disabled={isSaving || !stepForm.title}
+                  className="bg-gradient-to-r from-summer-pink to-summer-lavender text-white hover:opacity-90 border-0">
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : editingStep ? 'Guardar cambios' : 'Crear Step'}
+                </Button>
+              </div>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
