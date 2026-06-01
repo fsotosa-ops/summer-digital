@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, Users, Building2, Settings, AlertTriangle,
-  Route, Layers, Trophy, BarChart3, SlidersHorizontal,
+  Route, Layers, Trophy, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContactsTab } from './tabs/ContactsTab';
@@ -54,11 +54,11 @@ export function CRMHub() {
         <span className="mr-2 text-xs font-semibold text-slate-400 shrink-0">
           Accesos rápidos
         </span>
+        {/* Links a módulos externos al CRM — sidebar maneja la nav interna */}
         {([
-          { label: 'Journeys',     href: '/admin/journeys',        Icon: Route        },
-          { label: 'Recursos',     href: '/admin/resources',       Icon: Layers       },
-          { label: 'Mi Org',       href: '/admin/my-organization', Icon: Building2    },
-          { label: 'Gamificación', href: '/admin/gamification',    Icon: Trophy       },
+          { label: 'Journeys',     href: '/admin/journeys',     Icon: Route  },
+          { label: 'Recursos',     href: '/admin/resources',    Icon: Layers },
+          { label: 'Gamificación', href: '/admin/gamification', Icon: Trophy },
         ] as const).map(({ label, href, Icon }) => (
           <Link
             key={href}
@@ -70,22 +70,13 @@ export function CRMHub() {
           </Link>
         ))}
         {isSuperAdmin && (
-          <>
-            <Link
-              href="/analytics"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-summer-lavender/40 hover:bg-summer-lavender/5 hover:text-summer-lavender"
-            >
-              <BarChart3 className="h-3.5 w-3.5 shrink-0" />
-              Analítica
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
-              Config
-            </Link>
-          </>
+          <Link
+            href="/analytics"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-summer-lavender/40 hover:bg-summer-lavender/5 hover:text-summer-lavender"
+          >
+            <BarChart3 className="h-3.5 w-3.5 shrink-0" />
+            Analítica
+          </Link>
         )}
       </div>
 
