@@ -7,6 +7,7 @@ import { adminService } from '@/services/admin.service';
 import { organizationService } from '@/services/organization.service';
 import { toast } from 'sonner';
 import { ApiJourneyAdminRead, ApiJourneyUpdate, ApiStepAdminRead, ApiStepCreate, ApiStepUpdate, ApiStepType, ApiOrganization, ApiRewardRead, ApiUnlockCondition, ApiFieldOption } from '@/types/api.types';
+import { utcToLocalInput, localInputToUtcIso, TIMEZONE_OPTIONS } from '@/lib/tz';
 import { crmService } from '@/services/crm.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -403,6 +404,7 @@ export default function JourneyEditorPage() {
   const [editCategory, setEditCategory] = useState('');
   const [editIsGlobal, setEditIsGlobal] = useState(false);
   const [editAvailableFrom, setEditAvailableFrom] = useState('');
+  const [editTimezone, setEditTimezone] = useState('America/Santiago');
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Org assignment management (SuperAdmin only)
@@ -514,7 +516,11 @@ export default function JourneyEditorPage() {
     setEditDescription(journey.description || '');
     setEditCategory(journey.category || '');
     setEditIsGlobal(journey.is_global ?? false);
-    setEditAvailableFrom(journey.available_from ? journey.available_from.slice(0, 16) : '');
+    const tz = journey.timezone || 'America/Santiago';
+    setEditTimezone(tz);
+    setEditAvailableFrom(
+      journey.available_from ? utcToLocalInput(journey.available_from, tz) : ''
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
@@ -599,7 +605,8 @@ export default function JourneyEditorPage() {
     // Initialize scheduling mode from step data
     if (step.available_from) {
       setStepScheduleMode('date');
-      setStepAvailableFrom(step.available_from.slice(0, 16));
+      const tz = journey?.timezone || 'America/Santiago';
+      setStepAvailableFrom(utcToLocalInput(step.available_from, tz));
     } else if (step.unlock_hours_after_start) {
       setStepScheduleMode('hours_start');
       setStepHoursAfterStart(step.unlock_hours_after_start);
@@ -619,9 +626,10 @@ export default function JourneyEditorPage() {
     if (!orgId) return;
     setIsSaving(true);
     try {
+      const tz = journey?.timezone || 'America/Santiago';
       const schedulingFields = {
         available_from: stepScheduleMode === 'date' && stepAvailableFrom
-          ? new Date(stepAvailableFrom).toISOString()
+          ? localInputToUtcIso(stepAvailableFrom, tz)
           : null,
         unlock_hours_after_start: stepScheduleMode === 'hours_start' ? stepHoursAfterStart : null,
         unlock_hours_after_previous: stepScheduleMode === 'hours_previous' ? stepHoursAfterPrevious : null,
@@ -716,7 +724,11 @@ export default function JourneyEditorPage() {
       if (journey.is_active) {
         await adminService.archiveJourney(orgId, journeyId);
       } else {
+        // "Publicar ahora" clears any scheduled available_from
         await adminService.publishJourney(orgId, journeyId);
+        if (journey.available_from) {
+          await adminService.updateJourney(orgId, journeyId, { available_from: null } as ApiJourneyUpdate);
+        }
       }
       await fetchData();
     } catch (err) {
@@ -746,8 +758,10 @@ export default function JourneyEditorPage() {
     if (editDescription !== (journey.description || '')) return true;
     if (editCategory !== (journey.category || '')) return true;
     if (editIsGlobal !== (journey.is_global ?? false)) return true;
-    const journeyAvailableFromValue = journey.available_from ? journey.available_from.slice(0, 16) : '';
-    if (editAvailableFrom !== journeyAvailableFromValue) return true;
+    if (editTimezone !== (journey.timezone || 'America/Santiago')) return true;
+    const tz = journey.timezone || 'America/Santiago';
+    const storedLocal = journey.available_from ? utcToLocalInput(journey.available_from, tz) : '';
+    if (editAvailableFrom !== storedLocal) return true;
     return false;
   })();
   const configDirty = journeyDirty || orgsDirty;
@@ -763,9 +777,17 @@ export default function JourneyEditorPage() {
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
       if (editIsGlobal !== (journey.is_global ?? false)) updates.is_global = editIsGlobal;
-      const journeyAvailableFromValue = journey.available_from ? journey.available_from.slice(0, 16) : '';
-      if (editAvailableFrom !== journeyAvailableFromValue) {
-        updates.available_from = editAvailableFrom ? new Date(editAvailableFrom).toISOString() : null;
+      if (editTimezone !== (journey.timezone || 'America/Santiago')) updates.timezone = editTimezone;
+      const tz = editTimezone || 'America/Santiago';
+      const storedLocal = journey.available_from ? utcToLocalInput(journey.available_from, tz) : '';
+      if (editAvailableFrom !== storedLocal) {
+        if (editAvailableFrom) {
+          updates.available_from = localInputToUtcIso(editAvailableFrom, tz);
+          // Programar = activar automáticamente al llegar la fecha
+          if (!journey.is_active) updates.is_active = true;
+        } else {
+          updates.available_from = null;
+        }
       }
 
       // Only send is_onboarding when category actually changed
@@ -918,14 +940,31 @@ export default function JourneyEditorPage() {
                     >
                       {journey?.title}
                     </h1>
-                    <Badge variant="outline" className={cn(
-                      'text-xs font-semibold shrink-0',
-                      journey?.is_active
-                        ? 'bg-summer-pink/10 text-summer-pink border-summer-pink'
-                        : 'bg-slate-100 text-slate-500 border-slate-200'
-                    )}>
-                      {journey?.is_active ? 'Activo' : 'Borrador'}
-                    </Badge>
+                    {(() => {
+                      const isScheduled = journey?.is_active && journey?.available_from && new Date(journey.available_from) > new Date();
+                      if (isScheduled) {
+                        const tz = journey?.timezone || 'America/Santiago';
+                        const localStr = utcToLocalInput(journey!.available_from!, tz);
+                        const d = new Date(`${localStr}:00`);
+                        const label = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        return (
+                          <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-summer-lavender/10 text-summer-lavender border-summer-lavender gap-1">
+                            <Clock size={10} />
+                            Programado · {label}
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <Badge variant="outline" className={cn(
+                          'text-xs font-semibold shrink-0',
+                          journey?.is_active
+                            ? 'bg-summer-pink/10 text-summer-pink border-summer-pink'
+                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                        )}>
+                          {journey?.is_active ? 'Activo' : 'Borrador'}
+                        </Badge>
+                      );
+                    })()}
                     {journey?.category === 'Onboarding' && (
                       <Badge variant="outline" className="text-xs font-semibold shrink-0 bg-summer-sky/10 text-summer-sky border-summer-sky">
                         Onboarding
@@ -951,26 +990,33 @@ export default function JourneyEditorPage() {
                 <Eye size={14} /> Vista Previa
               </button>
 
-              {canEdit && (
-                <button
-                  onClick={handleToggleActive}
-                  disabled={isSaving}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40',
-                    journey?.is_active
-                      ? 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                      : 'bg-gradient-to-r from-summer-teal to-cyan-500 text-white hover:opacity-90'
-                  )}
-                >
-                  {isSaving
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : journey?.is_active
-                    ? <Archive size={14} />
-                    : <Globe size={14} />
-                  }
-                  {journey?.is_active ? 'Archivar' : 'Publicar'}
-                </button>
-              )}
+              {canEdit && (() => {
+                const isScheduled = journey?.is_active && journey?.available_from && new Date(journey.available_from) > new Date();
+                return (
+                  <button
+                    onClick={handleToggleActive}
+                    disabled={isSaving}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-40',
+                      journey?.is_active
+                        ? 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : isScheduled
+                        ? 'bg-gradient-to-r from-summer-lavender to-purple-500 text-white hover:opacity-90'
+                        : 'bg-gradient-to-r from-summer-teal to-cyan-500 text-white hover:opacity-90'
+                    )}
+                  >
+                    {isSaving
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : journey?.is_active
+                      ? <Archive size={14} />
+                      : isScheduled
+                      ? <Clock size={14} />
+                      : <Globe size={14} />
+                    }
+                    {journey?.is_active ? 'Archivar' : isScheduled ? 'Publicar ahora' : 'Publicar'}
+                  </button>
+                );
+              })()}
             </div>
           </div>
 
@@ -1052,8 +1098,30 @@ export default function JourneyEditorPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5 text-slate-400" />
+                Timezone del evento
+              </Label>
+              <select
+                value={editTimezone}
+                onChange={e => {
+                  const newTz = e.target.value;
+                  // Re-convert available_from to new timezone for display
+                  if (editAvailableFrom && journey?.available_from) {
+                    setEditAvailableFrom(utcToLocalInput(journey.available_from, newTz));
+                  }
+                  setEditTimezone(newTz);
+                }}
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+              >
+                {TIMEZONE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                Fecha de apertura (opcional)
+                Apertura de inscripciones (opcional)
               </Label>
               <input
                 type="datetime-local"
@@ -1062,7 +1130,7 @@ export default function JourneyEditorPage() {
                 className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
               />
               <p className="text-xs text-slate-400">
-                Antes de esta fecha el journey no aparecerá para los participantes.
+                Hora en <span className="font-medium text-slate-500">{TIMEZONE_OPTIONS.find(o => o.value === editTimezone)?.label ?? editTimezone}</span>. El journey se activa automáticamente en esta fecha.
               </p>
             </div>
           </div>
@@ -1671,12 +1739,17 @@ export default function JourneyEditorPage() {
                           <p className="text-xs text-slate-400 mt-0.5">Se habilita según progreso del participante</p>
                         )}
                         {mode === 'date' && stepScheduleMode === 'date' && (
-                          <input
-                            type="datetime-local"
-                            value={stepAvailableFrom}
-                            onChange={e => setStepAvailableFrom(e.target.value)}
-                            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-                          />
+                          <div className="mt-2 space-y-1">
+                            <input
+                              type="datetime-local"
+                              value={stepAvailableFrom}
+                              onChange={e => setStepAvailableFrom(e.target.value)}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                            />
+                            <p className="text-xs text-slate-400">
+                              Hora en {TIMEZONE_OPTIONS.find(o => o.value === (journey?.timezone || 'America/Santiago'))?.label ?? (journey?.timezone || 'America/Santiago')}
+                            </p>
+                          </div>
                         )}
                         {mode === 'hours_start' && stepScheduleMode === 'hours_start' && (
                           <div className="mt-2 flex items-center gap-2">
@@ -1884,7 +1957,12 @@ export default function JourneyEditorPage() {
                   <span className="flex items-center gap-1.5 text-summer-lavender">
                     <Clock className="h-3.5 w-3.5" />
                     {stepScheduleMode === 'date' && stepAvailableFrom
-                      ? `Disponible el ${new Date(stepAvailableFrom).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`
+                      ? (() => {
+                          const tz = journey?.timezone || 'America/Santiago';
+                          const tzLabel = TIMEZONE_OPTIONS.find(o => o.value === tz)?.label ?? tz;
+                          const d = new Date(`${stepAvailableFrom}:00`);
+                          return `${d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })} ${d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} (${tzLabel})`;
+                        })()
                       : stepScheduleMode === 'hours_start'
                       ? `Se habilita ${stepHoursAfterStart}h después del inicio`
                       : `Se habilita ${stepHoursAfterPrevious}h después del step anterior`

@@ -210,6 +210,7 @@ export interface ApiJourneyAdminRead {
   is_active: boolean;
   is_global?: boolean;
   available_from?: string | null;
+  timezone?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -337,6 +338,7 @@ export interface ApiJourneyUpdate {
   is_active?: boolean;
   is_global?: boolean;
   available_from?: string | null;
+  timezone?: string;
   metadata?: Record<string, unknown>;
   is_onboarding?: boolean | null;
 }
