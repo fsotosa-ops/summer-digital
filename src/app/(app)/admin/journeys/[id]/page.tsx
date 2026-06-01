@@ -1061,78 +1061,104 @@ export default function JourneyEditorPage() {
 
         {/* Config card — always visible in sidebar */}
         {canEdit && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-4">
-            <div className="space-y-1.5">
-              <Label>Descripción</Label>
-              <Textarea
-                value={editDescription}
-                onChange={e => setEditDescription(e.target.value)}
-                placeholder="Describe el objetivo del journey..."
-                rows={2}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Categoría</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {['Onboarding', 'Talleres', 'Habilidades', 'Networking', 'Otro'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setEditCategory(editCategory === cat ? '' : cat)}
-                    className={cn(
-                      'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
-                      editCategory === cat
-                        ? 'bg-summer-pink/10 border-summer-pink text-summer-pink'
-                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                    )}
-                  >
-                    {cat}
-                  </button>
-                ))}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-100">
+
+            {/* Description + Category */}
+            <div className="p-4 space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500 font-medium">Descripción</Label>
+                <Textarea
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  placeholder="Describe el objetivo del journey..."
+                  rows={2}
+                  className="text-sm resize-none"
+                />
               </div>
-              {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
-                <p className="text-xs text-summer-sky mt-1">
-                  Al guardar se agregarán steps de perfil CRM.
-                </p>
-              )}
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500 font-medium">Categoría</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Onboarding', 'Talleres', 'Habilidades', 'Networking', 'Otro'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setEditCategory(editCategory === cat ? '' : cat)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                        editCategory === cat
+                          ? 'bg-summer-pink/10 border-summer-pink text-summer-pink'
+                          : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                {editCategory === 'Onboarding' && editCategory !== (journey?.category || '') && (
+                  <p className="text-xs text-summer-sky">
+                    Al guardar se agregarán steps de perfil CRM.
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5 text-slate-400" />
-                Timezone del evento
-              </Label>
-              <select
-                value={editTimezone}
-                onChange={e => {
-                  const newTz = e.target.value;
-                  // Re-convert available_from to new timezone for display
-                  if (editAvailableFrom && journey?.available_from) {
-                    setEditAvailableFrom(utcToLocalInput(journey.available_from, newTz));
-                  }
-                  setEditTimezone(newTz);
-                }}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-              >
-                {TIMEZONE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+
+            {/* Scheduling sub-section */}
+            <div className="p-4 space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-summer-lavender" />
+                <span className="text-xs font-semibold text-slate-600">Programación</span>
+              </div>
+
+              {/* Timezone */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500 font-medium">Timezone</Label>
+                <Select
+                  value={editTimezone}
+                  onValueChange={(newTz) => {
+                    if (editAvailableFrom && journey?.available_from) {
+                      setEditAvailableFrom(utcToLocalInput(journey.available_from, newTz));
+                    }
+                    setEditTimezone(newTz);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Open date */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-500 font-medium">
+                  Apertura de inscripciones
+                  <span className="ml-1 text-slate-400 font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={editAvailableFrom}
+                  onChange={e => setEditAvailableFrom(e.target.value)}
+                  className="h-8 text-sm"
+                />
+                {editAvailableFrom ? (
+                  <p className="text-xs text-summer-lavender flex items-center gap-1">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    El journey se activará automáticamente.
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    Si no se configura, se abre al publicar.
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                Apertura de inscripciones (opcional)
-              </Label>
-              <input
-                type="datetime-local"
-                value={editAvailableFrom}
-                onChange={e => setEditAvailableFrom(e.target.value)}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
-              />
-              <p className="text-xs text-slate-400">
-                Hora en <span className="font-medium text-slate-500">{TIMEZONE_OPTIONS.find(o => o.value === editTimezone)?.label ?? editTimezone}</span>. El journey se activa automáticamente en esta fecha.
-              </p>
-            </div>
+
           </div>
         )}
 
@@ -1740,11 +1766,11 @@ export default function JourneyEditorPage() {
                         )}
                         {mode === 'date' && stepScheduleMode === 'date' && (
                           <div className="mt-2 space-y-1">
-                            <input
+                            <Input
                               type="datetime-local"
                               value={stepAvailableFrom}
                               onChange={e => setStepAvailableFrom(e.target.value)}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                              className="h-8 text-sm"
                             />
                             <p className="text-xs text-slate-400">
                               Hora en {TIMEZONE_OPTIONS.find(o => o.value === (journey?.timezone || 'America/Santiago'))?.label ?? (journey?.timezone || 'America/Santiago')}
@@ -1753,24 +1779,24 @@ export default function JourneyEditorPage() {
                         )}
                         {mode === 'hours_start' && stepScheduleMode === 'hours_start' && (
                           <div className="mt-2 flex items-center gap-2">
-                            <input
+                            <Input
                               type="number"
                               min="1"
                               value={stepHoursAfterStart}
                               onChange={e => setStepHoursAfterStart(parseInt(e.target.value) || 1)}
-                              className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                              className="h-8 w-20 text-sm"
                             />
                             <span className="text-sm text-slate-500">horas después del inicio</span>
                           </div>
                         )}
                         {mode === 'hours_previous' && stepScheduleMode === 'hours_previous' && (
                           <div className="mt-2 flex items-center gap-2">
-                            <input
+                            <Input
                               type="number"
                               min="1"
                               value={stepHoursAfterPrevious}
                               onChange={e => setStepHoursAfterPrevious(parseInt(e.target.value) || 1)}
-                              className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                              className="h-8 w-20 text-sm"
                             />
                             <span className="text-sm text-slate-500">horas después del anterior</span>
                           </div>
