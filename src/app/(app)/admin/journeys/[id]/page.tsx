@@ -51,6 +51,8 @@ import {
   Trophy,
   ImageIcon,
   User,
+  Clock,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -96,6 +98,20 @@ const PROFILE_FIELD_LABELS: Record<string, string> = {
 };
 
 const ALL_PROFILE_FIELDS = Object.keys(PROFILE_FIELD_LABELS);
+
+function formatStepScheduleChip(step: ApiStepAdminRead): string | null {
+  if (step.available_from) {
+    const d = new Date(step.available_from);
+    return `📅 ${d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  if (step.unlock_hours_after_start) {
+    return `⏱ ${step.unlock_hours_after_start}h después del inicio`;
+  }
+  if (step.unlock_hours_after_previous) {
+    return `⏱ ${step.unlock_hours_after_previous}h después del step anterior`;
+  }
+  return null;
+}
 
 function generateSlug(title: string) {
   return title
@@ -364,6 +380,13 @@ export default function JourneyEditorPage() {
   // CRM field options for profile_field steps
   const [fieldOptions, setFieldOptions] = useState<Record<string, ApiFieldOption[]>>({});
 
+  // Step scheduling state
+  type StepScheduleMode = 'none' | 'date' | 'hours_start' | 'hours_previous';
+  const [stepScheduleMode, setStepScheduleMode] = useState<StepScheduleMode>('none');
+  const [stepAvailableFrom, setStepAvailableFrom] = useState('');
+  const [stepHoursAfterStart, setStepHoursAfterStart] = useState(24);
+  const [stepHoursAfterPrevious, setStepHoursAfterPrevious] = useState(24);
+
   // Rewards (read-only view)
   const [rewards, setRewards] = useState<ApiRewardRead[]>([]);
   const [rewardsLoading, setRewardsLoading] = useState(false);
@@ -378,6 +401,7 @@ export default function JourneyEditorPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editIsGlobal, setEditIsGlobal] = useState(false);
+  const [editAvailableFrom, setEditAvailableFrom] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Org assignment management (SuperAdmin only)
@@ -489,6 +513,7 @@ export default function JourneyEditorPage() {
     setEditDescription(journey.description || '');
     setEditCategory(journey.category || '');
     setEditIsGlobal(journey.is_global ?? false);
+    setEditAvailableFrom(journey.available_from ? journey.available_from.slice(0, 16) : '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journey?.id, orgId]);
 
@@ -554,6 +579,10 @@ export default function JourneyEditorPage() {
       gamification_rules: { base_points: 10 },
     });
     setConfigsByType({});
+    setStepScheduleMode('none');
+    setStepAvailableFrom('');
+    setStepHoursAfterStart(24);
+    setStepHoursAfterPrevious(24);
     setStepDialogOpen(true);
   };
 
@@ -566,6 +595,22 @@ export default function JourneyEditorPage() {
       gamification_rules: step.gamification_rules || { base_points: 10 },
     });
     setConfigsByType({ [step.type]: step.config || {} });
+    // Initialize scheduling mode from step data
+    if (step.available_from) {
+      setStepScheduleMode('date');
+      setStepAvailableFrom(step.available_from.slice(0, 16));
+    } else if (step.unlock_hours_after_start) {
+      setStepScheduleMode('hours_start');
+      setStepHoursAfterStart(step.unlock_hours_after_start);
+    } else if (step.unlock_hours_after_previous) {
+      setStepScheduleMode('hours_previous');
+      setStepHoursAfterPrevious(step.unlock_hours_after_previous);
+    } else {
+      setStepScheduleMode('none');
+      setStepAvailableFrom('');
+      setStepHoursAfterStart(24);
+      setStepHoursAfterPrevious(24);
+    }
     setStepDialogOpen(true);
   };
 
@@ -573,16 +618,24 @@ export default function JourneyEditorPage() {
     if (!orgId) return;
     setIsSaving(true);
     try {
+      const schedulingFields = {
+        available_from: stepScheduleMode === 'date' && stepAvailableFrom
+          ? new Date(stepAvailableFrom).toISOString()
+          : null,
+        unlock_hours_after_start: stepScheduleMode === 'hours_start' ? stepHoursAfterStart : null,
+        unlock_hours_after_previous: stepScheduleMode === 'hours_previous' ? stepHoursAfterPrevious : null,
+      };
       if (editingStep) {
         const updateData: ApiStepUpdate = {
           title: stepForm.title,
           type: stepForm.type,
           config: stepForm.config,
           gamification_rules: stepForm.gamification_rules,
+          ...schedulingFields,
         };
         await adminService.updateStep(orgId, journeyId, editingStep.id, updateData);
       } else {
-        await adminService.createStep(orgId, journeyId, stepForm);
+        await adminService.createStep(orgId, journeyId, { ...stepForm, ...schedulingFields });
       }
       setStepDialogOpen(false);
       await fetchData();
@@ -692,6 +745,8 @@ export default function JourneyEditorPage() {
     if (editDescription !== (journey.description || '')) return true;
     if (editCategory !== (journey.category || '')) return true;
     if (editIsGlobal !== (journey.is_global ?? false)) return true;
+    const journeyAvailableFromValue = journey.available_from ? journey.available_from.slice(0, 16) : '';
+    if (editAvailableFrom !== journeyAvailableFromValue) return true;
     return false;
   })();
   const configDirty = journeyDirty || orgsDirty;
@@ -707,6 +762,10 @@ export default function JourneyEditorPage() {
       if (editDescription !== (journey.description || '')) updates.description = editDescription || null;
       if (editCategory !== (journey.category || '')) updates.category = editCategory || null;
       if (editIsGlobal !== (journey.is_global ?? false)) updates.is_global = editIsGlobal;
+      const journeyAvailableFromValue = journey.available_from ? journey.available_from.slice(0, 16) : '';
+      if (editAvailableFrom !== journeyAvailableFromValue) {
+        updates.available_from = editAvailableFrom ? new Date(editAvailableFrom).toISOString() : null;
+      }
 
       // Only send is_onboarding when category actually changed
       if (editCategory !== (journey.category || '')) {
@@ -990,6 +1049,21 @@ export default function JourneyEditorPage() {
                 </p>
               )}
             </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                Fecha de apertura (opcional)
+              </Label>
+              <input
+                type="datetime-local"
+                value={editAvailableFrom}
+                onChange={e => setEditAvailableFrom(e.target.value)}
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+              />
+              <p className="text-xs text-slate-400">
+                Antes de esta fecha el journey no aparecerá para los participantes.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1258,7 +1332,14 @@ export default function JourneyEditorPage() {
                           </span>
                         </div>
                         {index < steps.length - 1 && (
-                          <div className="w-4 h-0.5 bg-slate-300 rounded-full shrink-0 mt-[18px]" />
+                          <div className="flex flex-col items-center shrink-0 mt-[18px]">
+                            <div className="w-4 h-0.5 bg-slate-300 rounded-full" />
+                            {formatStepScheduleChip(steps[index + 1]) && (
+                              <span className="text-[8px] font-semibold text-summer-lavender whitespace-nowrap mt-0.5">
+                                {formatStepScheduleChip(steps[index + 1])!.split(' ')[0]}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -1298,6 +1379,28 @@ export default function JourneyEditorPage() {
                     );
                   })}
                 </svg>
+
+                {/* Delay chips between nodes */}
+                {steps.map((step, index) => {
+                  if (index === steps.length - 1) return null;
+                  const nextStep = steps[index + 1];
+                  const chip = formatStepScheduleChip(nextStep);
+                  if (!chip) return null;
+                  const x1 = steps.length === 1 ? 50 : 10 + (80 / (steps.length - 1)) * index;
+                  const x2 = steps.length === 1 ? 50 : 10 + (80 / (steps.length - 1)) * (index + 1);
+                  const midX = (x1 + x2) / 2;
+                  return (
+                    <div
+                      key={`chip-${step.id}`}
+                      className="absolute -translate-x-1/2 z-20 pointer-events-none"
+                      style={{ left: `${midX}%`, top: 'calc(50% - 22px)' }}
+                    >
+                      <span className="text-[10px] font-semibold text-summer-lavender bg-white border border-summer-lavender/40 px-1.5 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                        {chip}
+                      </span>
+                    </div>
+                  );
+                })}
 
                 {/* Step Nodes */}
                 {steps.map((step, index) => {
@@ -1351,7 +1454,7 @@ export default function JourneyEditorPage() {
               </div>
 
               {/* Step List with Drag & Drop */}
-              <div className="mt-6 space-y-2">
+              <div className="mt-6 space-y-0">
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -1361,15 +1464,35 @@ export default function JourneyEditorPage() {
                     items={steps.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {steps.map((step) => (
-                      <SortableStepItem
-                        key={step.id}
-                        step={step}
-                        onEdit={openEditDialog}
-                        onDelete={handleDeleteStep}
-                        readOnly={!canEdit}
-                      />
-                    ))}
+                    {steps.map((step, idx) => {
+                      const chip = formatStepScheduleChip(step);
+                      return (
+                        <div key={step.id}>
+                          {/* Delay chip shown above steps that have scheduling (except the first) */}
+                          {idx > 0 && chip && (
+                            <div className="flex items-center gap-2 my-1 ml-11">
+                              <div className="w-px h-3 bg-slate-200" />
+                              <span className="text-xs font-medium text-summer-lavender bg-summer-lavender/10 border border-summer-lavender/20 px-2 py-0.5 rounded-full">
+                                {chip}
+                              </span>
+                            </div>
+                          )}
+                          {idx > 0 && !chip && (
+                            <div className="flex items-center ml-11 my-0.5">
+                              <div className="w-px h-3 bg-slate-200" />
+                            </div>
+                          )}
+                          <div className={idx > 0 ? '' : ''}>
+                            <SortableStepItem
+                              step={step}
+                              onEdit={openEditDialog}
+                              onDelete={handleDeleteStep}
+                              readOnly={!canEdit}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </SortableContext>
                 </DndContext>
               </div>
@@ -1624,6 +1747,71 @@ export default function JourneyEditorPage() {
                 placeholder="Describe qué debe hacer el participante..."
                 rows={3}
               />
+            </div>
+
+            {/* Availability / Scheduling */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <Label className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-slate-400" />
+                Disponibilidad
+              </Label>
+              <div className="space-y-2">
+                {(['none', 'date', 'hours_start', 'hours_previous'] as const).map((mode) => (
+                  <label key={mode} className="flex items-start gap-2.5 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="schedule-mode"
+                      value={mode}
+                      checked={stepScheduleMode === mode}
+                      onChange={() => setStepScheduleMode(mode)}
+                      className="mt-0.5 h-4 w-4 text-summer-pink border-slate-300 focus:ring-summer-pink"
+                    />
+                    <span className="text-sm text-slate-700 leading-tight">
+                      {mode === 'none' && 'Sin restricción (según progreso del participante)'}
+                      {mode === 'date' && 'Fecha y hora específica'}
+                      {mode === 'hours_start' && 'Horas después del inicio del journey/evento'}
+                      {mode === 'hours_previous' && 'Horas después del step anterior'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {stepScheduleMode === 'date' && (
+                <div className="ml-6 space-y-1">
+                  <input
+                    type="datetime-local"
+                    value={stepAvailableFrom}
+                    onChange={e => setStepAvailableFrom(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                  />
+                </div>
+              )}
+
+              {stepScheduleMode === 'hours_start' && (
+                <div className="ml-6 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={stepHoursAfterStart}
+                    onChange={e => setStepHoursAfterStart(parseInt(e.target.value) || 1)}
+                    className="w-24 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                  />
+                  <span className="text-sm text-slate-500">horas</span>
+                </div>
+              )}
+
+              {stepScheduleMode === 'hours_previous' && (
+                <div className="ml-6 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={stepHoursAfterPrevious}
+                    onChange={e => setStepHoursAfterPrevious(parseInt(e.target.value) || 1)}
+                    className="w-24 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-summer-pink/30 focus:border-summer-pink"
+                  />
+                  <span className="text-sm text-slate-500">horas</span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

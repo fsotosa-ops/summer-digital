@@ -120,6 +120,7 @@ export function mapApiToJourney(
       points: basePoints || undefined,
       fieldNames,
       stepIcon,
+      available_at: stepProgress.available_at ?? undefined,
     };
   });
 

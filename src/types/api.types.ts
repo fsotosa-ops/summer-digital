@@ -194,6 +194,7 @@ export interface ApiStepProgress {
   status: ApiStepStatus;
   completed_at?: string | null;
   points_earned: number;
+  available_at?: string | null;
 }
 
 // --- Admin Journey DTOs ---
@@ -208,6 +209,7 @@ export interface ApiJourneyAdminRead {
   category?: string | null;
   is_active: boolean;
   is_global?: boolean;
+  available_from?: string | null;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -334,6 +336,7 @@ export interface ApiJourneyUpdate {
   thumbnail_url?: string | null;
   is_active?: boolean;
   is_global?: boolean;
+  available_from?: string | null;
   metadata?: Record<string, unknown>;
   is_onboarding?: boolean | null;
 }
@@ -398,6 +401,9 @@ export interface ApiStepAdminRead {
   order_index: number;
   config: Record<string, unknown>;
   gamification_rules: ApiGamificationRules;
+  available_from?: string | null;
+  unlock_hours_after_start?: number | null;
+  unlock_hours_after_previous?: number | null;
   created_at: string;
   updated_at: string;
   total_completions: number;
@@ -415,6 +421,9 @@ export interface ApiStepCreate {
   order_index?: number | null;
   config?: Record<string, unknown>;
   gamification_rules?: ApiGamificationRules;
+  available_from?: string | null;
+  unlock_hours_after_start?: number | null;
+  unlock_hours_after_previous?: number | null;
 }
 
 export interface ApiStepUpdate {
@@ -422,6 +431,9 @@ export interface ApiStepUpdate {
   type?: ApiStepType | null;
   config?: Record<string, unknown> | null;
   gamification_rules?: ApiGamificationRules | null;
+  available_from?: string | null;
+  unlock_hours_after_start?: number | null;
+  unlock_hours_after_previous?: number | null;
 }
 
 export interface ApiStepReorderItem {

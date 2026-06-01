@@ -74,6 +74,7 @@ export interface JourneyNode {
   points?: number; // Base points for completing this node
   fieldNames?: string[]; // For profile_field steps: CRM field names
   stepIcon?: string;    // For profile_field steps: emoji icon
+  available_at?: string; // ISO datetime when this locked step will become available
 }
 
 export interface Journey {
