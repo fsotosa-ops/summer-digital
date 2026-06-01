@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { LayoutDashboard, Users, Building2, Settings, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContactsTab } from './tabs/ContactsTab';
@@ -16,6 +17,7 @@ export type CRMSection = 'overview' | 'contacts' | 'orgs' | 'risk' | 'config';
 export function CRMHub() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+  const isSuperAdmin = user?.role === 'SuperAdmin';
   const [activeSection, setActiveSection] = useState<CRMSection>('overview');
 
   if (!user || !isAdmin) {
@@ -43,6 +45,43 @@ export function CRMHub() {
         icon={<Users className="h-5 w-5" />}
         className="mb-2"
       />
+
+      {/* Shortcuts strip — quick nav to admin sections */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5">
+        <span className="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+          Ir a
+        </span>
+        {[
+          { label: '⚡ Journeys',      href: '/admin/journeys'          },
+          { label: '📚 Recursos',      href: '/admin/resources'         },
+          { label: '🏢 Mi Org',        href: '/admin/my-organization'   },
+          { label: '🎮 Gamificación',  href: '/admin/gamification'      },
+        ].map(({ label, href }) => (
+          <Link
+            key={href}
+            href={href}
+            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-700"
+          >
+            {label}
+          </Link>
+        ))}
+        {isSuperAdmin && (
+          <>
+            <Link
+              href="/analytics"
+              className="rounded-md border border-indigo-800 bg-indigo-900/50 px-3 py-1 text-[11px] font-medium text-indigo-300 transition-colors hover:border-indigo-600 hover:bg-indigo-800/50"
+            >
+              📊 Analítica
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-700"
+            >
+              🔧 Config
+            </Link>
+          </>
+        )}
+      </div>
 
       <div className="flex flex-col md:flex-row min-h-[60vh] md:h-[calc(100vh-12rem)] rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* Mobile pill nav — grid layout, no horizontal scroll */}
