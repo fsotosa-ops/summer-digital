@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { crmService } from '@/services/crm.service';
 import { adminService } from '@/services/admin.service';
-import { resourceService } from '@/services/resource.service';
 import { eventService } from '@/services/event.service';
 import { ApiCrmContact, ApiOrgTrackingResponse, ApiEventDashboardSummary } from '@/types/api.types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +48,6 @@ export function ActivityTab({
   const [tracking, setTracking] = useState<ApiOrgTrackingResponse | null>(null);
   const [contacts, setContacts] = useState<ApiCrmContact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [resourceCount, setResourceCount] = useState<number | null>(null);
   const [eventSummary, setEventSummary] = useState<ApiEventDashboardSummary | null>(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,10 +56,9 @@ export function ActivityTab({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [contactsRes, trackingRes, resourcesRes, eventRes] = await Promise.allSettled([
+      const [contactsRes, trackingRes, eventRes] = await Promise.allSettled([
         crmService.listContacts(0, 30, undefined, orgId),
         orgId ? adminService.listOrgTracking(orgId) : Promise.resolve(null),
-        orgId ? resourceService.listResources(orgId, null) : Promise.resolve([]),
         orgId ? eventService.getDashboardSummary(orgId) : Promise.resolve(null),
       ]);
       if (contactsRes.status === 'fulfilled') {
@@ -70,9 +67,6 @@ export function ActivityTab({
       }
       if (trackingRes.status === 'fulfilled' && trackingRes.value) {
         setTracking(trackingRes.value);
-      }
-      if (resourcesRes.status === 'fulfilled') {
-        setResourceCount(Array.isArray(resourcesRes.value) ? resourcesRes.value.length : 0);
       }
       if (eventRes.status === 'fulfilled' && eventRes.value) {
         setEventSummary(eventRes.value);
@@ -101,7 +95,6 @@ export function ActivityTab({
     ...(tracking?.events.flatMap((e) => e.journeys) ?? []),
     ...(tracking?.unassigned_journeys ?? []),
   ];
-  const activeJourneyCount = allJourneys.filter((j) => j.is_active).length;
   const totalEnrollments    = allJourneys.reduce((s, j) => s + j.total_enrollments, 0);
   const completedEnrollments = allJourneys.reduce((s, j) => s + j.completed_enrollments, 0);
   const activeEnrollments   = allJourneys.reduce((s, j) => s + j.active_enrollments, 0);
@@ -137,60 +130,6 @@ export function ActivityTab({
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
           Actualizar
         </Button>
-      </div>
-
-      {/* ── KPI bar (moved from AdminDashboardPanel) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Usuarios activos',
-            sub: 'Total registrados',
-            value: total,
-            gradient: 'from-summer-pink to-summer-lavender',
-            border: 'border-summer-pink/30',
-          },
-          {
-            label: 'Journeys activos',
-            sub: 'Publicados',
-            value: activeJourneyCount,
-            gradient: 'from-sky-400 to-cyan-500',
-            border: 'border-sky-200',
-          },
-          {
-            label: 'Recursos',
-            sub: 'Disponibles',
-            value: resourceCount,
-            gradient: 'from-teal-400 to-emerald-500',
-            border: 'border-teal-200',
-          },
-          {
-            label: 'Completados',
-            sub: 'Total acumulado',
-            value: completedEnrollments,
-            gradient: 'from-yellow-400 to-orange-500',
-            border: 'border-yellow-200',
-          },
-        ].map(({ label, sub, value, gradient, border }) => (
-          <div
-            key={label}
-            className={`bg-white rounded-2xl border ${border} shadow-sm p-4 flex flex-col gap-2`}
-          >
-            <div className={`h-8 w-8 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-              <Users className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              {value === null ? (
-                <div className="h-8 w-14 animate-pulse rounded bg-slate-100" />
-              ) : (
-                <p className="text-2xl font-bold tabular-nums text-slate-800 leading-none">
-                  {value.toLocaleString()}
-                </p>
-              )}
-              <p className="text-sm font-medium text-slate-600 mt-1">{label}</p>
-              <p className="text-xs text-slate-400">{sub}</p>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* ── Live / upcoming event banner (conditional) ── */}

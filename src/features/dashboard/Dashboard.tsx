@@ -58,11 +58,16 @@ export function Dashboard() {
   const isSubscriber  = user.role === 'Subscriber';
   const isParticipantView = isParticipant || (isAdmin && viewMode === 'participant');
 
-  // Admins in admin mode belong in the CRM — redirect immediately
-  if (isAdmin && viewMode === 'admin') {
-    router.replace('/crm');
-    return null;
-  }
+  // Navigate to CRM in an effect — calling router.replace during render updates Router
+  // state while Dashboard is rendering, which React disallows.
+  useEffect(() => {
+    if (isAdmin && viewMode === 'admin') {
+      router.replace('/crm');
+    }
+  }, [isAdmin, viewMode, router]);
+
+  // Render nothing while redirect is in flight to avoid flashing participant content.
+  if (isAdmin && viewMode === 'admin') return null;
 
   // Hero card color tokens — participant vs admin
   const heroGradient   = isParticipantView ? 'from-summer-yellow to-summer-orange'                      : 'from-summer-pink to-summer-lavender';

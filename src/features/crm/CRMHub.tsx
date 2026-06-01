@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Building2, Settings, AlertTriangle } from 'lucide-react';
+import {
+  LayoutDashboard, Users, Building2, Settings, AlertTriangle,
+  Route, Layers, Trophy, BarChart3, SlidersHorizontal,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContactsTab } from './tabs/ContactsTab';
 import { OrganizationsTab } from './tabs/OrganizationsTab';
@@ -47,21 +50,22 @@ export function CRMHub() {
       />
 
       {/* Shortcuts strip — quick nav to admin sections */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5">
-        <span className="mr-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-          Ir a
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white border border-slate-100 shadow-sm px-4 py-3">
+        <span className="mr-2 text-xs font-semibold text-slate-400 shrink-0">
+          Accesos rápidos
         </span>
-        {[
-          { label: '⚡ Journeys',      href: '/admin/journeys'          },
-          { label: '📚 Recursos',      href: '/admin/resources'         },
-          { label: '🏢 Mi Org',        href: '/admin/my-organization'   },
-          { label: '🎮 Gamificación',  href: '/admin/gamification'      },
-        ].map(({ label, href }) => (
+        {([
+          { label: 'Journeys',     href: '/admin/journeys',        Icon: Route        },
+          { label: 'Recursos',     href: '/admin/resources',       Icon: Layers       },
+          { label: 'Mi Org',       href: '/admin/my-organization', Icon: Building2    },
+          { label: 'Gamificación', href: '/admin/gamification',    Icon: Trophy       },
+        ] as const).map(({ label, href, Icon }) => (
           <Link
             key={href}
             href={href}
-            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-700"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-summer-pink/40 hover:bg-summer-pink/5 hover:text-summer-pink"
           >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
             {label}
           </Link>
         ))}
@@ -69,21 +73,23 @@ export function CRMHub() {
           <>
             <Link
               href="/analytics"
-              className="rounded-md border border-indigo-800 bg-indigo-900/50 px-3 py-1 text-[11px] font-medium text-indigo-300 transition-colors hover:border-indigo-600 hover:bg-indigo-800/50"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-summer-lavender/40 hover:bg-summer-lavender/5 hover:text-summer-lavender"
             >
-              📊 Analítica
+              <BarChart3 className="h-3.5 w-3.5 shrink-0" />
+              Analítica
             </Link>
             <Link
               href="/admin/settings"
-              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-700"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800"
             >
-              🔧 Config
+              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+              Config
             </Link>
           </>
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row min-h-[60vh] md:h-[calc(100vh-12rem)] rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex flex-col md:flex-row min-h-[60vh] rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* Mobile pill nav — grid layout, no horizontal scroll */}
         <nav className="md:hidden grid grid-cols-3 gap-2 p-2 border-b border-slate-100 bg-white">
           {navItems.map(({ value, label, icon: Icon }) => (
@@ -127,7 +133,7 @@ export function CRMHub() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-4 bg-slate-50">
+        <main className="flex-1 p-4 bg-slate-50">
           {activeSection === 'overview'  && (
             <ActivityTab
               orgId={user?.organizationId}
