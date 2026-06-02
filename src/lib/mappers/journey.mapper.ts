@@ -102,6 +102,12 @@ export function mapApiToJourney(
     const fieldNames = nodeType === 'profile'
       ? ((config.field_names as string[]) || [])
       : undefined;
+    const requiredFieldNames = nodeType === 'profile'
+      ? (config.required_fields as string[] | undefined)
+      : undefined;
+    const isStepSkippable = nodeType === 'profile'
+      ? ((config.skippable as boolean | undefined) ?? false)
+      : undefined;
     const stepIcon = (config.icon as string) || undefined;
 
     return {
@@ -119,6 +125,8 @@ export function mapApiToJourney(
       videoWatched: isVideoType && isCompleted ? true : undefined,
       points: basePoints || undefined,
       fieldNames,
+      requiredFieldNames,
+      isStepSkippable,
       stepIcon,
       available_at: stepProgress.available_at ?? undefined,
     };
@@ -159,6 +167,12 @@ export function mapAdminDataToPreviewJourney(
     const videoUrl = (config.video_url as string) || undefined;
     const basePoints = (step.gamification_rules?.base_points as number) || 0;
     const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
+    const requiredFieldNames = nodeType === 'profile'
+      ? (config.required_fields as string[] | undefined)
+      : undefined;
+    const isStepSkippable = nodeType === 'profile'
+      ? ((config.skippable as boolean | undefined) ?? false)
+      : undefined;
     const stepIcon = (config.icon as string) || undefined;
 
     return {
@@ -175,6 +189,8 @@ export function mapAdminDataToPreviewJourney(
       embedUrl,
       points: basePoints || undefined,
       fieldNames,
+      requiredFieldNames,
+      isStepSkippable,
       stepIcon,
     };
   });
@@ -211,6 +227,12 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
     const videoUrl = (config.video_url as string) || undefined;
     const basePoints = (step.gamification_rules?.base_points as number) || 0;
     const fieldNames = nodeType === 'profile' ? ((config.field_names as string[]) || []) : undefined;
+    const requiredFieldNames = nodeType === 'profile'
+      ? (config.required_fields as string[] | undefined)
+      : undefined;
+    const isStepSkippable = nodeType === 'profile'
+      ? ((config.skippable as boolean | undefined) ?? false)
+      : undefined;
     const stepIcon = (config.icon as string) || undefined;
 
     return {
@@ -227,6 +249,8 @@ export function mapApiJourneyToPreview(journey: ApiJourney): Journey {
       embedUrl,
       points: basePoints || undefined,
       fieldNames,
+      requiredFieldNames,
+      isStepSkippable,
       stepIcon,
     };
   });

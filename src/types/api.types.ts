@@ -143,6 +143,8 @@ export type ApiStepType =
 
 export interface ProfileFieldStepConfig {
   field_names: string[];
+  required_fields?: string[];  // subset of field_names; absent = all required
+  skippable?: boolean;         // true = step completable even if all fields are empty
   description?: string | null;
   icon?: string | null;
 }

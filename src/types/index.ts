@@ -72,8 +72,10 @@ export interface JourneyNode {
   embedUrl?: string; // Universal embed URL from config.resource
   videoWatched?: boolean;
   points?: number; // Base points for completing this node
-  fieldNames?: string[]; // For profile_field steps: CRM field names
-  stepIcon?: string;    // For profile_field steps: emoji icon
+  fieldNames?: string[];          // For profile_field steps: CRM field names
+  requiredFieldNames?: string[];  // undefined = all required; [] = none required
+  isStepSkippable?: boolean;      // participant can skip the entire step
+  stepIcon?: string;              // For profile_field steps: emoji icon
   available_at?: string; // ISO datetime when this locked step will become available
 }
 

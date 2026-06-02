@@ -228,6 +228,17 @@ export function JourneyWizard({
     return !!(val && (typeof val !== 'string' || val.trim() !== ''));
   }, [draft]);
 
+  // ¿El campo actual es obligatorio? (undefined requiredFieldNames = todos son obligatorios)
+  const isCurrentFieldRequired = !currentNode?.requiredFieldNames ||
+    currentNode.requiredFieldNames.includes(
+      (currentNode?.fieldNames ?? [])[fieldIndex] ?? ''
+    );
+
+  // ¿Todos los campos requeridos del step están rellenos?
+  const allRequiredFilled = (currentNode?.fieldNames ?? [])
+    .filter(f => !currentNode?.requiredFieldNames || currentNode.requiredFieldNames.includes(f))
+    .every(f => isFieldFilled(f));
+
   const handleNextField = () => {
     const fields = currentNode?.fieldNames || [];
     if (fieldIndex < fields.length - 1) {
@@ -335,6 +346,31 @@ export function JourneyWizard({
     } catch (err) {
       console.error('[JourneyWizard] error completing milestone:', err);
       toast.error('Error al completar. Intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSkipEntireStep = async () => {
+    if (!currentNode || isSaving) return;
+    setIsSaving(true);
+    try {
+      if (isPreviewMode) { simCompleteNode(currentNode); return; }
+      const fieldsToSave = { ...draft };
+      for (const key of Object.keys(fieldsToSave)) {
+        const val = (fieldsToSave as Record<string, unknown>)[key];
+        if (val === '' || val === NONE) delete (fieldsToSave as Record<string, unknown>)[key];
+      }
+      if (Object.keys(fieldsToSave).length > 0) {
+        await crmService.updateMyContact(fieldsToSave);
+      }
+      await completeActivity(currentNode.id);
+      triggerStepSuccess();
+      await refreshJourneys(user?.organizationId ?? undefined);
+      showXp(currentNode.points ?? 10);
+      checkJourneyComplete();
+    } catch {
+      toast.error('Error al saltar el paso. Intenta de nuevo.');
     } finally {
       setIsSaving(false);
     }
@@ -540,8 +576,11 @@ export function JourneyWizard({
     const currentField = fields[fieldIndex];
     const isLastField = fieldIndex === fields.length - 1;
     const fieldFilled = isFieldFilled(currentField);
+    const fieldRequired = !node.requiredFieldNames || node.requiredFieldNames.includes(currentField);
     const FieldIcon = FIELD_ICONS[currentField];
     const question = FIELD_QUESTIONS[currentField] || FIELD_LABELS[currentField] || currentField;
+    const canProceed = fieldRequired ? fieldFilled : true;
+    const canComplete = allRequiredFilled;
 
     return (
       <motion.div
@@ -588,9 +627,19 @@ export function JourneyWizard({
                   </div>
                 )}
                 <p className="text-center text-xl font-semibold text-slate-800 leading-tight">{question}</p>
+                {!fieldRequired && (
+                  <div className="flex justify-center">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
+                      ✦ Opcional · Puedes saltar esto
+                    </span>
+                  </div>
+                )}
                 {renderSingleField(currentField)}
                 <p className="text-center text-xs text-slate-400">
-                  Campo {fieldIndex + 1} de {fields.length}
+                  {fieldRequired
+                    ? `Pregunta ${fieldIndex + 1} de ${fields.length}`
+                    : `Pregunta ${fieldIndex + 1} de ${fields.length} · Esto es opcional`
+                  }
                 </p>
               </div>
             )}
@@ -599,40 +648,57 @@ export function JourneyWizard({
 
         {/* CTA buttons — always show Back + Next */}
         {node.status === 'available' && (
-          <div className="flex gap-3">
-            {/* Back button — goes to previous field or previous step */}
-            <button
-              onClick={handlePrevField}
-              disabled={fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0}
-              className={cn(
-                'py-4 px-5 rounded-xl font-semibold text-base flex items-center justify-center gap-1.5 transition-all border-2',
-                fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0
-                  ? 'border-slate-100 text-slate-300 cursor-not-allowed'
-                  : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-              )}
-            >
-              <ChevronLeft className="h-4 w-4" /> Anterior
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-3">
+              {/* Back button — goes to previous field or previous step */}
+              <button
+                onClick={handlePrevField}
+                disabled={fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0}
+                className={cn(
+                  'py-4 px-5 rounded-xl font-semibold text-base flex items-center justify-center gap-1.5 transition-all border-2',
+                  fieldIndex === 0 && nodes.findIndex(n => n.id === node.id) === 0
+                    ? 'border-slate-100 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                )}
+              >
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </button>
 
-            {/* Next / Complete — enabled when field is filled */}
-            <button
-              onClick={isLastField ? handleCompleteStep : handleNextField}
-              disabled={!fieldFilled || (isLastField && isSaving)}
-              className={cn(
-                'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
-                fieldFilled && !(isLastField && isSaving)
-                  ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              )}
-            >
-              {isLastField && isSaving ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
-              ) : isLastField ? (
-                <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
-              ) : (
-                <>Siguiente <ChevronRight className="h-4 w-4" /></>
-              )}
-            </button>
+              {/* Next / Complete — for required fields: blocked until filled; for optional: always active */}
+              <button
+                onClick={isLastField ? handleCompleteStep : handleNextField}
+                disabled={isLastField ? (!canComplete || isSaving) : !canProceed}
+                className={cn(
+                  'flex-1 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
+                  (isLastField ? canComplete && !isSaving : canProceed)
+                    ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                )}
+              >
+                {isLastField && isSaving ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+                ) : isLastField ? (
+                  <>Listo con este paso <ChevronRight className="h-4 w-4" /></>
+                ) : (
+                  <>Siguiente <ChevronRight className="h-4 w-4" /></>
+                )}
+              </button>
+            </div>
+
+            {/* Skip optional field — only shown for optional fields */}
+            {!fieldRequired && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleDraftChange(currentField, '');
+                  if (isLastField) handleCompleteStep();
+                  else handleNextField();
+                }}
+                className="w-full text-center text-sm text-slate-400 hover:text-slate-600 py-1.5 transition-colors"
+              >
+                Saltar por ahora →
+              </button>
+            )}
           </div>
         )}
 
@@ -740,6 +806,16 @@ export function JourneyWizard({
           <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Bienvenida</p>
           <h1 className="text-sm font-semibold text-slate-800 truncate">{journey.title}</h1>
         </div>
+
+        {/* Skip entire step — only for skippable steps */}
+        {currentNode?.isStepSkippable && currentNode.status === 'available' && !isSaving && (
+          <button
+            onClick={handleSkipEntireStep}
+            className="text-xs text-slate-400 hover:text-slate-600 font-medium underline underline-offset-2 transition-colors whitespace-nowrap"
+          >
+            Completar más tarde
+          </button>
+        )}
 
         {/* Progress dots */}
         <div className="flex gap-1.5 items-center">

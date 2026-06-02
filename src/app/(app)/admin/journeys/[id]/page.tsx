@@ -1883,78 +1883,177 @@ export default function JourneyEditorPage() {
                 />
               )}
 
-              {/* Profile field configuration */}
-              {stepForm.type === 'profile_field' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
+              {/* Profile field configuration — three-zone design */}
+              {stepForm.type === 'profile_field' && (() => {
+                const fieldNames: string[] = (stepForm.config?.field_names as string[]) || [];
+                const savedRequired = stepForm.config?.required_fields as string[] | undefined;
+                const requiredFields: string[] = savedRequired ?? [...fieldNames];
+                const optionalFields = fieldNames.filter(f => !requiredFields.includes(f));
+                const availableFields = ALL_PROFILE_FIELDS.filter(f => !fieldNames.includes(f));
+                const isSkippable = (stepForm.config?.skippable as boolean) ?? false;
+
+                const addRequired = (field: string) => setStepForm({ ...stepForm, config: {
+                  ...stepForm.config,
+                  field_names: [...fieldNames, field],
+                  required_fields: [...requiredFields, field],
+                }});
+                const makeOptional = (field: string) => setStepForm({ ...stepForm, config: {
+                  ...stepForm.config,
+                  required_fields: requiredFields.filter(f => f !== field),
+                }});
+                const removeField = (field: string) => setStepForm({ ...stepForm, config: {
+                  ...stepForm.config,
+                  field_names: fieldNames.filter(f => f !== field),
+                  required_fields: requiredFields.filter(f => f !== field),
+                }});
+                const toggleSkippable = () => setStepForm({ ...stepForm, config: {
+                  ...stepForm.config,
+                  skippable: !isSkippable,
+                }});
+
+                return (
+                  <div className="space-y-4">
                     <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Campos de perfil CRM</Label>
-                    <p className="text-xs text-slate-400">
-                      Selecciona los campos que el miembro deberá completar en este step.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {ALL_PROFILE_FIELDS.map(field => {
-                        const selected = ((stepForm.config?.field_names as string[]) || []).includes(field);
-                        return (
+
+                    {/* Zone 1: Required fields */}
+                    <div className="rounded-xl border border-red-100 bg-red-50/50 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />
+                        <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Requeridos</p>
+                        <span className="text-xs text-red-400 ml-1">— el participante debe rellenar para avanzar</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 min-h-[32px]">
+                        {requiredFields.length === 0 && (
+                          <p className="text-xs text-slate-400 italic self-center">Ninguno — clic en un campo disponible para añadirlo</p>
+                        )}
+                        {requiredFields.map(field => (
                           <button
                             key={field}
                             type="button"
-                            onClick={() => {
-                              const current = (stepForm.config?.field_names as string[]) || [];
-                              const updated = selected
-                                ? current.filter(f => f !== field)
-                                : [...current, field];
-                              setStepForm({
-                                ...stepForm,
-                                config: { ...stepForm.config, field_names: updated },
-                              });
-                            }}
-                            className={cn(
-                              'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                              selected
-                                ? 'bg-summer-sky/10 border-summer-sky text-summer-sky'
-                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                            )}
+                            onClick={() => makeOptional(field)}
+                            title="Clic para mover a Opcionales"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-white border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 transition-colors"
                           >
                             {PROFILE_FIELD_LABELS[field]}
+                            <span className="text-red-300 text-[10px]">→ opt.</span>
                           </button>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {((stepForm.config?.field_names as string[]) || []).length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vista previa de opciones</p>
-                      {((stepForm.config?.field_names as string[]) || []).map(fieldName => {
-                        const opts = fieldOptions[fieldName] || [];
-                        const label = PROFILE_FIELD_LABELS[fieldName] || fieldName;
-                        return (
-                          <div key={fieldName} className="space-y-1">
-                            <p className="text-xs font-medium text-slate-700">{label}</p>
-                            {opts.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {opts.map(o => (
-                                  <span key={o.id} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">
-                                    {o.label}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-slate-400 italic">
-                                {['country', 'state', 'city'].includes(fieldName)
-                                  ? 'Usa selector de ubicación'
-                                  : ['phone', 'company', 'birth_date'].includes(fieldName)
-                                  ? 'Campo de texto libre'
-                                  : 'Sin opciones configuradas en CRM'}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                    {/* Zone 2: Optional fields */}
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+                        <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Opcionales</p>
+                        <span className="text-xs text-amber-500 ml-1">— se preguntan, pero el participante puede saltar</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 min-h-[32px]">
+                        {optionalFields.length === 0 && (
+                          <p className="text-xs text-slate-400 italic self-center">Ninguno — clic en un Requerido para moverlo aquí</p>
+                        )}
+                        {optionalFields.map(field => (
+                          <button
+                            key={field}
+                            type="button"
+                            onClick={() => removeField(field)}
+                            title="Clic para quitar del step"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border bg-white border-amber-200 text-amber-700 hover:border-amber-300 hover:bg-amber-50 transition-colors"
+                          >
+                            {PROFILE_FIELD_LABELS[field]}
+                            <span className="text-amber-300 text-[10px]">✕</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {/* Zone 3: Available to add */}
+                    {availableFields.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs text-slate-400 font-medium">Disponibles para añadir (se añaden como Requeridos):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {availableFields.map(field => (
+                            <button
+                              key={field}
+                              type="button"
+                              onClick={() => addRequired(field)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium border bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-white transition-colors"
+                            >
+                              + {PROFILE_FIELD_LABELS[field]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step-level skip toggle */}
+                    <div
+                      onClick={toggleSkippable}
+                      className={cn(
+                        'flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors',
+                        isSkippable
+                          ? 'border-summer-sky/30 bg-summer-sky/5'
+                          : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      )}
+                    >
+                      <div className={cn(
+                        'mt-0.5 h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+                        isSkippable ? 'bg-summer-sky border-summer-sky' : 'border-slate-300 bg-white'
+                      )}>
+                        {isSkippable && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-700">Permitir saltar este step completo</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          El participante verá "Completar más tarde" y podrá omitir todos los campos sin bloquear su avance.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Options preview */}
+                    {fieldNames.length > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vista previa de opciones</p>
+                        {fieldNames.map(fieldName => {
+                          const opts = fieldOptions[fieldName] || [];
+                          const label = PROFILE_FIELD_LABELS[fieldName] || fieldName;
+                          const isReq = requiredFields.includes(fieldName);
+                          return (
+                            <div key={fieldName} className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-medium text-slate-700">{label}</p>
+                                <span className={cn(
+                                  'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
+                                  isReq ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-600'
+                                )}>
+                                  {isReq ? 'Requerido' : 'Opcional'}
+                                </span>
+                              </div>
+                              {opts.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {opts.map(o => (
+                                    <span key={o.id} className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded text-xs">
+                                      {o.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-400 italic">
+                                  {['country', 'state', 'city'].includes(fieldName)
+                                    ? 'Usa selector de ubicación'
+                                    : ['phone', 'company', 'birth_date'].includes(fieldName)
+                                    ? 'Campo de texto libre'
+                                    : 'Sin opciones configuradas en CRM'}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Empty state for types with no extra config */}
               {(stepForm.type === 'event_attendance' || stepForm.type === 'social_interaction') && (
