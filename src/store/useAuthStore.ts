@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { User } from '@/types';
 import { authService } from '@/services/auth.service';
+import { apiClient } from '@/lib/api-client';
 import { calculateRank } from '@/lib/gamification';
 import { supabase } from '@/lib/supabase';
 
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>()(
       forceLogout: () => {
         // Logout sincrónico para auth muerta — no llama al backend
         // porque los tokens ya son inválidos
+        apiClient.clearTokens();
         supabase.auth.signOut().catch(() => {});
         set({ user: null, isLoading: false, error: null });
       },

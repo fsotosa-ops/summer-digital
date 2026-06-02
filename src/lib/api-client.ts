@@ -261,7 +261,7 @@ export class ApiError extends Error {
       let response = await this.fetchWithRetry(url, config, timeoutMs);
 
       // 3. Manejo de 401/403 (Unauthorized/Forbidden) y Refresh Automático
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
           if (!this.isPublicAuthEndpoint(endpoint)) {
               try {
                   await this.refreshAccessToken();

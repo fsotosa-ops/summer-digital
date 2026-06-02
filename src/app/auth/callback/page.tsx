@@ -23,6 +23,13 @@ function AuthCallbackContent() {
         return;
       }
 
+      // Prevent double-processing the same code (React StrictMode mounts effects twice
+      // in development; a second backend call with the same code fails PKCE validation
+      // because the verifier is consumed after the first successful exchange).
+      const processedKey = `oauth_code_used_${code}`;
+      if (sessionStorage.getItem(processedKey)) return;
+      sessionStorage.setItem(processedKey, '1');
+
       try {
         const user = await authService.handleOAuthCallback(code, state);
         setUser(user);
@@ -44,6 +51,7 @@ function AuthCallbackContent() {
           router.push('/dashboard');
         }
       } catch (err) {
+        sessionStorage.removeItem(processedKey);
         setError(err instanceof Error ? err.message : 'Error al procesar autenticación');
       }
     };

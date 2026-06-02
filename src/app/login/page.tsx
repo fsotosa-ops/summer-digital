@@ -148,26 +148,35 @@ function LoginContent() {
   // Efecto 3: Motor centralizado de enrutamiento (Single Source of Truth)
   // Reacciona automáticamente cuando detecta un usuario autenticado válido
   useEffect(() => {
-    if (hydrated && user && !isNavigating) {
-      setIsNavigating(true);
-      
-      const savedJoinId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
-      const targetEventId = savedJoinId || joinEventId;
-      
-      // Fresh login → clear stale onboarding flag so MainLayout re-checks
-      sessionStorage.removeItem(SESSION_KEYS.ONBOARDING_CHECKED);
+    if (!hydrated || !user || isNavigating) return;
 
-      // Si existe una intención de evento, lo enviamos al Gateway del evento
-      // Si no, lo enviamos a su dashboard general
-      const targetPath = targetEventId ? `/events/${targetEventId}` : '/dashboard';
-      
-      // Limpiamos la intención para no crear loops en futuros inicios de sesión
-      if (savedJoinId) {
-        sessionStorage.removeItem(SESSION_KEYS.JOIN_EVENT);
-      }
-      
-      router.push(targetPath);
+    // Guard: si no hay refresh_token, la sesión está muerta aunque Zustand tenga
+    // al usuario cacheado. Limpiar en vez de redirigir para evitar el loop
+    // dashboard → "sesión expirada" → login.
+    const hasRefreshToken = typeof window !== 'undefined' && !!localStorage.getItem('refresh_token');
+    if (!hasRefreshToken) {
+      useAuthStore.getState().forceLogout();
+      return;
     }
+
+    setIsNavigating(true);
+
+    const savedJoinId = sessionStorage.getItem(SESSION_KEYS.JOIN_EVENT);
+    const targetEventId = savedJoinId || joinEventId;
+
+    // Fresh login → clear stale onboarding flag so MainLayout re-checks
+    sessionStorage.removeItem(SESSION_KEYS.ONBOARDING_CHECKED);
+
+    // Si existe una intención de evento, lo enviamos al Gateway del evento
+    // Si no, lo enviamos a su dashboard general
+    const targetPath = targetEventId ? `/events/${targetEventId}` : '/dashboard';
+
+    // Limpiamos la intención para no crear loops en futuros inicios de sesión
+    if (savedJoinId) {
+      sessionStorage.removeItem(SESSION_KEYS.JOIN_EVENT);
+    }
+
+    router.push(targetPath);
   }, [hydrated, user, router, joinEventId, isNavigating]);
 
   // --- Handlers (Manejadores de Eventos) ---
