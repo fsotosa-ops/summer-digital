@@ -37,7 +37,7 @@ function isOnboardingJourney(journey: Journey): boolean {
 
 export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, selectJourney } = useJourneyStore();
+  const { journeys, fetchJourneys, selectJourney, signalJourneyCompleted } = useJourneyStore();
   const [phase, setPhase] = useState<Phase>('welcome');
   const [showConfetti, setShowConfetti] = useState(false);
   const [journeyData, setJourneyData] = useState<Journey | null>(null);
@@ -63,7 +63,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
         if (!journey) {
           // Journey still not found after enroll → silent escape to avoid blocking user
           console.warn('[OnboardingGate] Journey not found after enroll, skipping onboarding.');
-          sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
+          sessionStorage.setItem(`onboarding_shown_${journeyId}`, 'true');
           onComplete();
           return;
         }
@@ -74,7 +74,7 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
       } catch (err) {
         // Any network/API error → silent escape
         console.error('[OnboardingGate] Failed to load onboarding journey, skipping.', err);
-        sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
+        sessionStorage.setItem(`onboarding_shown_${journeyId}`, 'true');
         onComplete();
       }
     }, 2000);
@@ -82,13 +82,22 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Shared completion handler — triggers confetti then redirects (QR or dashboard).
+  // Shared completion handler — marks this specific journey as shown this session,
+  // signals the MainLayout gate to re-check (which will pick up the next pending
+  // onboarding journey if one exists), then navigates to dashboard or QR return.
   const triggerCompletion = () => {
     setShowConfetti(true);
     setPhase('completed');
     setTimeout(() => {
       setShowConfetti(false);
-      sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
+
+      // Mark this journey as already shown so the gate won't show it again
+      sessionStorage.setItem(`onboarding_shown_${journeyId}`, 'true');
+
+      // Signal the MainLayout gate to re-check — if the backend has another
+      // pending onboarding (sequential or contextual), it will redirect to it
+      signalJourneyCompleted(journeyId);
+
       const qrReturn = sessionStorage.getItem(SESSION_KEYS.QR_RETURN_URL);
       if (qrReturn) {
         sessionStorage.removeItem(SESSION_KEYS.QR_RETURN_URL);

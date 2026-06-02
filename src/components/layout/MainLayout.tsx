@@ -35,6 +35,7 @@ import { cn, SESSION_KEYS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useJourneyStore } from '@/store/useJourneyStore';
 import { UserRole } from '@/types';
 import { toast, Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
@@ -79,6 +80,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, initializeSession, refreshProfile, viewMode, setViewMode } = useAuthStore();
+  const lastCompletedJourneyId = useJourneyStore(s => s.lastCompletedJourneyId);
   const [hydrated, setHydrated] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -132,12 +134,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  // Onboarding gate: check once per session for Participants
+  // Onboarding gate — re-runs on login, org change, or journey completion.
+  // Uses per-journey sessionStorage keys (onboarding_shown_<id>) instead of a
+  // global boolean, so multiple onboarding journeys can be shown sequentially
+  // and contextual mid-flow onboarding (triggered by completing a regular journey)
+  // is supported.
   useEffect(() => {
     const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
     if (!hydrated || !user || isAdmin) return;
-    const checked = sessionStorage.getItem(SESSION_KEYS.ONBOARDING_CHECKED);
-    if (checked) return;
 
     setOnboardingChecking(true);
 
@@ -150,7 +154,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         await refreshProfile();
         const freshOrgId = useAuthStore.getState().user?.organizationId;
         if (freshOrgId) {
-          // Org was just assigned; the effect will re-run via the organizationId dep
           setOnboardingChecking(false);
           return;
         }
@@ -159,18 +162,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       try {
         const res = await journeyService.checkOnboarding(orgId ?? undefined);
         if (res.should_show && res.journey_id) {
+          // Skip if this specific journey was already shown this session
+          const shownKey = `onboarding_shown_${res.journey_id}`;
+          if (sessionStorage.getItem(shownKey)) {
+            setOnboardingChecking(false);
+            return;
+          }
           const currentPath = pathname || '/dashboard';
           router.replace(`/onboarding?journeyId=${res.journey_id}&redirect=${encodeURIComponent(currentPath)}`);
         }
       } catch {
-        sessionStorage.setItem(SESSION_KEYS.ONBOARDING_CHECKED, 'true');
+        // Network error — skip silently, will re-check on next trigger
       }
       setOnboardingChecking(false);
     };
 
     runCheck();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, user?.id, user?.organizationId]);
+  }, [hydrated, user?.id, user?.organizationId, lastCompletedJourneyId]);
 
   // Sync admin accordion with current route — but never while the sheet is open
   // (sheet open = user is manually controlling the accordion via tap)

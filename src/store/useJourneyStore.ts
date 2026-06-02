@@ -12,6 +12,9 @@ interface JourneyState {
   // For SuperAdmin: track which org we're viewing
   viewingOrgId: string | null;
   isPreviewMode: boolean;
+  // Signals the MainLayout onboarding gate to re-check after a journey completes.
+  // Changes whenever any journey (onboarding or regular) is fully completed.
+  lastCompletedJourneyId: string | null;
   fetchJourneys: (orgIdOverride?: string) => Promise<void>;
   refreshJourneys: (orgIdOverride?: string) => Promise<void>;
   fetchJourneysForAdmin: (orgId: string) => Promise<void>;
@@ -19,6 +22,7 @@ interface JourneyState {
   completeActivity: (nodeId: string, externalReference?: string) => Promise<void>;
   setViewingOrgId: (orgId: string | null) => void;
   clearError: () => void;
+  signalJourneyCompleted: (journeyId: string) => void;
 }
 
 export const useJourneyStore = create<JourneyState>((set, get) => ({
@@ -29,8 +33,13 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
   enrollmentMap: new Map(),
   viewingOrgId: null,
   isPreviewMode: false,
+  lastCompletedJourneyId: null,
 
   clearError: () => set({ lastError: null }),
+
+  signalJourneyCompleted: (journeyId: string) => {
+    set({ lastCompletedJourneyId: journeyId });
+  },
 
   // For participants: fetch based on enrollments (multi-org aware)
   fetchJourneys: async (fallbackOrgId?: string) => {
@@ -137,6 +146,12 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
       return { ...journey, nodes: finalNodes, progress, status };
     });
 
-    set({ journeys: updatedJourneys });
+    const justCompleted = updatedJourneys.find(
+      j => j.id === selectedJourneyId && j.status === 'completed'
+    );
+    set({
+      journeys: updatedJourneys,
+      ...(justCompleted ? { lastCompletedJourneyId: selectedJourneyId } : {}),
+    });
   },
 }));
