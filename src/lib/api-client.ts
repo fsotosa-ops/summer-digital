@@ -102,6 +102,24 @@ export class ApiError extends Error {
 
       this.refreshPromise = (async () => {
         try {
+          // PRIMARY: use Supabase SDK's persisted session. Supabase auto-rotates
+          // its own refresh token independently — our localStorage['refresh_token']
+          // can become stale after a Supabase auto-refresh, causing spurious logouts.
+          // getSession() returns a valid (and already-refreshed-if-expired) session
+          // from Supabase's own storage, bypassing the stale-token problem entirely.
+          try {
+            const { supabase } = await import('@/lib/supabase');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token && session?.refresh_token) {
+              this.setTokens(session.access_token, session.refresh_token);
+              return;
+            }
+          } catch {
+            // Fall through to backend /auth/refresh
+          }
+
+          // FALLBACK: call our backend refresh endpoint with the stored token.
+          // Used when Supabase SDK has no session (e.g., cleared storage, SSR).
           const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
 
           if (!refreshToken) {
