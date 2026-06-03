@@ -26,16 +26,24 @@ export default function JourneyPlayerPage() {
   const journeyId = params.id as string;
 
   const { user } = useAuthStore();
-  const { journeys, fetchJourneys, isLoading } = useJourneyStore();
+  const { journeys, fetchJourneys, refreshJourneys, isLoading } = useJourneyStore();
   const [hasFetched, setHasFetched] = useState(false);
 
   const journey = journeys.find(j => j.id === journeyId);
 
   useEffect(() => {
-    if (!journey && !hasFetched && user) {
+    if (!user) return;
+    if (!journey && !hasFetched) {
+      // Journey not in store yet — do a full fetch (shows loader)
       fetchJourneys(user.organizationId ?? undefined).then(() => setHasFetched(true));
+    } else if (journey) {
+      // Journey already in store — silently refresh to pick up any admin changes
+      // (e.g., unlock dates set after the store was last populated)
+      setHasFetched(true);
+      refreshJourneys(user.organizationId ?? undefined);
     }
-  }, [journey, hasFetched, user, fetchJourneys]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journeyId, user?.id]);
 
   if (!journey && (isLoading || !hasFetched)) {
     return (

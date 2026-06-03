@@ -131,7 +131,13 @@ export const useJourneyStore = create<JourneyState>((set, get) => ({
       const finalNodes = updatedNodes.map(node => {
         if (node.status === 'completed') completedNodesCount++;
         if (nextNodeId && node.id === nextNodeId && node.status === 'locked') {
-          return { ...node, status: 'available' as const };
+          // Only optimistically unlock if the step has no future scheduling constraint.
+          // available_at is set by the backend when a step is locked due to a scheduled
+          // date; respect it here to avoid showing a step as available before its time.
+          const isFutureScheduled = node.available_at && new Date(node.available_at) > new Date();
+          if (!isFutureScheduled) {
+            return { ...node, status: 'available' as const };
+          }
         }
         return node;
       });
