@@ -324,9 +324,13 @@ export function JourneyWizard({
       setContact(saved);
       await completeActivity(currentNode.id);
       triggerStepSuccess();
-      await refreshJourneys(user?.organizationId ?? undefined);
+      // Release the saving lock as soon as the step is saved and the optimistic
+      // update is applied — refreshJourneys runs in the background and should not
+      // keep the UI frozen on "Guardando..." while the next step is already ready.
+      setIsSaving(false);
       showXp(currentNode.points ?? 10);
       checkJourneyComplete();
+      await refreshJourneys(user?.organizationId ?? undefined);
     } catch (err) {
       console.error('[JourneyWizard] error completing step:', err);
       toast.error('Error al guardar. Intenta de nuevo.');
@@ -342,9 +346,10 @@ export function JourneyWizard({
       if (isPreviewMode) { simCompleteNode(node); return; }
       triggerStepSuccess();
       await completeActivity(node.id);
-      await refreshJourneys(user?.organizationId ?? undefined);
+      setIsSaving(false);
       showXp(node.points ?? 10);
       checkJourneyComplete();
+      await refreshJourneys(user?.organizationId ?? undefined);
     } catch (err) {
       console.error('[JourneyWizard] error completing milestone:', err);
       toast.error('Error al completar. Intenta de nuevo.');
@@ -368,9 +373,10 @@ export function JourneyWizard({
       }
       await completeActivity(currentNode.id);
       triggerStepSuccess();
-      await refreshJourneys(user?.organizationId ?? undefined);
+      setIsSaving(false);
       showXp(currentNode.points ?? 10);
       checkJourneyComplete();
+      await refreshJourneys(user?.organizationId ?? undefined);
     } catch {
       toast.error('Error al saltar el paso. Intenta de nuevo.');
     } finally {
@@ -782,7 +788,10 @@ export function JourneyWizard({
   }
 
   // ─── Wizard layout ──────────────────────────────────────────
-  const isComplete = progressPct === 100;
+  // Also treat as complete when the enrollment itself is marked completed in the
+  // backend — this handles stale/desynchronized data (e.g. journey steps changed
+  // after the enrollment was created) so we never try to re-complete a done step.
+  const isComplete = progressPct === 100 || journey.status === 'completed';
 
   return (
     <motion.div

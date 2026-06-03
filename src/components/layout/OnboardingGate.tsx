@@ -122,7 +122,11 @@ export function OnboardingGate({ journeyId, onComplete }: OnboardingGateProps) {
   // verify authoritative store state before transitioning (anti-cheat: no-op if incomplete).
   const handlePlayerBack = () => {
     const j = useJourneyStore.getState().journeys.find(jj => jj.id === journeyId);
-    if (j?.status === 'completed' || j?.progress === 100) {
+    // Check node-level completion in addition to enrollment status/progress, because
+    // stale enrollment data (e.g. after journey steps change) can leave progress_percentage
+    // out of sync even when all current nodes are done.
+    const allNodesDone = j?.nodes && j.nodes.length > 0 && j.nodes.every(n => n.status === 'completed');
+    if (j?.status === 'completed' || j?.progress === 100 || allNodesDone) {
       triggerCompletion();
     }
     // else: no-op — user cannot exit incomplete onboarding
