@@ -8,7 +8,11 @@ class AuthService {
   async login(email: string, password: string): Promise<User> {
     const response = await apiClient.post<ApiLoginResponse>('/auth/login', { email, password });
     apiClient.setTokens(response.access_token, response.refresh_token);
-    await syncSupabaseSession(response.access_token, response.refresh_token);
+    try {
+      await syncSupabaseSession(response.access_token, response.refresh_token);
+    } catch (e) {
+      console.warn('[AUTH] Supabase sync failed (non-critical):', e);
+    }
     return mapApiUserToUser(response.user);
   }
 
@@ -36,7 +40,11 @@ class AuthService {
     if (state) params.set('state', state);
     const response = await apiClient.get<ApiLoginResponse>(`/auth/callback?${params.toString()}`);
     apiClient.setTokens(response.access_token, response.refresh_token);
-    await syncSupabaseSession(response.access_token, response.refresh_token);
+    try {
+      await syncSupabaseSession(response.access_token, response.refresh_token);
+    } catch (e) {
+      console.warn('[AUTH] Supabase sync failed (non-critical):', e);
+    }
     return mapApiUserToUser(response.user);
   }
 
