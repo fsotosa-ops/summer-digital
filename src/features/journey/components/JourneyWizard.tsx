@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactConfetti from 'react-confetti';
+import { Widget as TypeformWidget } from '@typeform/embed-react';
 import { Journey, JourneyNode, NodeStatus } from '@/types';
 import { ApiCrmContact, ApiFieldOption } from '@/types/api.types';
 import { useJourneyStore } from '@/store/useJourneyStore';
@@ -321,6 +322,7 @@ export function JourneyWizard({
       }
       const saved = await crmService.updateMyContact(fieldsToSave);
       setContact(saved);
+      await completeActivity(currentNode.id);
       triggerStepSuccess();
       await refreshJourneys(user?.organizationId ?? undefined);
       showXp(currentNode.points ?? 10);
@@ -499,6 +501,11 @@ export function JourneyWizard({
   const renderMilestoneStep = (node: JourneyNode) => {
     const embedSrc = node.embedUrl || node.videoUrl || node.externalUrl;
 
+    // Extract Typeform form ID for survey nodes so we can use the embed widget
+    // (plain iframe doesn't fire onSubmit and can redirect the page to typeform.com)
+    const typeformMatch = embedSrc?.match(/typeform\.com\/to\/([a-zA-Z0-9]+)/);
+    const typeformFormId = typeformMatch ? typeformMatch[1] : null;
+
     return (
       <motion.div
         key={node.id}
@@ -522,43 +529,56 @@ export function JourneyWizard({
           )}
         </div>
 
-        {embedSrc && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-            <div className="aspect-video w-full">
-              <iframe
-                src={embedSrc}
-                className="w-full h-full"
-                allowFullScreen
-                allow="autoplay; encrypted-media"
-              />
-            </div>
-          </div>
-        )}
-
         {node.status === 'locked' ? (
           <div className="flex flex-col items-center gap-3 py-6 text-slate-400">
             <Lock className="h-8 w-8" />
             <p className="text-sm">Completa el paso anterior para desbloquear.</p>
           </div>
+        ) : typeformFormId ? (
+          /* Typeform survey: use Widget so onSubmit fires and step is completed
+             without the page redirecting to typeform.com */
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6 h-[480px]">
+            <TypeformWidget
+              id={typeformFormId}
+              style={{ width: '100%', height: '100%' }}
+              onSubmit={async () => {
+                await handleCompleteMilestoneStep(node);
+              }}
+            />
+          </div>
         ) : (
-          <button
-            onClick={() => handleCompleteMilestoneStep(node)}
-            disabled={isSaving}
-            className={cn(
-              'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
-              !isSaving
-                ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+          <>
+            {embedSrc && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div className="aspect-video w-full">
+                  <iframe
+                    src={embedSrc}
+                    className="w-full h-full"
+                    allowFullScreen
+                    allow="autoplay; encrypted-media"
+                  />
+                </div>
+              </div>
             )}
-          >
-            {isSaving
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
-              : <>Listo <ChevronRight className="h-4 w-4" /></>
-            }
-          </button>
+            <button
+              onClick={() => handleCompleteMilestoneStep(node)}
+              disabled={isSaving}
+              className={cn(
+                'w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all',
+                !isSaving
+                  ? 'bg-gradient-to-r from-summer-yellow to-summer-orange text-white shadow-md hover:shadow-lg hover:scale-[1.02]'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              )}
+            >
+              {isSaving
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+                : <>Listo <ChevronRight className="h-4 w-4" /></>
+              }
+            </button>
+          </>
         )}
 
-        {node.points && (
+        {node.points && node.status !== 'locked' && (
           <p className="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
             <Zap className="h-3 w-3 text-summer-yellow" />
             +{node.points} XP al completar
