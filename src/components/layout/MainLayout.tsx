@@ -40,6 +40,7 @@ import { UserRole } from '@/types';
 import { toast, Toaster } from 'sonner';
 import { journeyService } from '@/services/journey.service';
 import { apiClient } from '@/lib/api-client';
+import { supabase } from '@/lib/supabase';
 import { realtimeClient } from '@/lib/realtime/client';
 
 
@@ -122,6 +123,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       // Hard redirect para limpiar todo el estado React
       window.location.href = '/login?reason=session_expired';
     });
+  }, []);
+
+  // Keep apiClient tokens in sync with Supabase's auto-refresh.
+  // Supabase SDK rotates refresh tokens independently (~60s before JWT expiry).
+  // Without this listener, apiClient holds a stale refresh_token and fails on the
+  // next page reload or 401, triggering a spurious forced logout.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token && session?.refresh_token &&
+          (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
+        apiClient.setTokens(session.access_token, session.refresh_token);
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {

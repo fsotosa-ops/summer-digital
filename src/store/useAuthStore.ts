@@ -105,6 +105,20 @@ export const useAuthStore = create<AuthState>()(
         const currentUser = get().user;
         if (!currentUser) return;
 
+        // On page reload apiClient loses its in-memory access_token. Supabase SDK
+        // persists its session in localStorage and auto-rotates refresh tokens
+        // independently. Sync Supabase's current session into apiClient FIRST so
+        // the upcoming /auth/users/me call uses a valid token instead of the
+        // (potentially rotated) refresh_token stored under apiClient's own key.
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token && session?.refresh_token) {
+            apiClient.setTokens(session.access_token, session.refresh_token);
+          }
+        } catch {
+          // Non-fatal: apiClient will attempt its own refresh as fallback
+        }
+
         try {
           const user = await authService.refreshSession();
           if (user) {
